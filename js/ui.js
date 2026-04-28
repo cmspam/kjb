@@ -134,7 +134,15 @@ window.UI = (() => {
     let advanced = false; // show per-player level overrides
     let timerSec = 0;     // 0 = no timer; otherwise seconds per question
     let hardMode = false; // boss attacks require defensive Q to dodge
-    const names = ["","","","","",""];
+    // Pre-fill name fields with shuffled, unique funny names — kids see them on entry
+    // and can keep them or type over them.
+    const namePool = (window.FUNNY_NAMES || []).slice();
+    for (let i = namePool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [namePool[i], namePool[j]] = [namePool[j], namePool[i]];
+    }
+    const names = namePool.slice(0, 6);
+    while (names.length < 6) names.push("");
     const playerLevels = [null,null,null,null,null,null]; // null = use global
 
     function pickFunnyName(usedNames) {
@@ -194,7 +202,7 @@ window.UI = (() => {
       for (let i = 0; i < count; i++) {
         const wrap = document.createElement("div");
         wrap.style.cssText = "display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap;justify-content:center;";
-        const inp = el(`<input class="player-input" maxlength="10" placeholder="${JP.player_n(i+1)}" value="${names[i]||""}"/>`);
+        const inp = el(`<input class="player-input" maxlength="10" placeholder="${JP.player_n(i+1)}" value="${escapeHTML(names[i]||"")}"/>`);
         inp.oninput = (e) => { names[i] = e.target.value; };
         wrap.appendChild(inp);
         if (advanced) {
