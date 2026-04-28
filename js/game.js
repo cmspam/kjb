@@ -26,6 +26,7 @@ window.Game = (() => {
       level: opts.level,
       jinro: opts.jinro && players.length >= 4,
       solo: players.length === 1,
+      timerSec: opts.timerSec || 0,
       currentIdx: 0,
       round: 1,
       voteUsedThisRound: false,
@@ -146,7 +147,7 @@ window.Game = (() => {
       const wrong = S.currentQuestion.options.map((_,i)=>i).filter(i=>i!==S.currentQuestion.answer);
       hintIdx = wrong[(Math.random()*wrong.length)|0];
     }
-    UI.renderQuestion(p, S.currentQuestion, S.boss, S.players, { hintMaskIdx: hintIdx },
+    UI.renderQuestion(p, S.currentQuestion, S.boss, S.players, { hintMaskIdx: hintIdx, timerSec: S.timerSec },
       (correct, chosen) => handleAnswer(correct, chosen),
       () => {});
   }

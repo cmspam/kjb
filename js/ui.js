@@ -132,6 +132,7 @@ window.UI = (() => {
     let level = 2;        // global default level
     let jinro = false;
     let advanced = false; // show per-player level overrides
+    let timerSec = 0;     // 0 = no timer; otherwise seconds per question
     const names = ["","","","","",""];
     const playerLevels = [null,null,null,null,null,null]; // null = use global
 
@@ -153,6 +154,13 @@ window.UI = (() => {
           <div class="row" id="names-row"></div>
           <div class="row" style="margin-top:8px;">
             <button class="toggle ${advanced?'on':''}" id="adv-toggle">${advanced?'こべつレベル ON':'こべつレベル OFF'}</button>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <span class="subtle" style="margin-right:8px;">じかん せいげん:</span>
+            <button class="toggle ${timerSec===0?'on':''}" data-sec="0">なし</button>
+            <button class="toggle ${timerSec===30?'on':''}" data-sec="30">30びょう</button>
+            <button class="toggle ${timerSec===20?'on':''}" data-sec="20">20びょう</button>
+            <button class="toggle ${timerSec===10?'on':''}" data-sec="10">10びょう</button>
           </div>
           ${count >= 4 ? `
             <div class="subtle" style="margin-top:12px;">${JP.jinro_hint}</div>
@@ -196,6 +204,8 @@ window.UI = (() => {
         nr.appendChild(wrap);
       }
       tap($("adv-toggle"), () => { advanced = !advanced; redraw(); });
+      // Timer buttons (data-sec attribute on each toggle)
+      s.querySelectorAll("[data-sec]").forEach(b => tap(b, () => { timerSec = parseInt(b.dataset.sec,10); redraw(); }));
       const jinroBtn = $("jinro-toggle"); if (jinroBtn) tap(jinroBtn, () => { jinro = !jinro; redraw(); });
       tap($("go"), () => {
         const used = [];
@@ -207,7 +217,7 @@ window.UI = (() => {
         });
         const finalLevels = playerLevels.slice(0, count).map(l => l ?? level);
         SND.sfxPop();
-        onConfirm({ count, level, levels: finalLevels, jinro: jinro && count >= 4, names: finalNames });
+        onConfirm({ count, level, levels: finalLevels, jinro: jinro && count >= 4, names: finalNames, timerSec });
       });
       tap($("back"), () => location.reload());
     }
@@ -298,8 +308,11 @@ window.UI = (() => {
     // Apply hint mask
     const masked = (opts.hintMaskIdx ?? -1);
 
+    const timerSec = (opts && opts.timerSec) || 0;
+    const timerHtml = timerSec > 0 ? `<div class="q-timer" id="q-timer">⏱️ <span id="q-timer-num">${timerSec}</span></div>` : "";
     s.appendChild(el(`
       <div class="question-card">
+        ${timerHtml}
         <div class="stars">${stars}</div>
         <div class="question-prompt-jp">${question.prompt_jp}</div>
         ${displayPrompt}
@@ -307,12 +320,39 @@ window.UI = (() => {
         ${question.audio ? `<div class="row" style="margin-top:12px;"><button class="btn ghost" id="say-again">🔊 もういっかい</button></div>` : ``}
       </div>
     `));
+    let timerHandle = null;
+    let answered = false;
+    if (timerSec > 0) {
+      let remaining = timerSec;
+      const tn = $("q-timer-num");
+      timerHandle = setInterval(() => {
+        if (answered) { clearInterval(timerHandle); return; }
+        remaining--;
+        if (tn) tn.textContent = remaining;
+        const t = $("q-timer");
+        if (t && remaining <= 5) t.classList.add("low");
+        if (remaining <= 0) {
+          clearInterval(timerHandle);
+          if (!answered) {
+            answered = true;
+            const right = optsEl.querySelector(`[data-i="${question.answer}"]`);
+            if (right) right.classList.add("right");
+            optsEl.querySelectorAll(".opt").forEach(x => x.classList.add("disabled"));
+            SND.sfxWrong();
+            setTimeout(() => onAnswer(false, -1), 850);
+          }
+        }
+      }, 1000);
+    }
     const optsEl = $("opts");
     question.options.forEach((opt, i) => {
       const disabled = i === masked;
       const o = el(`<div class="opt ${disabled?'disabled':''}" data-i="${i}">${escapeHTML(opt)}</div>`);
       if (!disabled) {
         tap(o, () => {
+          if (answered) return;
+          answered = true;
+          if (timerHandle) clearInterval(timerHandle);
           const correct = i === question.answer;
           o.classList.add(correct ? "right" : "wrong");
           if (!correct) {

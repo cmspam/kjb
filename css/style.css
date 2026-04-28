@@ -146,6 +146,18 @@ h3 { font-size: 28px; margin: 4px 0; }
 .opt.wrong { background: var(--bad); color:#fff; border-color:#fff; }
 .opt.disabled { opacity: .55; pointer-events:none; }
 
+/* Question countdown timer */
+.q-timer {
+  position: absolute; top: 8px; right: 12px;
+  background: rgba(0,0,0,.5); color: #fff;
+  font-size: 20px; font-weight: 900;
+  padding: 4px 12px; border-radius: 99px;
+  z-index: 5;
+}
+.q-timer.low { background: var(--bad); animation: pulse 0.6s infinite alternate; }
+@keyframes pulse { 0%{transform:scale(1);} 100%{transform:scale(1.1);} }
+.question-card { position: relative; }
+
 /* Stars */
 .stars { font-size: 28px; color: var(--accent); letter-spacing: 4px; }
 .wager-grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; max-width: 720px; width:100%; margin: 0 auto; }
