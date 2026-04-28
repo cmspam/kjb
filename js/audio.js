@@ -39,6 +39,8 @@ window.SND = (() => {
       const u = new SpeechSynthesisUtterance(" ");
       u.volume = 0;
       speechSynthesis.speak(u);
+      const a = ctx();
+      if (a && a.state === "suspended") a.resume();
       unlocked = true;
     } catch(e) {}
   }
@@ -53,6 +55,7 @@ window.SND = (() => {
   }
   function tone(freq, dur, type="square", vol=0.15) {
     const a = ctx(); if (!a) return;
+    if (a.state === "suspended") a.resume();
     const o = a.createOscillator(); const g = a.createGain();
     o.type = type; o.frequency.value = freq;
     g.gain.value = vol;
