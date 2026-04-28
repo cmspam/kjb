@@ -402,5 +402,197 @@
     Q({ stars:2, ptype:"phrase", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
   });
 
+  // ============= EIKEN 4 STYLE EXTENSIONS =============
+
+  function shuffleWords(correct) {
+    const words = correct.replace(/[?.,]/g,"").split(/\s+/);
+    const punct = correct.match(/[?.]$/) ? correct.match(/[?.]$/)[0] : "";
+    const wrongs = new Set();
+    let tries = 0;
+    while (wrongs.size < 3 && tries++ < 80) {
+      const a = words.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      const cap = a[0][0].toUpperCase() + a[0].slice(1);
+      a[0] = cap;
+      const cand = a.join(" ") + punct;
+      if (cand !== correct) wrongs.add(cand);
+    }
+    return Array.from(wrongs);
+  }
+
+  // ★3 SENTENCE ORDERING (Eiken 4 Section 3)
+  const orderings4 = [
+    ["きのう なにを しましたか？", "What did you do yesterday?"],
+    ["きみは いつ おきますか？", "What time do you get up?"],
+    ["わたしは すしを たべるのが すき", "I like to eat sushi"],
+    ["かれは サッカーを したかった", "He wanted to play soccer"],
+    ["これは わたしの ペンより 高い", "This is more expensive than my pen"],
+    ["きみの ほんは どこに ある？", "Where is your book?"],
+    ["わたしは あした 学校に いきます", "I will go to school tomorrow"],
+    ["かのじょは ピアノを ひくのが じょうず", "She is good at playing the piano"],
+    ["わたしは あさ 7じに あさごはんを たべる", "I eat breakfast at 7 in the morning"],
+    ["この本は とても おもしろい", "This book is very interesting"],
+    ["ジョンは おにいさんより 背が高い", "John is taller than his brother"],
+    ["わたしは えいごを べんきょうする", "I study English"],
+    ["かれらは こうえんで サッカーをした", "They played soccer in the park"],
+    ["きみは すしが すき？", "Do you like sushi?"],
+    ["かのじょは 学校に 行きました", "She went to school"],
+    ["わたしは そらをみるのが すき", "I like watching the sky"],
+    ["あなたの しゅみは なんですか？", "What is your hobby?"],
+    ["かれは おもしろい 本を よんでいる", "He is reading an interesting book"],
+    ["わたしは あした パーティーに 行く", "I will go to the party tomorrow"],
+    ["きょねん 私は とうきょうに 行った", "I went to Tokyo last year"],
+    ["かれは いそがしすぎて こられない", "He is too busy to come"],
+    ["わたしは いつも はやく ねます", "I always go to bed early"],
+    ["どうやって 学校に いきますか？", "How do you go to school?"],
+    ["なぜ かれは おこっているの？", "Why is he angry?"],
+    ["かのじょは うたうのが じょうずです", "She is good at singing"],
+    ["きみが いちばん すきな 食べ物は？", "What is your favorite food?"],
+    ["私たちは こうえんに行く つもり", "We are going to the park"],
+    ["かれは 本を わすれた", "He forgot his book"],
+    ["これは わたしの いちばん 古い ぼうしです", "This is my oldest hat"],
+    ["きみは いつ かえる？", "When are you coming home?"],
+    ["かれは ピアノが ひける", "He can play the piano"],
+    ["わたしは その えいがを 見たい", "I want to see that movie"],
+    ["雨が ふっている", "It is raining"],
+    ["昨日は 寒かった", "Yesterday was cold"],
+    ["私たちは 来週 京都に 行く", "We will go to Kyoto next week"],
+  ];
+  orderings4.forEach(([jp, en]) => {
+    const wrongs = shuffleWords(en);
+    if (wrongs.length < 3) return;
+    const opts = wrongs.slice(0, 3);
+    const pos = (Math.random()*4)|0;
+    opts.splice(pos, 0, en);
+    Q({ stars:3, ptype:"order4", prompt_jp:`「${jp}」を ただしい えいごに！`, options: opts, answer: pos });
+  });
+
+  // ★3 LISTENING DIALOGUE (Eiken 4 Listening Part 2)
+  // A short two-line dialogue is read, then a question. Pick the answer.
+  const listenDialogue = [
+    ["A: Are you coming to my party? B: Yes! What time? A: It starts at 6 pm.", "What time is the party?", "6 pm", ["3 pm","6 pm","9 pm","tomorrow"]],
+    ["A: I went to Hokkaido last summer. B: How was it? A: It was beautiful.", "Where did he go?", "Hokkaido", ["Tokyo","Osaka","Hokkaido","Kyoto"]],
+    ["A: My brother is 15. B: Oh, mine is 12.", "How old is the second person's brother?", "12", ["12","15","17","13"]],
+    ["A: I want a pizza. B: Sorry, we have only ramen.", "What does the speaker have?", "ramen", ["pizza","ramen","sushi","curry"]],
+    ["A: Is it raining? B: No, it's snowing.", "What's the weather?", "snowing", ["rainy","snowing","sunny","cloudy"]],
+    ["A: How did you come? B: By bike.", "How did the speaker come?", "by bike", ["by bus","by bike","by train","by car"]],
+    ["A: The book costs 1500 yen. B: I'll take it.", "How much is the book?", "1500 yen", ["500 yen","1000 yen","1500 yen","2000 yen"]],
+    ["A: I have two cats. B: I have one dog.", "How many pets total?", "three", ["two","three","four","one"]],
+    ["A: Where are you from? B: I'm from Australia.", "Where is the speaker from?", "Australia", ["America","Australia","England","Canada"]],
+    ["A: Did you finish your homework? B: Not yet.", "Did he finish?", "No", ["Yes","No","Maybe","Don't know"]],
+    ["A: I will study tonight. B: Good idea.", "When will he study?", "tonight", ["tomorrow","tonight","yesterday","next week"]],
+    ["A: My mom is a doctor. B: Mine is a teacher.", "What is the second person's mom?", "teacher", ["doctor","teacher","cook","artist"]],
+    ["A: It's hot today, isn't it? B: Yes, very hot.", "What's the weather?", "hot", ["cold","cool","hot","rainy"]],
+    ["A: I'll see you at 5. B: OK, see you then.", "When will they meet?", "5", ["3","4","5","6"]],
+  ];
+  listenDialogue.forEach(([d, q, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"listen_dialogue", prompt_jp:`たいわを きいて こたえて 🔊\n${q}`, audio: d, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 LISTENING SHORT PASSAGE (Eiken 4 Listening Part 3)
+  const listenPassage = [
+    ["My name is Mike. I'm twelve years old. I have a sister.", "How old is Mike?", "12", ["10","12","15","8"]],
+    ["I went to the beach yesterday. I swam and made a sand castle.", "Where did he go?", "beach", ["beach","park","mountain","library"]],
+    ["My favorite sport is soccer. I play it every Sunday with my friends.", "What does he play?", "soccer", ["soccer","baseball","tennis","basketball"]],
+    ["I'm hungry. I want to eat curry tonight.", "What does she want?", "curry", ["pizza","curry","sushi","ramen"]],
+    ["My mom bought a red dress. It's very pretty.", "What did mom buy?", "a red dress", ["a red dress","a blue dress","a hat","shoes"]],
+    ["Tom studies English every morning. He started two years ago.", "When did Tom start?", "two years ago", ["one year ago","two years ago","last month","yesterday"]],
+    ["The cat is sleeping on the bed. The dog is in the garden.", "Where is the dog?", "in the garden", ["on the bed","in the garden","at school","in the kitchen"]],
+    ["I love rainy days. I like to read books inside.", "What does she like to do on rainy days?", "read books", ["read books","play outside","watch TV","sleep"]],
+    ["My grandfather is 70. He still plays tennis every weekend.", "What does grandfather do?", "plays tennis", ["plays tennis","reads books","goes shopping","watches TV"]],
+    ["I always wake up at 6:30. Then I have breakfast at 7.", "When does she have breakfast?", "7", ["6:30","7","7:30","8"]],
+  ];
+  listenPassage.forEach(([p, q, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"listen_passage", prompt_jp:`はなしを きいて こたえて 🔊\n${q}`, audio: p, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 MORE GRAMMAR FILLS (Eiken 4 mix)
+  const moreGram4 = [
+    ["I ___ TV when you called.","was watching",["was watching","watch","watched","watches"]],
+    ["She ___ to Tokyo last week.","went",["go","goes","went","gone"]],
+    ["My brother ___ taller than me.","is",["am","is","are","be"]],
+    ["___ you finish your homework yesterday?","Did",["Do","Does","Did","Are"]],
+    ["I ___ swim very well.","can",["can","do","am","be"]],
+    ["This is ___ best book I have ever read.","the",["a","an","the","is"]],
+    ["He has ___ in his pocket.","nothing",["nothing","anything","something","everything"]],
+    ["I have ___ books than you.","more",["many","most","more","much"]],
+    ["She is the ___ student in class.","tallest",["tall","taller","tallest","more tall"]],
+    ["I will call you ___ I get home.","when",["when","because","but","so"]],
+    ["He is a ___ singer.","good",["good","well","best","better"]],
+    ["She speaks English ___.","well",["good","well","best","more good"]],
+    ["My grandfather lives ___ Osaka.","in",["in","on","at","by"]],
+    ["I'm interested ___ science.","in",["in","on","at","with"]],
+    ["She is afraid ___ dogs.","of",["of","at","in","on"]],
+    ["I'll be there ___ 10 minutes.","in",["in","on","at","for"]],
+    ["___ is the weather today?","How",["How","What","Where","When"]],
+    ["___ many students are in your class?","How",["How","What","Where","Why"]],
+    ["I have ___ time to study.","no",["no","not","never","none"]],
+    ["She ___ her homework yet.","hasn't done",["doesn't do","didn't do","hasn't done","isn't doing"]],
+  ];
+  moreGram4.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"gram4", prompt_jp:"あてはまる ことば は？", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★2 MORE CONVERSATION (Eiken 4 Section 2)
+  const conv4 = [
+    ["A: How was the movie?\nB: ___", "It was great!", ["It was great!","I'm Yuki.","Pizza, please.","On Tuesday."]],
+    ["A: Could you help me?\nB: ___", "Of course.", ["Of course.","I'm fine.","Yesterday.","On Sunday."]],
+    ["A: When did you come back?\nB: ___", "Last night.", ["Last night.","Pizza.","Yes, I do.","On the desk."]],
+    ["A: What's wrong?\nB: ___", "I lost my key.", ["I lost my key.","I'm Yuki.","Pizza, please.","On Friday."]],
+    ["A: Can I borrow your pen?\nB: ___", "Sure, here you are.", ["Sure, here you are.","No, thanks.","I'm fine.","Yes, please."]],
+    ["A: Why are you late?\nB: ___", "The bus was late.", ["The bus was late.","Yes, I am.","Pizza.","On Monday."]],
+    ["A: I'm going to Hokkaido tomorrow.\nB: ___", "Have a great trip!", ["Have a great trip!","I'm Yuki.","On Friday.","Pizza."]],
+    ["A: How long does it take?\nB: ___", "About 20 minutes.", ["About 20 minutes.","I'm fine.","Yes, I do.","Pizza."]],
+    ["A: Should I open the window?\nB: ___", "Yes, please.", ["Yes, please.","I'm Yuki.","On Sunday.","Pizza."]],
+    ["A: I have a stomachache.\nB: ___", "You should rest.", ["You should rest.","I'm fine.","Pizza.","Yes."]],
+    ["A: My grandma is sick.\nB: ___", "I'm sorry to hear that.", ["I'm sorry to hear that.","Yes, please.","Pizza.","On Sunday."]],
+    ["A: Do you know him?\nB: ___", "No, I don't.", ["No, I don't.","Pizza.","Tomorrow.","I'm Yuki."]],
+    ["A: I passed the test!\nB: ___", "Congratulations!", ["Congratulations!","I'm sorry.","Pizza.","Goodbye."]],
+    ["A: Is this seat free?\nB: ___", "Yes, please sit down.", ["Yes, please sit down.","On Tuesday.","Pizza.","I'm fine."]],
+    ["A: Excuse me, where's the station?\nB: ___", "It's near the post office.", ["It's near the post office.","I'm Yuki.","Pizza.","Yes, I do."]],
+  ];
+  conv4.forEach(([q, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:2, ptype:"conv4", prompt_jp:`あう こたえは どれ？`, prompt:q, options: m.opts, answer: m.pos });
+  });
+
+  // More vocab — feelings, school events, environment
+  const feelings = [["happy","うれしい"],["sad","かなしい"],["angry","おこっている"],["tired","つかれた"],
+    ["excited","わくわく"],["nervous","きんちょう"],["surprised","びっくり"],["bored","たいくつ"],
+    ["scared","こわい"],["proud","ほこらしい"],["lonely","さみしい"],["worried","しんぱい"]];
+  feelings.forEach(([en, jp]) => {
+    let m = mc(en, feelings.map(f=>f[0]));
+    Q({ stars:2, ptype:"feel_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+    m = mc(jp, feelings.map(f=>f[1]));
+    Q({ stars:2, ptype:"feel_en2jp", prompt_jp:`「${en}」の いみ は？`, prompt:en, audio:en, options: m.opts, answer: m.pos });
+  });
+
+  // School/event vocab
+  const schoolEvent = [["festival","おまつり"],["sports day","うんどうかい"],["field trip","えんそく"],
+    ["test","テスト"],["homework","しゅくだい"],["club","クラブ"],["graduation","そつぎょう"],
+    ["entrance ceremony","にゅうがくしき"],["concert","コンサート"],["exam","しけん"]];
+  schoolEvent.forEach(([en, jp]) => {
+    let m = mc(en, schoolEvent.map(s=>s[0]));
+    Q({ stars:2, ptype:"event_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+  });
+
+  // Adjectives - more
+  const adjectives = [["big","おおきい"],["small","ちいさい"],["fast","はやい"],["slow","おそい"],
+    ["expensive","たかい(値段)"],["cheap","やすい"],["heavy","おもい"],["light","かるい"],
+    ["interesting","おもしろい"],["boring","つまらない"],["difficult","むずかしい"],["easy","かんたん"],
+    ["important","だいじ"],["famous","ゆうめい"],["beautiful","きれい"],["dangerous","あぶない"]];
+  adjectives.forEach(([en, jp]) => {
+    let m = mc(en, adjectives.map(a=>a[0]));
+    Q({ stars:1, ptype:"adj_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+    m = mc(jp, adjectives.map(a=>a[1]));
+    Q({ stars:1, ptype:"adj_en2jp", prompt_jp:`「${en}」の いみ は？`, prompt:en, audio:en, options: m.opts, answer: m.pos });
+  });
+
   window.QUESTIONS_LEVEL3 = all;
 })();

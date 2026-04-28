@@ -414,5 +414,203 @@
     Q({ stars:3, ptype:"num_ctx", prompt_jp:"よい こたえは？", prompt:s, options: m.opts, answer: m.pos });
   });
 
+  // ============= EIKEN-STYLE EXTENSIONS =============
+  // Inspired by actual Eiken 5 past papers — vocab/grammar fills, conversation
+  // responses, sentence ordering (the genuine 3★ test format), and listening responses.
+
+  // ★3 SENTENCE ORDERING (Eiken 5 Section 3 format) — 40+ items
+  // Pick the correctly-ordered English sentence.
+  function shuffleWords(correct) {
+    // Make 3 wrong orderings of the same words
+    const words = correct.replace(/[?.]/g,"").split(/\s+/);
+    const punct = correct.match(/[?.]/) ? correct.match(/[?.]/)[0] : "";
+    const wrongs = new Set();
+    let tries = 0;
+    while (wrongs.size < 3 && tries++ < 60) {
+      const a = words.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      const cap = a[0][0].toUpperCase() + a[0].slice(1);
+      a[0] = cap;
+      const cand = a.join(" ") + punct;
+      if (cand !== correct) wrongs.add(cand);
+    }
+    return Array.from(wrongs);
+  }
+  const orderings = [
+    ["これらの くつは いくらですか？", "How much are these shoes?"],
+    ["この しゃしん の おんなのこ は だれですか？", "Who is the girl in this photo?"],
+    ["あした の ピクニック に なにが ひつよう？", "What do we need for the picnic?"],
+    ["トムの おとうさんは なにを おしえますか？", "What does Tom's father teach?"],
+    ["わたし は ひろし に あさごはんを つくる", "I am cooking breakfast for Hiroshi"],
+    ["あなた の なまえは なんですか？", "What is your name?"],
+    ["ねこは どこに いますか？", "Where is the cat?"],
+    ["きみは なんさい？", "How old are you?"],
+    ["これは だれの ペン？", "Whose pen is this?"],
+    ["おかあさんは なにを かいますか？", "What does mother buy?"],
+    ["きみは おんがくが すき？", "Do you like music?"],
+    ["この いぬは かわいい", "This dog is cute"],
+    ["きょうは あついです", "It is hot today"],
+    ["にちようびに なにを する？", "What do you do on Sunday?"],
+    ["わたしは とうきょうに すんでいます", "I live in Tokyo"],
+    ["がっこうには ともだちが たくさん いる", "I have many friends at school"],
+    ["まいあさ じてんしゃで がっこうに いきます", "I go to school by bike every morning"],
+    ["きみの たんじょうびは いつ？", "When is your birthday?"],
+    ["この くつは とても たかい", "These shoes are very expensive"],
+    ["あの とりは あおいですか？", "Is that bird blue?"],
+    ["かれは サッカーが できますか？", "Can he play soccer?"],
+    ["わたしは ほん を よみたいです", "I want to read a book"],
+    ["かのじょは すしを たべません", "She does not eat sushi"],
+    ["がっこうは どこですか？", "Where is the school?"],
+    ["この ケーキは おいしい", "This cake is delicious"],
+    ["きみは なんの どうぶつ が すき？", "What animal do you like?"],
+    ["わたし は アメリカ から です", "I am from America"],
+    ["かれら は がくせい です", "They are students"],
+    ["そら は あおい です", "The sky is blue"],
+    ["ねこ は つくえ の した に いる", "The cat is under the desk"],
+    ["きょう は すいようび", "Today is Wednesday"],
+    ["トム は いつ おきますか？", "When does Tom get up?"],
+    ["わたし は おなか が すいた", "I am hungry"],
+    ["ボブ は おとうさん より せが たかい", "Bob is taller than his father"],
+    ["これ は あなたの かさ？", "Is this your umbrella?"],
+    ["わたしの いぬ は かしこい", "My dog is smart"],
+    ["かれら は こうえん で あそぶ", "They play in the park"],
+    ["わたし は えいごの せんせい です", "I am an English teacher"],
+    ["なに を たべる？", "What do you eat?"],
+    ["かのじょ は ピアノ を ひく", "She plays the piano"],
+  ];
+  orderings.forEach(([jp, en]) => {
+    const wrongs = shuffleWords(en);
+    if (wrongs.length < 3) return;
+    const opts = wrongs.slice(0, 3);
+    const pos = (Math.random()*4)|0;
+    opts.splice(pos, 0, en);
+    Q({ stars:3, ptype:"order", prompt_jp:`「${jp}」を ただしい えいごに！`, options: opts, answer: pos });
+  });
+
+  // ★2 LISTENING — Hear a question, pick the appropriate response (Eiken 5 Listening Part 1)
+  const listenResp = [
+    ["Is this your bag?", "Yes, it is.", ["Yes, it is.","Sure, I can.","On the chair.","I have a pen."]],
+    ["Who likes tennis in your family?", "My sister does.", ["My sister does.","It's a racket.","At school.","Pizza, please."]],
+    ["What's that bird?", "I don't know.", ["I don't know.","Thank you.","I like this park.","Yes, I am."]],
+    ["I like cats. How about you?", "Me, too.", ["Me, too.","Over there.","Good idea.","Thank you."]],
+    ["How many books do you have?", "Only one.", ["Only one.","By bike.","My favorite.","On Tuesday."]],
+    ["How old is your baby?", "10 months old.", ["10 months old.","He's fine.","Good job.","Yes, I do."]],
+    ["Do you live in Osaka?", "That's right.", ["That's right.","By bus.","Nice to meet you.","I'm fine."]],
+    ["Does your mother have a dog?", "No, she doesn't.", ["No, she doesn't.","No, she's a teacher.","Yes, please.","On Tuesday."]],
+    ["My birthday is in May.", "Mine is in April.", ["Mine is in April.","It's a big party.","I like winter.","No, thanks."]],
+    ["When is the show?", "It's next week.", ["It's next week.","I want a cake.","Please buy flowers.","Yes, I can."]],
+    ["We have a lot of cookies.", "We can share them.", ["We can share them.","Yes, it is.","I don't like salad.","Good morning."]],
+    ["Where is your school?", "Near the station.", ["Near the station.","I'm ten.","Yes, I do.","Pizza."]],
+    ["What time is it now?", "It's 3 o'clock.", ["It's 3 o'clock.","I'm Yuki.","On the desk.","Yes, I am."]],
+    ["Can you help me?", "Sure, I can.", ["Sure, I can.","I'm fine.","On Monday.","Pizza."]],
+    ["Do you want some water?", "Yes, please.", ["Yes, please.","I'm Yuki.","On Tuesday.","I can swim."]],
+    ["What's your favorite color?", "Blue.", ["Blue.","I'm a boy.","On the chair.","Yes, please."]],
+    ["Where's your mother?", "In the kitchen.", ["In the kitchen.","She is fine.","I'm hungry.","Yes."]],
+    ["How's the weather?", "It's sunny.", ["It's sunny.","I'm Yuki.","Pizza.","Yes."]],
+    ["What do you do after school?", "I play soccer.", ["I play soccer.","I'm fine.","I am ten.","Yes, please."]],
+    ["Do you like math?", "Yes, I do.", ["Yes, I do.","On Sunday.","I'm Yuki.","Pizza."]],
+  ];
+  listenResp.forEach(([q, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:2, ptype:"listen_resp", prompt_jp:`しつもんを きいて、こたえを えらべ！ 🔊`, audio: q, options: m.opts, answer: m.pos });
+  });
+
+  // ★2 CONVERSATION COMPLETION (Eiken 5 Section 2)
+  const conv = [
+    ["Teacher: Let's start the lesson. ___\nStudent: OK.", "Please open your book.", ["Please open your book.","See you tomorrow.","You can go home.","I'm sleepy."]],
+    ["Woman: What time is the next train?\nMan: ___", "At five o'clock.", ["At five o'clock.","Yes, it does.","For one hour.","It's good."]],
+    ["Mother: Bob, help me with dinner.\nBoy: ___ I'm coming.", "All right.", ["All right.","No, I can't.","It's ready.","You can drink it."]],
+    ["Girl: What class do you like?\nBoy: ___", "Science.", ["Science.","I go to school.","After lunch.","It's my homework."]],
+    ["Teacher: Please close the windows. ___\nStudent: Yes.", "It's cold.", ["It's cold.","Good morning.","Here you are.","It's today."]],
+    ["A: Are you ready?\nB: ___", "Yes, I am.", ["Yes, I am.","I'm Yuki.","On Friday.","I have a pen."]],
+    ["A: How was the test?\nB: ___", "It was easy.", ["It was easy.","I'm a student.","Pizza, please.","On Monday."]],
+    ["A: Whose ball is this?\nB: ___", "It's mine.", ["It's mine.","Yes, I do.","On the field.","Pink."]],
+    ["A: Excuse me. May I help you?\nB: ___", "Yes, please.", ["Yes, please.","I'm fine.","Goodbye.","See you."]],
+    ["A: How was your weekend?\nB: ___", "It was great!", ["It was great!","I'm a girl.","Yes, please.","On Saturday."]],
+    ["A: Let's play in the park.\nB: ___", "That sounds fun!", ["That sounds fun!","I'm fine, thanks.","On Tuesday.","I have a dog."]],
+    ["A: Mom, I'm hungry.\nB: ___", "OK, dinner is almost ready.", ["OK, dinner is almost ready.","I'm Yuki.","On the table.","Yes, I do."]],
+    ["A: Happy birthday!\nB: ___", "Thank you!", ["Thank you!","Good night.","Pizza, please.","See you."]],
+    ["A: Don't run inside.\nB: ___", "Sorry.", ["Sorry.","Yes, I can.","On Tuesday.","I'm fine."]],
+    ["A: Is this your phone?\nB: ___", "No, it's not.", ["No, it's not.","I'm Yuki.","On Sunday.","Pizza."]],
+  ];
+  conv.forEach(([q, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:2, ptype:"conv", prompt_jp:`あう こたえは どれ？`, prompt:q, options: m.opts, answer: m.pos });
+  });
+
+  // ★2 MORE GRAMMAR FILLS (Eiken 5 Section 1 style)
+  const moreGram = [
+    ["Mr. Sato is a teacher. He ___ math.","teaches",["plays","draws","speaks","teaches"]],
+    ["It's raining. Let's eat ___ home.","at",["at","in","on","under"]],
+    ["I always go shopping ___ Sunday.","on",["on","at","in","by"]],
+    ["I ___ a cat. She is cute.","have",["have","has","had","having"]],
+    ["Dad, please ___ this wall.","paint",["swim","sleep","paint","play"]],
+    ["I want some ___ in my coffee.","sugar",["paper","sun","light","sugar"]],
+    ["Is your brother on the team? Yes, ___ right.","that's",["we're","that's","she's","I'm"]],
+    ["Are you Canadian? No. I'm ___ America.","from",["to","from","under","by"]],
+    ["She often ___ pictures.","takes",["tells","does","takes","sings"]],
+    ["I like tennis. What ___ you?","about",["over","about","down","after"]],
+    ["My dad goes jogging ___ the morning.","in",["on","in","out","down"]],
+    ["Keiko and Megumi are friends. ___ like tennis.","They",["They","He","She","You"]],
+    ["Let's clean ___ classroom.","our",["we","our","us","ours"]],
+    ["What is Scott doing? He is ___ a doghouse.","making",["make","making","makes","made"]],
+    ["I'm reading a book ___ my room.","in",["in","on","at","by"]],
+    ["My birthday is ___ June 5.","on",["on","at","in","by"]],
+    ["I get up ___ 7 in the morning.","at",["at","on","in","by"]],
+    ["She is ___ tall girl.","a",["a","an","the","is"]],
+    ["I have ___ apple every morning.","an",["a","an","the","is"]],
+    ["___ you have any pets? Yes, a dog.","Do",["Do","Does","Are","Is"]],
+    ["___ your sister like music?","Does",["Do","Does","Are","Is"]],
+    ["Look at ___ boy. He is my brother.","that",["this","that","these","those"]],
+    ["Whose pencil is this? It's ___.","mine",["my","mine","me","I"]],
+    ["I want ___ go to the zoo.","to",["to","at","on","in"]],
+    ["She is good ___ tennis.","at",["at","on","in","by"]],
+    ["The cat is ___ the table.","under",["under","up","into","of"]],
+    ["I have a ball. ___ is red.","It",["It","He","She","They"]],
+    ["___ bag is this? — Mine.","Whose",["Who","Whose","What","Where"]],
+    ["I'm tired. Let's ___ a break.","take",["take","make","do","get"]],
+    ["My birthday party is ___ Saturday.","on",["on","at","in","by"]],
+  ];
+  moreGram.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:2, ptype:"gram_fill", prompt_jp:"あてはまる ことば は？", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // More vocab — school subjects, daily routines, family
+  const subjects = [["math","さんすう","🧮"],["science","りか","🔬"],["English","えいご","🔤"],["art","びじゅつ","🎨"],
+    ["music","おんがく","🎵"],["P.E.","たいいく","⚽"],["Japanese","こくご","✏️"],["history","れきし","📜"],
+    ["lunch","きゅうしょく","🍱"],["recess","きゅうけい","🤸"]];
+  subjects.forEach(([en, jp, emoji]) => {
+    let m = mc(en, subjects.map(s=>s[0]));
+    Q({ stars:1, ptype:"subj_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+    m = mc(jp, subjects.map(s=>s[1]));
+    Q({ stars:1, ptype:"subj_en2jp", prompt_jp:`「${en}」の いみ は？`, prompt:en, audio:en, options: m.opts, answer: m.pos });
+    m = mc(en, subjects.map(s=>s[0]));
+    Q({ stars:2, ptype:"subj_pic", prompt_jp:`これは えいごで？`, promptImage: emoji, options: m.opts, answer: m.pos });
+  });
+
+  // Daily routine words
+  const daily = [["wake up","おきる"],["have breakfast","あさごはんを たべる"],["go to school","がっこうへ いく"],
+    ["come home","いえに かえる"],["do homework","しゅくだいを する"],["take a bath","おふろに はいる"],
+    ["go to bed","ねる"],["watch TV","テレビを みる"],["play games","ゲームを する"],["read a book","ほんを よむ"]];
+  daily.forEach(([en, jp]) => {
+    const m = mc(en, daily.map(d=>d[0]));
+    Q({ stars:2, ptype:"daily", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+  });
+
+  // More family + people
+  const ppl = [["man","おとこのひと"],["woman","おんなのひと"],["boy","おとこのこ"],["girl","おんなのこ"],
+    ["baby","あかちゃん"],["child","こども"],["children","こどもたち"],["people","ひとびと"],
+    ["teacher","せんせい"],["student","せいと"],["friend","ともだち"],["classmate","クラスメイト"]];
+  ppl.forEach(([en, jp]) => {
+    const m = mc(en, ppl.map(p=>p[0]));
+    Q({ stars:1, ptype:"ppl_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+    const m2 = mc(jp, ppl.map(p=>p[1]));
+    Q({ stars:1, ptype:"ppl_en2jp", prompt_jp:`「${en}」の いみ は？`, prompt:en, audio:en, options: m2.opts, answer: m2.pos });
+  });
+
   window.QUESTIONS_LEVEL2 = all;
 })();
