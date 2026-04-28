@@ -182,7 +182,7 @@ window.Game = (() => {
     let dmg = p.attackPower + S.pendingDamageBonus;
     const mult = Monsters.damageMultiplier(S.boss);
     dmg = Math.round(dmg * mult);
-    if (S.doubleNextAttack && S.currentIdx > 0) { dmg *= 2; S.doubleNextAttack = false; }
+    if (S.doubleNextAttack) { dmg *= 2; S.doubleNextAttack = false; }
     part.hp = Math.max(0, part.hp - dmg);
     SND.sfxHit();
     UI.toast(JP.hit_part(p.name, part.name_jp, dmg), 1100);
@@ -242,6 +242,8 @@ window.Game = (() => {
     p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
     applyCardEffect(p, card, null);
     SND.sfxCard();
+    const core = S.boss.parts.find(x => x.effect === "win");
+    if (core && core.hp <= 0) { setTimeout(doVictory, 600); return; }
     goAction();
   }
 
@@ -306,8 +308,6 @@ window.Game = (() => {
         SND.sfxHit();
       }
       UI.toast(`ベロ ビーム！ ${ef.v}ダメ ×${n}`);
-      const core = S.boss.parts.find(x => x.effect === "win");
-      if (core && core.hp <= 0) { setTimeout(doVictory, 600); return; }
     } else if (ef.type === C.REVEAL_ROLE) {
       const isSpy = target.role === "spy";
       UI.toast(isSpy ? `${target.name} は スパイ！` : `${target.name} は シロ！`, 2400);
