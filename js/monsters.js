@@ -1,320 +1,450 @@
 // Boss definitions and SVG renderer.
-// Each boss has parts. Each part has hp, effect, and draw fn that takes a damage state.
-// Damage state: 0 = healthy, 1 = bloody/hurt, 2 = destroyed.
+// Each part has a draw fn that returns an SVG fragment based on damage state.
+// Damage states: 0 healthy, 1 damaged (hp <= 50%), 2 destroyed (hp = 0).
 window.Monsters = (() => {
 
-  // ---- Reusable SVG part builders ----
-  const SVG_NS = "http://www.w3.org/2000/svg";
+  function partState(p) { if (p.hp <= 0) return 2; if (p.hp <= p.maxHP * 0.5) return 1; return 0; }
 
-  function partState(part) {
-    if (part.hp <= 0) return 2;
-    if (part.hp <= part.maxHP * 0.5) return 1;
-    return 0;
-  }
+  // -------- Reusable drawing helpers --------
 
-  // -- Eye (round, with pupil) --
-  function drawEye(part, color="#fff") {
+  // Big cartoon eye with sparkle, eyebrow optionally
+  function drawEye(part, color) {
     const s = partState(part);
-    const {x, y, r} = part.geom;
+    const { x, y, r, mood = "happy" } = part.geom;
     if (s === 2) {
-      // X eye
-      return `
-        <g class="part part-${part.id}">
-          <circle cx="${x}" cy="${y}" r="${r}" fill="#553" opacity=".35"/>
-          <line x1="${x-r*0.7}" y1="${y-r*0.7}" x2="${x+r*0.7}" y2="${y+r*0.7}" stroke="#000" stroke-width="${r*0.35}" stroke-linecap="round"/>
-          <line x1="${x+r*0.7}" y1="${y-r*0.7}" x2="${x-r*0.7}" y2="${y+r*0.7}" stroke="#000" stroke-width="${r*0.35}" stroke-linecap="round"/>
-        </g>`;
-    }
-    const tear = s === 1 ? `<path d="M ${x-r*0.3} ${y+r*0.7} q -2 ${r*0.6} ${r*0.4} ${r*0.9}" fill="#7cf" opacity=".9"/>` : "";
-    const blink = part.geom.blink ? "" : "";
-    return `
-      <g class="part part-${part.id} bob" style="animation-delay: ${(part.geom.delay||0)}s">
-        <circle cx="${x}" cy="${y}" r="${r}" fill="${color}" stroke="#000" stroke-width="3"/>
-        <circle cx="${x+r*0.15}" cy="${y+r*0.15}" r="${r*0.45}" fill="#222"/>
-        <circle cx="${x+r*0.3}" cy="${y-r*0.05}" r="${r*0.15}" fill="#fff"/>
-        ${tear}
+      return `<g class="part">
+        <circle cx="${x}" cy="${y}" r="${r}" fill="#3a2a4a" opacity=".5"/>
+        <line x1="${x-r*0.7}" y1="${y-r*0.7}" x2="${x+r*0.7}" y2="${y+r*0.7}" stroke="#000" stroke-width="${Math.max(4,r*0.3)}" stroke-linecap="round"/>
+        <line x1="${x+r*0.7}" y1="${y-r*0.7}" x2="${x-r*0.7}" y2="${y+r*0.7}" stroke="#000" stroke-width="${Math.max(4,r*0.3)}" stroke-linecap="round"/>
+        <text x="${x}" y="${y+r*1.6}" text-anchor="middle" font-size="${r*0.9}">💫</text>
       </g>`;
+    }
+    const tear = s === 1 ? `<path d="M ${x-r*0.3} ${y+r*0.4} Q ${x-r*0.5} ${y+r*1.2} ${x-r*0.1} ${y+r*1.6}" fill="#7cd1ff" stroke="#0a3a5a" stroke-width="2"/>` : "";
+    const browL = mood === "angry" ? `<path d="M ${x-r} ${y-r*1.1} L ${x+r*0.4} ${y-r*0.5}" stroke="#000" stroke-width="${r*0.25}" stroke-linecap="round"/>` :
+                                      `<path d="M ${x-r*0.9} ${y-r*1.2} Q ${x} ${y-r*1.6} ${x+r*0.7} ${y-r*1.1}" stroke="#000" stroke-width="${r*0.18}" fill="none" stroke-linecap="round"/>`;
+    return `<g class="part bob" style="animation-delay:${(part.geom.delay||0)}s; transform-origin:${x}px ${y}px">
+      <ellipse cx="${x+r*0.05}" cy="${y+r*0.15}" rx="${r}" ry="${r*1.05}" fill="#fff" stroke="#000" stroke-width="${Math.max(3,r*0.15)}"/>
+      <ellipse cx="${x+r*0.1}" cy="${y+r*0.18}" rx="${r*0.55}" ry="${r*0.7}" fill="#222"/>
+      <circle cx="${x+r*0.3}" cy="${y-r*0.1}" r="${r*0.22}" fill="#fff"/>
+      <circle cx="${x-r*0.15}" cy="${y+r*0.35}" r="${r*0.1}" fill="#fff" opacity=".7"/>
+      ${browL}
+      ${tear}
+    </g>`;
   }
 
-  // -- Tentacle (curved squiggle) --
-  function drawTentacle(part, color="#ff8ec7") {
+  // Tentacle with curve, suction cups, gradient feel
+  function drawTentacle(part, color) {
     const s = partState(part);
-    const {x, y, dir, len} = part.geom; // dir: angle in degrees
+    const { x, y, dir, len } = part.geom;
     const rad = dir * Math.PI/180;
     if (s === 2) {
-      // stump with bandage
-      const sx = x + Math.cos(rad)*30;
-      const sy = y + Math.sin(rad)*30;
-      return `
-        <g class="part part-${part.id}">
-          <ellipse cx="${sx}" cy="${sy}" rx="22" ry="14" fill="${color}" stroke="#000" stroke-width="3"/>
-          <rect x="${sx-22}" y="${sy-6}" width="44" height="12" fill="#fff" stroke="#000" stroke-width="2"/>
-          <line x1="${sx-18}" y1="${sy-6}" x2="${sx-12}" y2="${sy+6}" stroke="#000" stroke-width="2"/>
-          <line x1="${sx-6}" y1="${sy-6}" x2="${sx}" y2="${sy+6}" stroke="#000" stroke-width="2"/>
-          <line x1="${sx+6}" y1="${sy-6}" x2="${sx+12}" y2="${sy+6}" stroke="#000" stroke-width="2"/>
-        </g>`;
+      const sx = x + Math.cos(rad)*40;
+      const sy = y + Math.sin(rad)*40;
+      return `<g class="part">
+        <ellipse cx="${sx}" cy="${sy}" rx="28" ry="20" fill="${color}" stroke="#000" stroke-width="3"/>
+        <path d="M ${sx-26} ${sy-2} L ${sx+26} ${sy-2} L ${sx+26} ${sy+10} L ${sx-26} ${sy+10} Z" fill="#fff" stroke="#000" stroke-width="2"/>
+        <line x1="${sx-22}" y1="${sy-4}" x2="${sx-16}" y2="${sy+12}" stroke="#000" stroke-width="2"/>
+        <line x1="${sx-12}" y1="${sy-4}" x2="${sx-6}" y2="${sy+12}" stroke="#000" stroke-width="2"/>
+        <line x1="${sx-2}" y1="${sy-4}" x2="${sx+4}" y2="${sy+12}" stroke="#000" stroke-width="2"/>
+        <line x1="${sx+8}" y1="${sy-4}" x2="${sx+14}" y2="${sy+12}" stroke="#000" stroke-width="2"/>
+        <text x="${sx}" y="${sy-22}" text-anchor="middle" font-size="20">💥</text>
+      </g>`;
     }
-    // wavy tentacle
-    const cx1 = x + Math.cos(rad)*len*0.4 + Math.cos(rad+1.5)*30;
-    const cy1 = y + Math.sin(rad)*len*0.4 + Math.sin(rad+1.5)*30;
+    // 3-segment curve for waviness
+    const cx1 = x + Math.cos(rad)*len*0.35 + Math.cos(rad+1.5)*30;
+    const cy1 = y + Math.sin(rad)*len*0.35 + Math.sin(rad+1.5)*30;
     const cx2 = x + Math.cos(rad)*len*0.7 - Math.cos(rad+1.5)*30;
     const cy2 = y + Math.sin(rad)*len*0.7 - Math.sin(rad+1.5)*30;
     const ex = x + Math.cos(rad)*len;
     const ey = y + Math.sin(rad)*len;
-    const hurt = s === 1 ? `<path d="M ${cx1-6} ${cy1} l 6 -10 l 6 10 l 6 -10" stroke="#ff3b6b" stroke-width="3" fill="none"/>` : "";
-    return `
-      <g class="part part-${part.id}">
-        <path d="M ${x} ${y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${ex} ${ey}"
-          stroke="${color}" stroke-width="34" stroke-linecap="round" fill="none"
-          stroke-linejoin="round" />
-        <path d="M ${x} ${y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${ex} ${ey}"
-          stroke="#000" stroke-width="38" stroke-linecap="round" fill="none" opacity=".18"/>
-        ${hurt}
-      </g>`;
+    const cracks = s === 1 ? `
+      <text x="${cx1}" y="${cy1}" text-anchor="middle" font-size="22" fill="#fff" stroke="#000" stroke-width="0.5">🩹</text>
+    ` : "";
+    // Suction cups along the way
+    const cups = (s === 0) ? `
+      <circle cx="${cx1+6}" cy="${cy1+6}" r="6" fill="#fff" stroke="#000" stroke-width="2"/>
+      <circle cx="${cx2-4}" cy="${cy2-2}" r="5" fill="#fff" stroke="#000" stroke-width="2"/>
+      <circle cx="${ex-Math.cos(rad)*22}" cy="${ey-Math.sin(rad)*22}" r="5" fill="#fff" stroke="#000" stroke-width="2"/>
+    ` : "";
+    return `<g class="part">
+      <path d="M ${x} ${y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${ex} ${ey}"
+        stroke="#000" stroke-width="42" stroke-linecap="round" fill="none"/>
+      <path d="M ${x} ${y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${ex} ${ey}"
+        stroke="${color}" stroke-width="34" stroke-linecap="round" fill="none"/>
+      <path d="M ${x} ${y} C ${cx1+4} ${cy1-4}, ${cx2+2} ${cy2-2}, ${ex+2} ${ey-2}"
+        stroke="rgba(255,255,255,.35)" stroke-width="10" stroke-linecap="round" fill="none"/>
+      ${cups}
+      ${cracks}
+    </g>`;
   }
 
-  // -- Beak / mouth --
-  function drawBeak(part, color="#ffcc66") {
+  // Mouth / beak with teeth + tongue
+  function drawMouth(part, color) {
     const s = partState(part);
-    const {x, y, w, h, mood="open"} = part.geom;
+    const { x, y, w, h } = part.geom;
     if (s === 2) {
-      return `
-        <g class="part part-${part.id}">
-          <text x="${x}" y="${y+5}" text-anchor="middle" font-size="${h*1.4}" fill="#000" font-weight="900">×</text>
-        </g>`;
-    }
-    // open mouth with teeth
-    return `
-      <g class="part part-${part.id}">
-        <ellipse cx="${x}" cy="${y}" rx="${w}" ry="${h}" fill="#220" stroke="#000" stroke-width="3"/>
-        <polygon points="${x-w*0.6},${y-h*0.5} ${x-w*0.4},${y+h*0.4} ${x-w*0.2},${y-h*0.5}" fill="#fff"/>
-        <polygon points="${x-w*0.05},${y-h*0.5} ${x+w*0.15},${y+h*0.4} ${x+w*0.35},${y-h*0.5}" fill="#fff"/>
-        <polygon points="${x+w*0.4},${y-h*0.5} ${x+w*0.6},${y+h*0.5} ${x+w*0.8},${y-h*0.5}" fill="#fff"/>
-        ${s===1 ? `<path d="M ${x-w} ${y-h} q ${w} -10 ${w*2} 0" stroke="#ff3b6b" stroke-width="3" fill="none"/>` : ""}
-      </g>`;
-  }
-
-  // -- Antenna --
-  function drawAntenna(part, color="#9af") {
-    const s = partState(part);
-    const {x, y, h} = part.geom;
-    if (s === 2) {
-      return `<g class="part part-${part.id}">
-        <line x1="${x}" y1="${y}" x2="${x}" y2="${y-h*0.3}" stroke="#000" stroke-width="6" stroke-linecap="round"/>
-        <text x="${x+10}" y="${y-h*0.2}" font-size="22" fill="#ff3b6b">💥</text>
+      return `<g class="part">
+        <ellipse cx="${x}" cy="${y}" rx="${w}" ry="${h*0.6}" fill="#fff" stroke="#000" stroke-width="3"/>
+        <text x="${x}" y="${y+h*0.6}" text-anchor="middle" font-size="${h*1.4}" fill="#000" font-weight="900">×</text>
       </g>`;
     }
-    return `
-      <g class="part part-${part.id} bob" style="animation-delay:.3s">
-        <line x1="${x}" y1="${y}" x2="${x}" y2="${y-h}" stroke="#000" stroke-width="6" stroke-linecap="round"/>
-        <circle cx="${x}" cy="${y-h-8}" r="14" fill="${color}" stroke="#000" stroke-width="3"/>
-        ${s===1 ? `<path d="M ${x-12} ${y-h*0.5} l 24 6 l -24 6" stroke="#ff3b6b" stroke-width="2" fill="none"/>` : ""}
-      </g>`;
+    const teeth = `
+      <polygon points="${x-w*0.55},${y-h*0.3} ${x-w*0.4},${y+h*0.55} ${x-w*0.25},${y-h*0.3}" fill="#fff" stroke="#000" stroke-width="1.5"/>
+      <polygon points="${x-w*0.1},${y-h*0.3} ${x+w*0.05},${y+h*0.55} ${x+w*0.2},${y-h*0.3}" fill="#fff" stroke="#000" stroke-width="1.5"/>
+      <polygon points="${x+w*0.35},${y-h*0.3} ${x+w*0.5},${y+h*0.55} ${x+w*0.65},${y-h*0.3}" fill="#fff" stroke="#000" stroke-width="1.5"/>`;
+    const tongue = `<ellipse cx="${x}" cy="${y+h*0.4}" rx="${w*0.45}" ry="${h*0.3}" fill="#ff7099" stroke="#000" stroke-width="2"/>`;
+    const drool = s===1 ? `<path d="M ${x+w*0.3} ${y+h*0.4} Q ${x+w*0.4} ${y+h*1.2} ${x+w*0.5} ${y+h*1.6}" stroke="#7cd1ff" stroke-width="3" fill="none"/>` : "";
+    return `<g class="part">
+      <path d="M ${x-w} ${y-h*0.4} Q ${x} ${y-h*0.6} ${x+w} ${y-h*0.4} Q ${x+w*1.05} ${y+h*0.7} ${x} ${y+h} Q ${x-w*1.05} ${y+h*0.7} ${x-w} ${y-h*0.4} Z"
+            fill="#3a0d1a" stroke="#000" stroke-width="3"/>
+      ${tongue}
+      ${teeth}
+      ${drool}
+    </g>`;
   }
 
-  // -- Leg / arm --
-  function drawLeg(part, color="#ff8ec7") {
+  // Antenna with bouncy ball
+  function drawAntenna(part, color) {
     const s = partState(part);
-    const {x, y, dir, len} = part.geom;
+    const { x, y, h } = part.geom;
+    if (s === 2) {
+      return `<g class="part">
+        <line x1="${x}" y1="${y}" x2="${x+6}" y2="${y-h*0.4}" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+        <text x="${x+12}" y="${y-h*0.3}" font-size="22">💥</text>
+      </g>`;
+    }
+    const wave = s === 1 ? "transform=\"rotate(8 "+x+" "+y+")\"" : "";
+    return `<g class="part bob" style="animation-delay:.3s" ${wave}>
+      <path d="M ${x} ${y} Q ${x-8} ${y-h*0.5} ${x} ${y-h}" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <circle cx="${x}" cy="${y-h-12}" r="14" fill="${color}" stroke="#000" stroke-width="3"/>
+      <circle cx="${x}" cy="${y-h-12}" r="14" fill="${color}" opacity=".4"/>
+      <circle cx="${x-4}" cy="${y-h-16}" r="4" fill="#fff" opacity=".7"/>
+      <text x="${x}" y="${y-h-7}" text-anchor="middle" font-size="14" fill="#000">★</text>
+    </g>`;
+  }
+
+  // Limb (arm/leg) with chunky shape, hand/foot at end
+  function drawLeg(part, color, opts={}) {
+    const s = partState(part);
+    const { x, y, dir, len } = part.geom;
     const rad = dir * Math.PI/180;
-    if (s === 2) {
-      const sx = x + Math.cos(rad)*30;
-      const sy = y + Math.sin(rad)*30;
-      return `<g class="part part-${part.id}">
-        <ellipse cx="${sx}" cy="${sy}" rx="20" ry="14" fill="${color}" stroke="#000" stroke-width="3"/>
-        <text x="${sx}" y="${sy+5}" text-anchor="middle" font-size="20" fill="#000">×</text>
-      </g>`;
-    }
     const ex = x + Math.cos(rad)*len;
     const ey = y + Math.sin(rad)*len;
-    return `<g class="part part-${part.id}">
-      <line x1="${x}" y1="${y}" x2="${ex}" y2="${ey}" stroke="${color}" stroke-width="22" stroke-linecap="round"/>
-      <line x1="${x}" y1="${y}" x2="${ex}" y2="${ey}" stroke="#000" stroke-width="26" stroke-linecap="round" opacity=".18"/>
-      <ellipse cx="${ex}" cy="${ey}" rx="18" ry="10" fill="${color}" stroke="#000" stroke-width="3"/>
-      ${s===1 ? `<text x="${ex}" y="${ey-10}" font-size="20" fill="#ff3b6b">!</text>` : ""}
-    </g>`;
-  }
-
-  // -- Belly screen / button (special) --
-  function drawBelly(part) {
-    const s = partState(part);
-    const {x, y, w, h} = part.geom;
     if (s === 2) {
-      return `<g class="part part-${part.id}">
-        <rect x="${x-w}" y="${y-h}" width="${w*2}" height="${h*2}" rx="10" fill="#222" stroke="#000" stroke-width="3"/>
-        <text x="${x}" y="${y+8}" text-anchor="middle" font-size="44" fill="#ff3b6b">×</text>
+      return `<g class="part">
+        <ellipse cx="${x+Math.cos(rad)*30}" cy="${y+Math.sin(rad)*30}" rx="22" ry="16" fill="${color}" stroke="#000" stroke-width="3"/>
+        <text x="${x+Math.cos(rad)*30}" y="${y+Math.sin(rad)*30+7}" text-anchor="middle" font-size="24">💥</text>
       </g>`;
     }
-    return `<g class="part part-${part.id}">
-      <rect x="${x-w}" y="${y-h}" width="${w*2}" height="${h*2}" rx="10" fill="#0af" stroke="#000" stroke-width="3"/>
-      <text x="${x}" y="${y+8}" text-anchor="middle" font-size="34" fill="#fff" font-weight="900">${s===1 ? "?_?" : ":3"}</text>
+    const claw = opts.claw ? `<path d="M ${ex-10} ${ey-12} L ${ex-4} ${ey-22} L ${ex+2} ${ey-12}" fill="#eee" stroke="#000" stroke-width="2"/>
+      <path d="M ${ex+2} ${ey-12} L ${ex+8} ${ey-22} L ${ex+14} ${ey-12}" fill="#eee" stroke="#000" stroke-width="2"/>` : "";
+    const hand = opts.hand ? `<circle cx="${ex}" cy="${ey}" r="22" fill="${color}" stroke="#000" stroke-width="3"/>
+      <circle cx="${ex-8}" cy="${ey-2}" r="5" fill="#fff" opacity=".6"/>` : "";
+    const foot = opts.foot ? `<ellipse cx="${ex}" cy="${ey}" rx="24" ry="14" fill="${color}" stroke="#000" stroke-width="3"/>
+      <ellipse cx="${ex-8}" cy="${ey-2}" rx="3" ry="2" fill="#fff" opacity=".6"/>` : "";
+    const bruise = s===1 ? `<circle cx="${(x+ex)/2}" cy="${(y+ey)/2}" r="10" fill="#7a3a55" opacity=".7"/>` : "";
+    return `<g class="part">
+      <line x1="${x}" y1="${y}" x2="${ex}" y2="${ey}" stroke="#000" stroke-width="32" stroke-linecap="round"/>
+      <line x1="${x}" y1="${y}" x2="${ex}" y2="${ey}" stroke="${color}" stroke-width="24" stroke-linecap="round"/>
+      <line x1="${x-2}" y1="${y-2}" x2="${ex-2}" y2="${ey-2}" stroke="rgba(255,255,255,.3)" stroke-width="8" stroke-linecap="round"/>
+      ${hand}${foot}${claw}${bruise}
     </g>`;
   }
 
-  // -- Tongue (silly) --
-  function drawTongue(part, color="#ff5577") {
+  // Belly screen (digital face) or general "body part"
+  function drawBelly(part, color) {
     const s = partState(part);
-    const {x, y, len} = part.geom;
+    const { x, y, w, h } = part.geom;
     if (s === 2) {
-      return `<g class="part part-${part.id}">
-        <text x="${x}" y="${y+10}" text-anchor="middle" font-size="22" fill="#000">×</text>
+      return `<g class="part">
+        <rect x="${x-w}" y="${y-h}" width="${w*2}" height="${h*2}" rx="14" fill="#222" stroke="#000" stroke-width="3"/>
+        <text x="${x}" y="${y+h*0.4}" text-anchor="middle" font-size="${h*1.4}" fill="#ff3b6b" font-weight="900">×</text>
+        <text x="${x-w*0.7}" y="${y-h*0.4}" font-size="20">⚡</text>
+        <text x="${x+w*0.5}" y="${y-h*0.4}" font-size="20">💥</text>
       </g>`;
     }
-    return `<g class="part part-${part.id} bob" style="animation-delay:.2s">
-      <path d="M ${x-12} ${y} q 0 ${len*0.5} ${len*0.3} ${len}
-                q ${len*0.3} ${len*0.2} ${len*0.6} 0
-                l 0 -${len*0.6} q -${len*0.3} -${len*0.2} -${len*0.6} 0 z"
-            fill="${color}" stroke="#000" stroke-width="3"/>
+    const face = s === 1 ? ":(" : ":3";
+    return `<g class="part">
+      <rect x="${x-w-3}" y="${y-h-3}" width="${(w+3)*2}" height="${(h+3)*2}" rx="16" fill="#000"/>
+      <rect x="${x-w}" y="${y-h}" width="${w*2}" height="${h*2}" rx="14" fill="#0a3548" stroke="#000" stroke-width="0"/>
+      <rect x="${x-w+4}" y="${y-h+4}" width="${w*2-8}" height="${h*2-8}" rx="10" fill="#0fc4ff"/>
+      <text x="${x}" y="${y+8}" text-anchor="middle" font-size="${h*0.9}" fill="#001a2e" font-weight="900">${face}</text>
+      <rect x="${x-w}" y="${y-h}" width="${w*2}" height="${h*0.4}" rx="14" fill="#fff" opacity=".25"/>
     </g>`;
   }
 
-  // ---- Boss factory: returns fresh deep copies ----
+  // Tongue (long, dangling)
+  function drawTongue(part, color) {
+    const s = partState(part);
+    const { x, y, len } = part.geom;
+    if (s === 2) {
+      return `<g class="part">
+        <text x="${x}" y="${y+18}" text-anchor="middle" font-size="22">💥</text>
+      </g>`;
+    }
+    return `<g class="part bob" style="animation-delay:.4s">
+      <path d="M ${x-14} ${y} Q ${x-22} ${y+len*0.3} ${x-10} ${y+len*0.6} Q ${x} ${y+len*0.85} ${x+10} ${y+len*0.6} Q ${x+22} ${y+len*0.3} ${x+14} ${y} Z"
+            fill="#ff5a8a" stroke="#000" stroke-width="3"/>
+      <line x1="${x}" y1="${y+10}" x2="${x}" y2="${y+len*0.7}" stroke="#c93366" stroke-width="3"/>
+      <ellipse cx="${x-7}" cy="${y+10}" rx="3" ry="6" fill="#fff" opacity=".5"/>
+    </g>`;
+  }
+
+  // Tail (with cute end)
+  function drawTail(part, color) {
+    const s = partState(part);
+    const { x, y, dir, len } = part.geom;
+    const rad = dir * Math.PI/180;
+    if (s === 2) {
+      return `<g class="part">
+        <text x="${x+Math.cos(rad)*30}" y="${y+Math.sin(rad)*30}" text-anchor="middle" font-size="24">💥</text>
+      </g>`;
+    }
+    const cx = x + Math.cos(rad)*len*0.5;
+    const cy = y + Math.sin(rad)*len*0.5 + 30;
+    const ex = x + Math.cos(rad)*len;
+    const ey = y + Math.sin(rad)*len;
+    return `<g class="part">
+      <path d="M ${x} ${y} Q ${cx} ${cy} ${ex} ${ey}" stroke="#000" stroke-width="22" fill="none" stroke-linecap="round"/>
+      <path d="M ${x} ${y} Q ${cx} ${cy} ${ex} ${ey}" stroke="${color}" stroke-width="14" fill="none" stroke-linecap="round"/>
+      <circle cx="${ex}" cy="${ey}" r="14" fill="${color}" stroke="#000" stroke-width="3"/>
+      <text x="${ex}" y="${ey+5}" text-anchor="middle" font-size="14">⭐</text>
+    </g>`;
+  }
+
+  // Core (heart/brain weak point) — pulses
+  function drawCore(part, color) {
+    const s = partState(part);
+    const { x, y, r } = part.geom;
+    if (s === 2) {
+      // Should be game over, but show shattered core anyway
+      return `<g class="part"><text x="${x}" y="${y}" text-anchor="middle" font-size="${r*2}">💥</text></g>`;
+    }
+    const heart = `<path d="M ${x} ${y+r*0.7}
+      C ${x-r*1.4} ${y-r*0.2}, ${x-r*1.4} ${y-r*1.1}, ${x-r*0.5} ${y-r*0.9}
+      C ${x-r*0.2} ${y-r*0.85}, ${x} ${y-r*0.5}, ${x} ${y-r*0.3}
+      C ${x} ${y-r*0.5}, ${x+r*0.2} ${y-r*0.85}, ${x+r*0.5} ${y-r*0.9}
+      C ${x+r*1.4} ${y-r*1.1}, ${x+r*1.4} ${y-r*0.2}, ${x} ${y+r*0.7} Z"
+      fill="#ff3b6b" stroke="#000" stroke-width="3"/>`;
+    const glow = `<circle cx="${x}" cy="${y}" r="${r*1.6}" fill="#ff3b6b" opacity=".3" class="bob"/>`;
+    const cracks = s===1 ? `<path d="M ${x-r*0.2} ${y-r*0.5} L ${x+r*0.1} ${y} L ${x-r*0.1} ${y+r*0.3}" stroke="#000" stroke-width="3" fill="none"/>` : "";
+    const sparkle = `<text x="${x-r*0.4}" y="${y-r*0.2}" font-size="${r*0.7}" fill="#fff" opacity=".9">✦</text>`;
+    return `<g class="part" style="transform-origin:${x}px ${y}px">
+      ${glow}
+      ${heart}
+      ${sparkle}
+      ${cracks}
+    </g>`;
+  }
+
+  // Cheek blush
+  function blushPair(cx, cy, dx) {
+    return `<ellipse cx="${cx-dx}" cy="${cy}" rx="14" ry="9" fill="#ff6688" opacity=".55"/>
+            <ellipse cx="${cx+dx}" cy="${cy}" rx="14" ry="9" fill="#ff6688" opacity=".55"/>`;
+  }
+
+  // -------- Boss factories --------
 
   function makeTakoTakoSahur() {
+    const color = "#ff8ec7";
     return {
       id: "tako",
       name_jp: "タコタコ サフール",
       name_en: "Tako Tako Sahur",
       catchphrase: "タコ・タコ・サフール！",
-      color: "#ff8ec7",
-      // boss-level attack pattern
+      color,
       attacksPerRound: 2,
       bodySVG: () => `
-        <ellipse cx="400" cy="220" rx="160" ry="130" fill="#ff8ec7" stroke="#000" stroke-width="4"/>
-        <ellipse cx="400" cy="170" rx="170" ry="80" fill="#ffaad4" stroke="#000" stroke-width="3" opacity=".6"/>
+        <defs>
+          <radialGradient id="takoBody" cx=".4" cy=".3" r=".8">
+            <stop offset="0" stop-color="#ffc4dc"/>
+            <stop offset="1" stop-color="#ff5fa3"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="408" cy="240" rx="178" ry="50" fill="#000" opacity=".25"/>
+        <ellipse cx="400" cy="200" rx="170" ry="135" fill="#000"/>
+        <ellipse cx="400" cy="200" rx="160" ry="125" fill="url(#takoBody)"/>
+        <ellipse cx="370" cy="140" rx="55" ry="30" fill="#fff" opacity=".45"/>
+        <ellipse cx="420" cy="120" rx="20" ry="10" fill="#fff" opacity=".7"/>
+        ${blushPair(400, 230, 80)}
       `,
       parts: [
-        { id:"t1", type:"limb", name_jp:"あし1", maxHP:6, hp:6, geom:{x:280,y:250,dir:165,len:140}, draw: drawTentacle, effect:"atk-1" },
-        { id:"t2", type:"limb", name_jp:"あし2", maxHP:6, hp:6, geom:{x:300,y:280,dir:185,len:130}, draw: drawTentacle, effect:"atk-1" },
-        { id:"t3", type:"limb", name_jp:"あし3", maxHP:6, hp:6, geom:{x:340,y:310,dir:200,len:130}, draw: drawTentacle, effect:"atk-1" },
-        { id:"t4", type:"limb", name_jp:"あし4", maxHP:6, hp:6, geom:{x:460,y:310,dir:340,len:130}, draw: drawTentacle, effect:"atk-1" },
-        { id:"t5", type:"limb", name_jp:"あし5", maxHP:6, hp:6, geom:{x:500,y:280,dir:355,len:130}, draw: drawTentacle, effect:"atk-1" },
-        { id:"t6", type:"limb", name_jp:"あし6", maxHP:6, hp:6, geom:{x:520,y:250,dir:15,len:140}, draw: drawTentacle, effect:"atk-1" },
-        { id:"eL", type:"eye",  name_jp:"ひだりめ", maxHP:8, hp:8, geom:{x:355,y:180,r:30,delay:0}, draw: drawEye, effect:"miss-50" },
-        { id:"eR", type:"eye",  name_jp:"みぎめ",  maxHP:8, hp:8, geom:{x:445,y:180,r:30,delay:.4}, draw: drawEye, effect:"miss-30" },
-        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:10, hp:10, geom:{x:400,y:240,w:40,h:18}, draw: drawBeak, effect:"no-poison" },
-        { id:"core", type:"core", name_jp:"のうみそ", maxHP:22, hp:22, geom:{x:400,y:120,r:28}, draw: drawEye, effect:"win" },
+        { id:"t1", type:"limb", name_jp:"あし1", maxHP:6, hp:6, geom:{x:280,y:300,dir:165,len:130}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"t2", type:"limb", name_jp:"あし2", maxHP:6, hp:6, geom:{x:310,y:330,dir:185,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"t3", type:"limb", name_jp:"あし3", maxHP:6, hp:6, geom:{x:355,y:340,dir:200,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"t4", type:"limb", name_jp:"あし4", maxHP:6, hp:6, geom:{x:445,y:340,dir:340,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"t5", type:"limb", name_jp:"あし5", maxHP:6, hp:6, geom:{x:490,y:330,dir:355,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"t6", type:"limb", name_jp:"あし6", maxHP:6, hp:6, geom:{x:520,y:300,dir:15,len:130}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"eL", type:"eye",  name_jp:"ひだりめ", maxHP:8, hp:8, geom:{x:355,y:175,r:30,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
+        { id:"eR", type:"eye",  name_jp:"みぎめ",  maxHP:8, hp:8, geom:{x:445,y:175,r:30,delay:.4}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:10, hp:10, geom:{x:400,y:250,w:38,h:18}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"core", type:"core", name_jp:"ハート（よわてん）", maxHP:22, hp:22, geom:{x:400,y:90,r:24}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: ["イタ〜！","ぎゃー！","タコパ〜！","おしりが ピリピリ！","タコ・タコ・タコ〜！"]
+      hits: ["イタ〜！","タコパ〜！","おしりが ピリピリ！","タコ・タコ・タコ〜！"]
     };
   }
 
   function makeBombardiroUnkodilo() {
+    const color = "#a87245";
     return {
       id: "unko",
       name_jp: "ボンバルディロ ウンコディロ",
       name_en: "Bombardiro Unkodilo",
       catchphrase: "ボンバルディロ・ウンコディロ！",
-      color: "#9b6b3a",
+      color,
       attacksPerRound: 2,
       bodySVG: () => `
-        <ellipse cx="400" cy="240" rx="180" ry="120" fill="#9b6b3a" stroke="#000" stroke-width="4"/>
-        <ellipse cx="400" cy="180" rx="120" ry="80" fill="#7a4c20" stroke="#000" stroke-width="3"/>
-        <ellipse cx="380" cy="230" rx="40" ry="20" fill="#b8895a"/>
-        <ellipse cx="420" cy="260" rx="30" ry="14" fill="#b8895a"/>
-        <ellipse cx="350" cy="200" rx="14" ry="6" fill="#5a3818"/>
-        <ellipse cx="450" cy="220" rx="12" ry="6" fill="#5a3818"/>
+        <defs>
+          <linearGradient id="unkoBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#cc9866"/>
+            <stop offset="1" stop-color="#7a4a25"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="400" cy="395" rx="190" ry="20" fill="#000" opacity=".3"/>
+        <!-- Poop swirl body -->
+        <path d="M 220 360 Q 220 240 280 220 Q 240 200 270 160 Q 240 140 290 120 Q 320 90 400 90 Q 480 90 510 120 Q 560 140 530 160 Q 560 200 520 220 Q 580 240 580 360 Q 580 380 400 380 Q 220 380 220 360 Z"
+              fill="url(#unkoBody)" stroke="#000" stroke-width="4"/>
+        <!-- highlights/shading -->
+        <path d="M 290 130 Q 320 110 400 110 Q 480 110 510 130" stroke="#fff" stroke-width="5" fill="none" opacity=".25"/>
+        <path d="M 270 175 Q 320 160 400 160 Q 480 160 530 175" stroke="#fff" stroke-width="4" fill="none" opacity=".2"/>
+        <ellipse cx="350" cy="280" rx="20" ry="12" fill="#000" opacity=".25"/>
+        <ellipse cx="430" cy="320" rx="14" ry="8" fill="#000" opacity=".3"/>
+        <!-- stink lines -->
+        <path d="M 400 70 Q 395 50 405 30" stroke="#888" stroke-width="3" fill="none" opacity=".7"/>
+        <path d="M 380 75 Q 372 55 380 30" stroke="#888" stroke-width="3" fill="none" opacity=".5"/>
+        <path d="M 420 75 Q 428 55 420 30" stroke="#888" stroke-width="3" fill="none" opacity=".5"/>
+        ${blushPair(400, 270, 80)}
       `,
       parts: [
-        { id:"L1", type:"limb", name_jp:"うでR", maxHP:7, hp:7, geom:{x:560,y:230,dir:0,len:90}, draw: drawLeg, effect:"atk-1" },
-        { id:"L2", type:"limb", name_jp:"うでL", maxHP:7, hp:7, geom:{x:240,y:230,dir:180,len:90}, draw: drawLeg, effect:"atk-1" },
-        { id:"L3", type:"limb", name_jp:"あしR", maxHP:7, hp:7, geom:{x:480,y:340,dir:30,len:80}, draw: drawLeg, effect:"slow" },
-        { id:"L4", type:"limb", name_jp:"あしL", maxHP:7, hp:7, geom:{x:320,y:340,dir:150,len:80}, draw: drawLeg, effect:"slow" },
-        { id:"ant", type:"special", name_jp:"アンテナ", maxHP:5, hp:5, geom:{x:400,y:90,h:50}, draw: drawAntenna, effect:"no-special" },
-        { id:"eR", type:"eye",  name_jp:"みぎめ", maxHP:8, hp:8, geom:{x:440,y:160,r:24,delay:0}, draw: drawEye, effect:"miss-50" },
-        { id:"eL", type:"eye",  name_jp:"ひだりめ", maxHP:8, hp:8, geom:{x:360,y:160,r:24,delay:.3}, draw: drawEye, effect:"miss-30" },
-        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:10, hp:10, geom:{x:400,y:200,w:50,h:22}, draw: drawBeak, effect:"no-poison" },
-        { id:"belly", type:"special", name_jp:"おなか", maxHP:9, hp:9, geom:{x:400,y:270,w:55,h:38}, draw: drawBelly, effect:"weak-spot" },
-        { id:"core", type:"core", name_jp:"コア", maxHP:24, hp:24, geom:{x:400,y:400,r:24}, draw: drawEye, effect:"win" },
+        { id:"L1", type:"limb", name_jp:"うで R", maxHP:7, hp:7, geom:{x:560,y:230,dir:0,len:80}, draw:(p)=>drawLeg(p,color,{claw:true}), effect:"atk-1" },
+        { id:"L2", type:"limb", name_jp:"うで L", maxHP:7, hp:7, geom:{x:240,y:230,dir:180,len:80}, draw:(p)=>drawLeg(p,color,{claw:true}), effect:"atk-1" },
+        { id:"L3", type:"limb", name_jp:"あし R", maxHP:7, hp:7, geom:{x:480,y:380,dir:30,len:60}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"L4", type:"limb", name_jp:"あし L", maxHP:7, hp:7, geom:{x:320,y:380,dir:150,len:60}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"ant", type:"special", name_jp:"アンテナ", maxHP:5, hp:5, geom:{x:400,y:100,h:50}, draw:(p)=>drawAntenna(p,color), effect:"no-special" },
+        { id:"eR", type:"eye",  name_jp:"みぎめ",  maxHP:8, hp:8, geom:{x:445,y:170,r:24,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
+        { id:"eL", type:"eye",  name_jp:"ひだりめ", maxHP:8, hp:8, geom:{x:355,y:170,r:24,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:10, hp:10, geom:{x:400,y:215,w:48,h:20}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"belly", type:"special", name_jp:"おなか", maxHP:9, hp:9, geom:{x:400,y:300,w:55,h:38}, draw:(p)=>drawBelly(p,color), effect:"weak-spot" },
+        { id:"core", type:"core", name_jp:"コア（よわてん）", maxHP:24, hp:24, geom:{x:400,y:380,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: ["ウンコ もれる！","ブッ！","おなかが いたい！","ボン！ボン！","ウンコ・ディロ〜！"]
+      hits: ["ウンコ もれる！","ブッ！","おなかが いたい！"]
     };
   }
 
   function makeTralaleroPakupaku() {
+    const color = "#7cd1ff";
     return {
       id: "tral",
       name_jp: "トラララ パクパク",
       name_en: "Tralalero Pakupaku",
       catchphrase: "トラララ・トラララ・パクパク！",
-      color: "#7cd1ff",
+      color,
       attacksPerRound: 2,
       bodySVG: () => `
-        <ellipse cx="400" cy="240" rx="180" ry="120" fill="#7cd1ff" stroke="#000" stroke-width="4"/>
-        <ellipse cx="400" cy="240" rx="170" ry="110" fill="none" stroke="#fff" stroke-width="3" opacity=".6"/>
-        <path d="M 250 240 q -80 -20 -80 -60 q 30 60 80 60" fill="#7cd1ff" stroke="#000" stroke-width="3"/>
-        <path d="M 250 240 q -80 20 -80 60 q 30 -60 80 -60" fill="#7cd1ff" stroke="#000" stroke-width="3"/>
+        <defs>
+          <radialGradient id="tralBody" cx=".5" cy=".4" r=".7">
+            <stop offset="0" stop-color="#bce8ff"/>
+            <stop offset="1" stop-color="#3aa7d8"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="408" cy="380" rx="190" ry="20" fill="#000" opacity=".3"/>
+        <!-- Tail -->
+        <path d="M 240 240 Q 130 200 110 140 Q 160 200 220 240 Q 130 280 100 340 Q 160 280 240 270 Z"
+              fill="url(#tralBody)" stroke="#000" stroke-width="4"/>
+        <!-- Body -->
+        <ellipse cx="420" cy="240" rx="180" ry="130" fill="url(#tralBody)" stroke="#000" stroke-width="4"/>
+        <!-- Spots -->
+        <circle cx="380" cy="180" r="9" fill="#ffe24a" stroke="#000" stroke-width="2"/>
+        <circle cx="490" cy="220" r="7" fill="#ffe24a" stroke="#000" stroke-width="2"/>
+        <circle cx="450" cy="280" r="8" fill="#ffe24a" stroke="#000" stroke-width="2"/>
+        <circle cx="520" cy="160" r="6" fill="#ffe24a" stroke="#000" stroke-width="2"/>
+        <!-- Belly stripe -->
+        <ellipse cx="420" cy="290" rx="120" ry="50" fill="#fff" opacity=".4"/>
+        <!-- Highlight -->
+        <ellipse cx="380" cy="170" rx="60" ry="22" fill="#fff" opacity=".55"/>
+        ${blushPair(440, 260, 70)}
       `,
       parts: [
-        { id:"finT", type:"limb", name_jp:"せびれ", maxHP:6, hp:6, geom:{x:400,y:120,dir:270,len:60}, draw: drawLeg, effect:"slow" },
-        { id:"finL", type:"limb", name_jp:"ひれL", maxHP:6, hp:6, geom:{x:330,y:280,dir:200,len:90}, draw: drawLeg, effect:"atk-1" },
-        { id:"finR", type:"limb", name_jp:"ひれR", maxHP:6, hp:6, geom:{x:470,y:280,dir:340,len:90}, draw: drawLeg, effect:"atk-1" },
-        { id:"legL", type:"limb", name_jp:"あしL", maxHP:7, hp:7, geom:{x:370,y:340,dir:130,len:80}, draw: drawLeg, effect:"slow" },
-        { id:"legR", type:"limb", name_jp:"あしR", maxHP:7, hp:7, geom:{x:430,y:340,dir:50,len:80}, draw: drawLeg, effect:"slow" },
-        { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:360,y:200,r:30,delay:0}, draw: drawEye, effect:"miss-40" },
-        { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:440,y:200,r:30,delay:.4}, draw: drawEye, effect:"miss-40" },
-        { id:"mouth", type:"mouth", name_jp:"おおきなくち", maxHP:11, hp:11, geom:{x:400,y:265,w:60,h:24}, draw: drawBeak, effect:"no-poison" },
-        { id:"tongue", type:"special", name_jp:"べろ", maxHP:6, hp:6, geom:{x:400,y:285,len:60}, draw: drawTongue, effect:"weak-spot" },
-        { id:"core", type:"core", name_jp:"ハート", maxHP:22, hp:22, geom:{x:400,y:235,r:22}, draw: drawEye, effect:"win" },
+        { id:"finT", type:"limb", name_jp:"せびれ", maxHP:6, hp:6, geom:{x:420,y:120,dir:270,len:60}, draw:(p)=>drawLeg(p,color), effect:"slow" },
+        { id:"finL", type:"limb", name_jp:"ひれ L", maxHP:6, hp:6, geom:{x:330,y:280,dir:200,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"finR", type:"limb", name_jp:"ひれ R", maxHP:6, hp:6, geom:{x:510,y:280,dir:340,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"legL", type:"limb", name_jp:"あし L", maxHP:7, hp:7, geom:{x:380,y:355,dir:130,len:70}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"legR", type:"limb", name_jp:"あし R", maxHP:7, hp:7, geom:{x:460,y:355,dir:50,len:70}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:380,y:200,r:28,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
+        { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:470,y:200,r:28,delay:.4}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
+        { id:"mouth", type:"mouth", name_jp:"おおきなくち", maxHP:11, hp:11, geom:{x:420,y:280,w:56,h:24}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"tongue", type:"special", name_jp:"べろ", maxHP:6, hp:6, geom:{x:420,y:298,len:70}, draw:(p)=>drawTongue(p,color), effect:"weak-spot" },
+        { id:"core", type:"core", name_jp:"ハート（よわてん）", maxHP:22, hp:22, geom:{x:420,y:235,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: ["パク！パク！","トラララ〜！","おさかな いたい！","ピチピチ！","しっぽが ピンチ！"]
+      hits: ["パク！パク！","トラララ〜！","ピチピチ！"]
     };
   }
 
   function makeBrrPampamu() {
+    const color = "#caa6e8";
     return {
       id: "pamp",
       name_jp: "ブルブル パンパム",
       name_en: "Brr Brr Pampamu",
       catchphrase: "ブルブル・ブルブル・パンパム！",
-      color: "#caa6e8",
+      color,
       attacksPerRound: 2,
       bodySVG: () => `
-        <ellipse cx="400" cy="250" rx="170" ry="130" fill="#caa6e8" stroke="#000" stroke-width="4"/>
-        <circle cx="400" cy="180" r="100" fill="#dec0fa" stroke="#000" stroke-width="4"/>
-        <path d="M 340 110 q 20 -40 60 -20" fill="#dec0fa" stroke="#000" stroke-width="3"/>
-        <path d="M 460 110 q -20 -40 -60 -20" fill="#dec0fa" stroke="#000" stroke-width="3"/>
+        <defs>
+          <radialGradient id="pampBody" cx=".4" cy=".3" r=".7">
+            <stop offset="0" stop-color="#e8d2ff"/>
+            <stop offset="1" stop-color="#9070c8"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="408" cy="395" rx="170" ry="18" fill="#000" opacity=".3"/>
+        <!-- Body (fluffy) -->
+        <path d="M 250 280 Q 250 180 320 150 Q 320 100 400 100 Q 480 100 480 150 Q 550 180 550 280 Q 550 380 400 380 Q 250 380 250 280 Z"
+              fill="url(#pampBody)" stroke="#000" stroke-width="4"/>
+        <!-- Fluff edges -->
+        <circle cx="270" cy="220" r="22" fill="url(#pampBody)" stroke="#000" stroke-width="3"/>
+        <circle cx="535" cy="220" r="22" fill="url(#pampBody)" stroke="#000" stroke-width="3"/>
+        <circle cx="290" cy="320" r="20" fill="url(#pampBody)" stroke="#000" stroke-width="3"/>
+        <circle cx="510" cy="320" r="20" fill="url(#pampBody)" stroke="#000" stroke-width="3"/>
+        <!-- Highlight -->
+        <ellipse cx="370" cy="170" rx="60" ry="22" fill="#fff" opacity=".55"/>
+        ${blushPair(400, 230, 90)}
+        <!-- fart cloud peeking -->
+        <circle cx="260" cy="380" r="10" fill="#a8d8a0" opacity=".7" stroke="#000" stroke-width="1"/>
+        <circle cx="540" cy="385" r="9" fill="#a8d8a0" opacity=".7" stroke="#000" stroke-width="1"/>
       `,
       parts: [
-        { id:"earL", type:"special", name_jp:"みみL", maxHP:5, hp:5, geom:{x:340,y:90,h:40}, draw: drawAntenna, effect:"no-special" },
-        { id:"earR", type:"special", name_jp:"みみR", maxHP:5, hp:5, geom:{x:460,y:90,h:40}, draw: drawAntenna, effect:"no-special" },
-        { id:"armL", type:"limb", name_jp:"うでL", maxHP:6, hp:6, geom:{x:260,y:240,dir:185,len:100}, draw: drawLeg, effect:"atk-1" },
-        { id:"armR", type:"limb", name_jp:"うでR", maxHP:6, hp:6, geom:{x:540,y:240,dir:355,len:100}, draw: drawLeg, effect:"atk-1" },
-        { id:"legL", type:"limb", name_jp:"あしL", maxHP:7, hp:7, geom:{x:370,y:370,dir:120,len:60}, draw: drawLeg, effect:"slow" },
-        { id:"legR", type:"limb", name_jp:"あしR", maxHP:7, hp:7, geom:{x:430,y:370,dir:60,len:60}, draw: drawLeg, effect:"slow" },
-        { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:360,y:180,r:24,delay:0}, draw: drawEye, effect:"miss-40" },
-        { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:440,y:180,r:24,delay:.3}, draw: drawEye, effect:"miss-40" },
-        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:9, hp:9, geom:{x:400,y:225,w:30,h:14}, draw: drawBeak, effect:"no-poison" },
-        { id:"butt", type:"special", name_jp:"おしり", maxHP:9, hp:9, geom:{x:400,y:330,w:50,h:30}, draw: drawBelly, effect:"weak-spot" },
-        { id:"core", type:"core", name_jp:"ハート", maxHP:23, hp:23, geom:{x:400,y:240,r:22}, draw: drawEye, effect:"win" },
+        { id:"earL", type:"special", name_jp:"つの L", maxHP:5, hp:5, geom:{x:340,y:110,h:40}, draw:(p)=>drawAntenna(p,color), effect:"no-special" },
+        { id:"earR", type:"special", name_jp:"つの R", maxHP:5, hp:5, geom:{x:460,y:110,h:40}, draw:(p)=>drawAntenna(p,color), effect:"no-special" },
+        { id:"armL", type:"limb", name_jp:"うで L", maxHP:6, hp:6, geom:{x:260,y:240,dir:185,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"armR", type:"limb", name_jp:"うで R", maxHP:6, hp:6, geom:{x:540,y:240,dir:355,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"legL", type:"limb", name_jp:"あし L", maxHP:7, hp:7, geom:{x:370,y:380,dir:120,len:55}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"legR", type:"limb", name_jp:"あし R", maxHP:7, hp:7, geom:{x:430,y:380,dir:60,len:55}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:370,y:200,r:26,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
+        { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:430,y:200,r:26,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
+        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:9, hp:9, geom:{x:400,y:255,w:32,h:14}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"butt", type:"special", name_jp:"おしり", maxHP:9, hp:9, geom:{x:400,y:340,w:50,h:24}, draw:(p)=>drawBelly(p,color), effect:"weak-spot" },
+        { id:"core", type:"core", name_jp:"ハート（よわてん）", maxHP:23, hp:23, geom:{x:400,y:240,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: ["ブルブル〜！","パンパム！","ふわふわ いたい！","おならが でた！","ママ〜！"]
+      hits: ["ブルブル〜！","パンパム！","ふわふわ いたい！"]
     };
   }
 
   const factories = [makeTakoTakoSahur, makeBombardiroUnkodilo, makeTralaleroPakupaku, makeBrrPampamu];
 
-  function randomBoss() {
-    return factories[Math.floor(Math.random()*factories.length)]();
-  }
+  function randomBoss() { return factories[Math.floor(Math.random()*factories.length)](); }
 
   function renderBossSVG(boss) {
-    const partsSVG = boss.parts.map(p => p.draw(p, boss.color)).join("\n");
-    return `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+    const partsSVG = boss.parts.map(p => p.draw(p)).join("\n");
+    return `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;">
       ${boss.bodySVG()}
       ${partsSVG}
     </svg>`;
   }
 
-  // Returns alive parts only
   function alive(boss) { return boss.parts.filter(p => p.hp > 0); }
-  function aliveTargets(boss) {
-    // core is targetable but only deals normal damage
-    return alive(boss);
-  }
+  function aliveTargets(boss) { return alive(boss); }
   function partById(boss, id) { return boss.parts.find(p => p.id === id); }
 
-  // Compute boss attack count this round, modifiers from destroyed parts.
   function bossModifiers(boss) {
     let atks = boss.attacksPerRound;
     let missChance = 0;
@@ -326,14 +456,13 @@ window.Monsters = (() => {
       if (p.effect === "miss-40") missChance += 0.4;
       if (p.effect === "miss-30") missChance += 0.3;
       if (p.effect === "no-special" || p.effect === "no-poison") hasSpecial = false;
-      if (p.effect === "slow") atks -= 0.5; // half-slow
+      if (p.effect === "slow") atks -= 0.5;
     }
     atks = Math.max(0, Math.floor(atks));
     missChance = Math.min(0.85, missChance);
     return { atks, missChance, hasSpecial };
   }
 
-  // damage multiplier from destroyed weak-spots
   function damageMultiplier(boss) {
     let m = 1;
     for (const p of boss.parts) {
