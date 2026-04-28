@@ -28,9 +28,11 @@ window.UI = (() => {
         <div class="title-en bob">${JP.titleEn}</div>
         <div style="font-size: 80px; margin: 20px 0;" class="bob">🐙💩👾🦑</div>
         <button class="btn huge hot" id="btn-start">${JP.start} ⚔️</button>
+        <button class="btn ghost" id="btn-rules" style="margin-top:8px;">あそびかた ❓</button>
         <div class="subtle" style="margin-top: 28px;">タップで おとが でます 🔊</div>
       </div>`));
     $("btn-start").onclick = () => { SND.unlock(); SND.sfxPop(); onStart(); };
+    $("btn-rules").onclick = () => { SND.unlock(); showRules(() => renderTitle({onStart})); };
   }
 
   // -------- SETUP --------
@@ -432,7 +434,29 @@ window.UI = (() => {
     return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
 
+  function showRules(onBack) {
+    show("title");
+    const s = $("screen-title"); s.innerHTML = "";
+    s.appendChild(el(`
+      <div class="center" style="max-width: 720px; margin: 24px auto; padding: 0 12px;">
+        <h2>あそびかた 📖</h2>
+        <div style="text-align:left; font-size:18px; line-height:1.7; background:var(--card); padding:18px; border-radius:14px; box-shadow:var(--shadow);">
+          <p>🎯 <b>もくてき:</b> カイジュウの「コア」を こわせ！</p>
+          <p>📱 <b>１人ずつ ばん:</b> iPad を まわして あそぶよ。</p>
+          <p>1️⃣ ★1〜★3 から もんだいを えらぶ。むずかしいほど ダメージが ふえる！</p>
+          <p>2️⃣ えいごの もんだいに こたえる。せいかい → エナジー＆こうげき！</p>
+          <p>3️⃣ カイジュウの どこかを タップして こうげき！</p>
+          <p>4️⃣ カードを つかって なかまを たすけよう！</p>
+          <p>👹 <b>パーツ こわし:</b> あしを こわすと カイジュウの こうげきが へる！ 目を こわすと はずれやすく！</p>
+          <p>🕵️ <b>うらぎりモード（4人〜）:</b> ひとりだけ スパイ！ばれずに みんなを まけさせよう。みんなは スパイを あてるか カイジュウを たおせば しょうり！</p>
+          <p style="text-align:center; font-weight:900; color: var(--accent);">たのしんで〜！ 🎉</p>
+        </div>
+        <button class="btn huge cool" id="back-rules" style="margin-top:18px;">${JP.back}</button>
+      </div>`));
+    $("back-rules").onclick = () => onBack();
+  }
+
   return { renderTitle, renderSetup, renderPass, renderRole, renderWager, renderQuestion,
            renderResult, renderAction, renderTargetPicker, renderBoss, renderVictory,
-           renderDefeat, renderVote, toast, show };
+           renderDefeat, renderVote, toast, show, showRules };
 })();
