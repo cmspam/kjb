@@ -227,17 +227,17 @@
     Q({ stars:3, ptype:"read", prompt_jp:"ぶんを よんで こたえて:", prompt:`${story}\n\n${q}`, options: m.opts, answer: m.pos });
   });
 
-  // ========= LISTENING (sentence) =========
+  // ★2 Sentence-recognition listening (was 3★ — just word-for-word matching, no comprehension)
   const listenSents = [
     "I like cats.","I have a dog.","She is happy.","He went to school.","I want pizza.",
     "Can you swim?","What is your name?","I am ten years old.","It is hot today.","I don't like fish."
   ];
   listenSents.forEach((s) => {
     const m = mc(s, listenSents);
-    Q({ stars:3, ptype:"listen_sent", prompt_jp:"きこえた ぶんを えらべ！ 🔊", audio:s, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"listen_sent", prompt_jp:"きこえた ぶんを えらべ！ 🔊", audio:s, options: m.opts, answer: m.pos });
   });
 
-  // ========= MORE Q&A =========
+  // ★2 Q&A response-matching (was 3★ — straightforward)
   const qa = [
     ["What did you do yesterday?","I played soccer.",["I played soccer.","I will go.","I'm Yuki.","Yes, I do."]],
     ["Where will you go tomorrow?","To the zoo.",["To the zoo.","Yes, I did.","I am ten.","Pizza."]],
@@ -250,7 +250,143 @@
   ];
   qa.forEach(([q, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:3, ptype:"qa", prompt_jp:"よい こたえは？", prompt:`Q: ${q}`, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"qa", prompt_jp:"よい こたえは？", prompt:`Q: ${q}`, options: m.opts, answer: m.pos });
+  });
+
+  // ============= NEW ★3 CONTENT (proper Eiken 4 difficulty) =============
+
+  // ★3 Past continuous
+  const pastCont = [
+    ["I ___ sleeping when you called.","was",["was","were","is","am"]],
+    ["They ___ playing soccer at 5 pm.","were",["was","were","is","are"]],
+    ["She ___ reading a book.","was",["was","were","is","am"]],
+    ["What ___ you doing yesterday?","were",["was","were","do","did"]],
+    ["My parents ___ watching TV.","were",["was","were","is","are"]],
+    ["I wasn't sleeping, I ___ studying.","was",["was","were","do","did"]],
+  ];
+  pastCont.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"past_cont", prompt_jp:"かこ しんこうけい", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Present continuous
+  const presCont = [
+    ["She ___ a book now.","is reading",["is reading","reads","read","is read"]],
+    ["They ___ TV right now.","are watching",["watch","watches","are watching","is watching"]],
+    ["Look! It ___.","is raining",["rains","is raining","rain","raining"]],
+    ["I ___ to music.","am listening",["listen","am listening","is listening","are listening"]],
+    ["The dogs ___.","are barking",["bark","barks","is barking","are barking"]],
+  ];
+  presCont.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"pres_cont", prompt_jp:"げんざい しんこうけい", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Modal nuance: must / have to / should
+  const modal = [
+    ["You ___ wear a helmet on a bike. (ぜったい)","must"],
+    ["You ___ eat vegetables. (したほうがいい)","should"],
+    ["I ___ go now. My mom is calling. (しなければ)","have to"],
+    ["You ___ hit your sister! (ぜったい だめ)","must not"],
+    ["We ___ be quiet in class. (きまり)","must"],
+    ["You ___ try this cake! (おすすめ)","should"],
+  ];
+  modal.forEach(([s, ans]) => {
+    const m = mc(ans, ["must","must not","should","have to","can","can't"]);
+    Q({ stars:3, ptype:"modal", prompt_jp:"モーダル どうし", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Conditional (if)
+  const cond = [
+    ["If it rains, I ___ stay home.","will"],
+    ["If you study hard, you ___ pass.","will"],
+    ["If I ___ rich, I would buy a car.","were"],
+    ["What will you do if you ___ him?","see"],
+    ["If you don't hurry, you ___ be late.","will"],
+  ];
+  cond.forEach(([s, ans]) => {
+    const m = mc(ans, ["will","were","see","go","do","is"]);
+    Q({ stars:3, ptype:"conditional", prompt_jp:"もし〜なら", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Phrasal verbs
+  const phrasal = [
+    ["Please ___ the light. (つける)","turn on"],
+    ["Don't ___ on your dream! (あきらめる)","give up"],
+    ["I'll ___ you ___ at 8.","pick up"],
+    ["___ the word in the dictionary. (しらべる)","Look up"],
+    ["Please ___ your shoes. (ぬぐ)","take off"],
+    ["The plane will ___ soon. (りりく)","take off"],
+  ];
+  phrasal.forEach(([s, ans]) => {
+    const m = mc(ans, ["turn on","turn off","give up","pick up","look up","take off","put on"]);
+    Q({ stars:3, ptype:"phrasal", prompt_jp:"フレーズ どうし", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Long reading comprehension (4-5 sentences with inference)
+  const longRead = [
+    [`Yuki goes to school by bus. The bus stop is near her house. The bus comes at 7:50. She gets to school at 8:15.`,
+     "How long is the bus ride?", "25 minutes", ["10 minutes","25 minutes","45 minutes","1 hour"]],
+    [`Tom lived in Tokyo for five years. Last year he moved to Osaka with his family. He likes Osaka but he misses his Tokyo friends.`,
+     "Where does Tom live now?", "Osaka", ["Tokyo","Osaka","Kyoto","Nagoya"]],
+    [`It was raining yesterday. We didn't go to the park. We stayed home and watched a movie. It was fun.`,
+     "Why didn't they go to the park?", "It was raining.", ["It was raining.","They were tired.","The park was closed.","They had homework."]],
+    [`Mika has three brothers. The oldest is twenty. The youngest is five. Mika is in the middle. She is fifteen.`,
+     "How old is the oldest brother?", "20", ["5","15","20","25"]],
+    [`I bought a new bike yesterday. It cost 30,000 yen. It is red and very fast. I rode it to school today.`,
+     "What color is the bike?", "red", ["blue","red","green","black"]],
+    [`Saturday is my birthday. I will have a party at home. Ten friends will come. My mom will make a chocolate cake.`,
+     "When is the party?", "Saturday", ["Friday","Saturday","Sunday","Monday"]],
+    [`Mr. Brown teaches English at our school. He is from Australia. He likes baseball and sushi. He has lived in Japan for two years.`,
+     "Where is Mr. Brown from?", "Australia", ["America","England","Australia","Canada"]],
+    [`Last summer we went to the beach. We swam in the sea and made a sand castle. Then it rained, so we went home early.`,
+     "Why did they go home early?", "It rained.", ["They were tired.","It rained.","It was dark.","They were hungry."]],
+  ];
+  longRead.forEach(([story, q, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"long_read", prompt_jp:"よく よんで こたえて:", prompt:`${story}\n\n${q}`, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Listening comprehension with multi-fact audio
+  const listenComp3 = [
+    ["I went to school by bus yesterday.", "How did he go to school?", "by bus", ["by bus","by car","by bike","walk"]],
+    ["She bought three apples for 300 yen.", "How much was each apple?", "100 yen", ["50 yen","100 yen","300 yen","30 yen"]],
+    ["I'll meet you at the station at 6 pm.", "When will they meet?", "6 pm", ["3 pm","6 am","6 pm","8 pm"]],
+    ["My brother is taller than my dad.", "Who is taller?", "brother", ["brother","dad","mom","sister"]],
+    ["I have a test tomorrow, so I must study.", "What does he have to do?", "study", ["sleep","study","play","eat"]],
+    ["The library closes at 8 on Saturdays.", "When does it close?", "8 pm Saturday", ["8 am Saturday","8 pm Saturday","8 pm Sunday","6 pm Saturday"]],
+    ["I wanted pizza but I ate ramen.", "What did he eat?", "ramen", ["pizza","ramen","sushi","curry"]],
+    ["She speaks English and Japanese.", "How many languages?", "two", ["one","two","three","four"]],
+  ];
+  listenComp3.forEach(([sent, q, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"listen_comp3", prompt_jp:`きいて こたえて 🔊\n${q}`, audio:sent, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Tag questions
+  const tag = [
+    ["You like pizza, ___?","don't you"],
+    ["She is your friend, ___?","isn't she"],
+    ["He went home, ___?","didn't he"],
+    ["They can swim, ___?","can't they"],
+    ["It's hot today, ___?","isn't it"],
+  ];
+  tag.forEach(([s, ans]) => {
+    const m = mc(ans, ["don't you","isn't she","didn't he","can't they","isn't it","does he"]);
+    Q({ stars:3, ptype:"tag_q", prompt_jp:"ふか ぎもん: ___?", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Quantifiers (much/many/a lot of)
+  const quant = [
+    ["How ___ books do you have? (かぞえられる)","many"],
+    ["How ___ water did you drink? (かぞえられない)","much"],
+    ["I have ___ homework today.","a lot of"],
+    ["There aren't ___ apples left.","many"],
+    ["She doesn't drink ___ coffee.","much"],
+  ];
+  quant.forEach(([s, ans]) => {
+    const m = mc(ans, ["many","much","a lot of","few","little"]);
+    Q({ stars:3, ptype:"quant", prompt_jp:"りょうの ことば", prompt:s, options: m.opts, answer: m.pos });
   });
 
   // ========= Idioms / Common phrases =========

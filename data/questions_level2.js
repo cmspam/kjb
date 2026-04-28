@@ -281,14 +281,14 @@
     Q({ stars:2, ptype:"num", prompt_jp:`「${n}」は えいごで？`, prompt:n, options: m.opts, answer: m.pos });
   });
 
-  // Listening
+  // ★1 Listen-and-tap single word (was misclassified at 3★)
   const listenWords = ["apple","banana","cat","dog","school","friend","happy","big","red","fish","mom","dad","run","jump","book","chair"];
   listenWords.forEach((w) => {
     const m = mc(w, listenWords);
-    Q({ stars:3, ptype:"listen_word", prompt_jp:`きこえた えいたん は？ 🔊`, audio:w, options: m.opts, answer: m.pos });
+    Q({ stars:1, ptype:"listen_word", prompt_jp:`きこえた えいたん は？ 🔊`, audio:w, options: m.opts, answer: m.pos });
   });
 
-  // Q&A scenarios
+  // ★2 Q&A scenarios (was 3★, but it's straightforward response-matching)
   const qa = [
     ["What's this?","It's a pen.",["It's a pen.","I'm Yuki.","Yes, I do.","On the desk."]],
     ["How are you?","I'm fine.",["I'm fine.","It's red.","I have a dog.","No, I'm not."]],
@@ -301,7 +301,117 @@
   ];
   qa.forEach(([q, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:3, ptype:"qa", prompt_jp:"よい こたえは？", prompt:`Q: ${q}`, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"qa", prompt_jp:"よい こたえは？", prompt:`Q: ${q}`, options: m.opts, answer: m.pos });
+  });
+
+  // ============= NEW ★3 CONTENT (proper Eiken 5 difficulty) =============
+
+  // ★3 there is/are (singular vs plural noun phrase)
+  const tIsAre = [
+    ["There ___ a cat in the box.","is",["is","are","am","be"]],
+    ["There ___ three pens on the desk.","are",["is","are","am","be"]],
+    ["There ___ many flowers.","are",["is","are","am","be"]],
+    ["There ___ some milk in the cup.","is",["is","are","am","be"]],
+    ["There ___ no children here.","are",["is","are","am","be"]],
+    ["There ___ a book and two pencils.","are",["is","are","am","be"]],
+    ["There ___ water on the floor.","is",["is","are","am","be"]],
+    ["There ___ a school near my house.","is",["is","are","am","be"]],
+  ];
+  tIsAre.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"there_is", prompt_jp:"There is / There are どっち？", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 some/any
+  const someAny = [
+    ["I have ___ apples.","some",["some","any","much","one"]],
+    ["Do you have ___ pets?","any",["some","any","much","one"]],
+    ["I don't have ___ money.","any",["some","any","much","one"]],
+    ["She has ___ friends in Tokyo.","some",["some","any","much","one"]],
+    ["Are there ___ cookies left?","any",["some","any","much","one"]],
+    ["There is ___ water in the bottle.","some",["some","any","much","one"]],
+    ["Is there ___ milk in the fridge?","any",["some","any","much","one"]],
+  ];
+  someAny.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"some_any", prompt_jp:"some / any?", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 frequency adverbs
+  const freq = [
+    ["I ___ play video games. (まいにち)","always",["always","never","sometimes","usually"]],
+    ["She ___ eats meat. (ぜったいに たべない)","never",["always","never","sometimes","usually"]],
+    ["We ___ go to the beach in summer. (たいてい)","usually",["always","never","sometimes","usually"]],
+    ["He ___ helps his mom. (ときどき)","sometimes",["always","never","sometimes","usually"]],
+    ["Cats ___ like water. (あんまり)","never",["always","never","sometimes","usually"]],
+    ["I ___ watch TV after dinner. (ほぼ いつも)","usually",["always","never","sometimes","usually"]],
+  ];
+  freq.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"frequency", prompt_jp:"ひんどの ことば", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Time prepositions (in/on/at)
+  const tPrep = [
+    ["I get up ___ 7 o'clock.","at",["in","on","at","by"]],
+    ["My birthday is ___ May.","in",["in","on","at","by"]],
+    ["School starts ___ Monday.","on",["in","on","at","by"]],
+    ["I sleep ___ night.","at",["in","on","at","by"]],
+    ["I was born ___ 2014.","in",["in","on","at","by"]],
+    ["See you ___ Sunday.","on",["in","on","at","by"]],
+    ["I have lunch ___ noon.","at",["in","on","at","by"]],
+    ["It snows ___ winter.","in",["in","on","at","by"]],
+  ];
+  tPrep.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"tprep", prompt_jp:"in / on / at", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Listening comprehension (multi-fact in audio, recall a detail)
+  const listenComp = [
+    ["I have a brother and two sisters.", "How many sisters?", "two", ["one","two","three","four"]],
+    ["My cat is white and small.", "What color is the cat?", "white", ["white","black","brown","pink"]],
+    ["I like apples and grapes.", "Does he like grapes?", "Yes", ["Yes","No","Maybe","Don't know"]],
+    ["The book is on the desk.", "Where is the book?", "on the desk", ["on the desk","in the bag","on the bed","under the chair"]],
+    ["I have three cats and one dog.", "How many pets in total?", "four", ["three","four","five","six"]],
+    ["My dad is a doctor.", "What is his job?", "doctor", ["doctor","teacher","cook","driver"]],
+    ["It's three thirty.", "What time is it?", "3:30", ["3:00","3:30","2:30","4:30"]],
+    ["I want pizza for dinner.", "What does she want?", "pizza", ["pizza","sushi","ramen","curry"]],
+    ["My birthday is May fifth.", "When is the birthday?", "May 5", ["May 5","May 15","June 5","April 5"]],
+    ["The dog is in the garden.", "Where is the dog?", "in the garden", ["in the garden","in the house","at school","on the bed"]],
+  ];
+  listenComp.forEach(([sent, q, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"listen_comp", prompt_jp:`きいて こたえて 🔊\n${q}`, audio:sent, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Subject-verb agreement edge cases
+  const sv = [
+    ["My friend and I ___ students.","are",["am","is","are","be"]],
+    ["Everyone ___ happy today.","is",["am","is","are","be"]],
+    ["Everybody ___ here!","is",["am","is","are","be"]],
+    ["Both my parents ___ teachers.","are",["am","is","are","be"]],
+    ["My family ___ big.","is",["am","is","are","be"]],
+    ["The dogs and the cat ___ playing.","are",["am","is","are","be"]],
+    ["Each student ___ a pencil.","has",["have","has","having","had"]],
+    ["The news ___ exciting.","is",["am","is","are","be"]],
+  ];
+  sv.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"sv_agree", prompt_jp:"しゅごと どうし の あわせ", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★3 Numbers in context (price, phone, time)
+  const numCtx = [
+    ["Q: How much is it? A: It's ___ yen. (500)", "five hundred", ["five hundred","fifty","five thousand","fifteen"]],
+    ["Q: What time is it? A: It's ___. (10:15)", "ten fifteen", ["ten fifteen","ten fifty","fifteen ten","ten thirty"]],
+    ["Q: How old? A: I'm ___. (12)", "twelve", ["twelve","twenty","two","ten"]],
+    ["Q: How many? A: ___. (50)", "fifty", ["fifteen","fifty","five","five hundred"]],
+    ["Q: What's the score? A: ___ to ___. (3-2)", "three to two", ["three to two","two to three","thirteen to two","thirty to twenty"]],
+  ];
+  numCtx.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"num_ctx", prompt_jp:"よい こたえは？", prompt:s, options: m.opts, answer: m.pos });
   });
 
   window.QUESTIONS_LEVEL2 = all;

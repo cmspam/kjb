@@ -278,7 +278,7 @@ window.Monsters = (() => {
         { id:"eL", type:"eye",  name_jp:"ひだりめ", maxHP:8, hp:8, geom:{x:355,y:175,r:30,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
         { id:"eR", type:"eye",  name_jp:"みぎめ",  maxHP:8, hp:8, geom:{x:445,y:175,r:30,delay:.4}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
         { id:"mouth", type:"mouth", name_jp:"くち", maxHP:10, hp:10, geom:{x:400,y:250,w:38,h:18}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
-        { id:"core", type:"core", name_jp:"ハート（よわてん）", maxHP:22, hp:22, geom:{x:400,y:90,r:24}, draw:(p)=>drawCore(p,color), effect:"win" },
+        { id:"core", type:"core", name_jp:"ハート", maxHP:30, hp:30, geom:{x:400,y:90,r:24}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
       hits: [
         "イタタタ！", "タコパ〜！", "おしりが ピリピリ！", "タコ・タコ・タコ〜！",
@@ -336,7 +336,7 @@ window.Monsters = (() => {
         { id:"eL", type:"eye",  name_jp:"ひだりめ", maxHP:8, hp:8, geom:{x:355,y:170,r:24,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
         { id:"mouth", type:"mouth", name_jp:"くち", maxHP:10, hp:10, geom:{x:400,y:215,w:48,h:20}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
         { id:"belly", type:"special", name_jp:"おなか", maxHP:9, hp:9, geom:{x:400,y:300,w:55,h:38}, draw:(p)=>drawBelly(p,color), effect:"weak-spot" },
-        { id:"core", type:"core", name_jp:"コア（よわてん）", maxHP:24, hp:24, geom:{x:400,y:380,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
+        { id:"core", type:"core", name_jp:"コア", maxHP:30, hp:30, geom:{x:400,y:380,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
       hits: [
         "ウンコ もれる〜！", "ブッ！", "おなかが いたい！", "うん？うんち？",
@@ -396,7 +396,7 @@ window.Monsters = (() => {
         { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:470,y:200,r:28,delay:.4}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
         { id:"mouth", type:"mouth", name_jp:"おおきなくち", maxHP:11, hp:11, geom:{x:420,y:280,w:56,h:24}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
         { id:"tongue", type:"special", name_jp:"べろ", maxHP:6, hp:6, geom:{x:420,y:298,len:70}, draw:(p)=>drawTongue(p,color), effect:"weak-spot" },
-        { id:"core", type:"core", name_jp:"ハート（よわてん）", maxHP:22, hp:22, geom:{x:420,y:235,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
+        { id:"core", type:"core", name_jp:"ハート", maxHP:30, hp:30, geom:{x:420,y:235,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
       hits: [
         "パク！パク！", "トラララ〜！", "ピチピチ！", "お魚 イタイ！",
@@ -456,7 +456,7 @@ window.Monsters = (() => {
         { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:430,y:200,r:26,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
         { id:"mouth", type:"mouth", name_jp:"くち", maxHP:9, hp:9, geom:{x:400,y:255,w:32,h:14}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
         { id:"butt", type:"special", name_jp:"おしり", maxHP:9, hp:9, geom:{x:400,y:340,w:50,h:24}, draw:(p)=>drawBelly(p,color), effect:"weak-spot" },
-        { id:"core", type:"core", name_jp:"ハート（よわてん）", maxHP:23, hp:23, geom:{x:400,y:240,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
+        { id:"core", type:"core", name_jp:"ハート", maxHP:30, hp:30, geom:{x:400,y:240,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
       hits: [
         "ブルブル〜！", "パンパム！", "ふわふわ いたい！", "もこもこ もこもこ！",
@@ -552,7 +552,7 @@ window.Monsters = (() => {
         ${blushPair(400, 305, 90)}
       `,
       parts: [
-        { id:"cherry", type:"core", name_jp:"さくらんぼ（よわてん）", maxHP:20, hp:20, geom:{x:400,y:120,r:18}, draw:(p)=>drawCherryCore(p,color), effect:"win" },
+        { id:"cherry", type:"core", name_jp:"さくらんぼ", maxHP:28, hp:28, geom:{x:400,y:120,r:18}, draw:(p)=>drawCherryCore(p,color), effect:"win" },
         { id:"whip", type:"special", name_jp:"ホイップ", maxHP:8, hp:8, geom:{x:400,y:175,h:30}, draw:(p)=>drawAntenna(p,"#fff"), effect:"weak-spot" },
         { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:370,y:280,r:22,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
         { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:430,y:280,r:22,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
@@ -631,7 +631,7 @@ window.Monsters = (() => {
         ${blushPair(400, 220, 90)}
       `,
       parts: [
-        { id:"nose", type:"core", name_jp:"おはな（よわてん）", maxHP:22, hp:22, geom:{x:400,y:200,r:18}, draw:(p)=>drawNoseCore(p,color), effect:"win" },
+        { id:"nose", type:"core", name_jp:"おはな", maxHP:30, hp:30, geom:{x:400,y:200,r:18}, draw:(p)=>drawNoseCore(p,color), effect:"win" },
         { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:365,y:175,r:14,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
         { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:435,y:175,r:14,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
         { id:"mouth", type:"mouth", name_jp:"くち", maxHP:9, hp:9, geom:{x:400,y:235,w:30,h:14}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
@@ -694,16 +694,37 @@ window.Monsters = (() => {
   function randomBoss() { return factories[Math.floor(Math.random()*factories.length)](); }
 
   function renderBossSVG(boss) {
+    const armor = coreArmor(boss);
+    const core = boss.parts.find(p => p.effect === "win");
     const partsSVG = boss.parts.map(p => p.draw(p)).join("\n");
+    let armorOverlay = "";
+    if (core && core.hp > 0 && armor > 0) {
+      const cx = core.geom.x;
+      const cy = core.geom.y - (core.geom.r || 20) - 24;
+      armorOverlay = `<g class="armor-indicator">
+        <rect x="${cx-44}" y="${cy-22}" width="88" height="34" rx="17" fill="#000" opacity=".7"/>
+        <text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="22" font-weight="900" fill="#9be0ff">🛡️ ${armor}</text>
+      </g>`;
+    } else if (core && core.hp > 0 && armor === 0) {
+      const cx = core.geom.x;
+      const cy = core.geom.y - (core.geom.r || 20) - 24;
+      armorOverlay = `<g class="armor-indicator">
+        <rect x="${cx-58}" y="${cy-22}" width="116" height="34" rx="17" fill="#ff3b6b"/>
+        <text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="20" font-weight="900" fill="#fff">よわてん！</text>
+      </g>`;
+    }
     return `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;">
       ${boss.bodySVG()}
       ${partsSVG}
+      ${armorOverlay}
     </svg>`;
   }
 
   function alive(boss) { return boss.parts.filter(p => p.hp > 0); }
   function aliveTargets(boss) { return alive(boss); }
   function partById(boss, id) { return boss.parts.find(p => p.id === id); }
+  // Armor on core = number of intact non-core parts
+  function coreArmor(boss) { return boss.parts.filter(p => p.effect !== "win" && p.hp > 0).length; }
 
   function bossModifiers(boss) {
     let atks = boss.attacksPerRound;
