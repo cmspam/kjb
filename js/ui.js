@@ -3,7 +3,13 @@ window.UI = (() => {
   const SCREENS = ["title","setup","pass","role","wager","question","result","action","boss","victory","defeat","vote"];
   function $(id) { return document.getElementById(id); }
   function show(name) {
-    SCREENS.forEach(n => { const el = $("screen-"+n); if (el) el.classList.toggle("hidden", n !== name); });
+    SCREENS.forEach(n => {
+      const el = $("screen-"+n);
+      if (!el) return;
+      el.classList.toggle("hidden", n !== name);
+      // clear hidden screens to prevent stale ID collisions (#cont, etc.)
+      if (n !== name) el.innerHTML = "";
+    });
     window.scrollTo(0,0);
   }
   function el(html) { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; }
@@ -31,8 +37,14 @@ window.UI = (() => {
         <button class="btn ghost" id="btn-rules" style="margin-top:8px;">あそびかた ❓</button>
         <div class="subtle" style="margin-top: 28px;">タップで おとが でます 🔊</div>
       </div>`));
-    $("btn-start").onclick = () => { SND.unlock(); SND.sfxPop(); onStart(); };
-    $("btn-rules").onclick = () => { SND.unlock(); showRules(() => renderTitle({onStart})); };
+    $("btn-start").addEventListener("click", () => {
+      try { SND.unlock(); SND.sfxPop(); } catch(e) {}
+      onStart();
+    });
+    $("btn-rules").addEventListener("click", () => {
+      try { SND.unlock(); } catch(e) {}
+      showRules(() => renderTitle({onStart}));
+    });
   }
 
   // -------- SETUP --------
@@ -401,10 +413,12 @@ window.UI = (() => {
         <div class="energy">⚡ ${p.energy} 🎴 ${p.hand?p.hand.length:0}</div>
       </div>`).join("");
     return `
-      <div class="round-banner">${boss ? `${boss.name_jp}` : ""}</div>
-      <div class="stage">${svg}</div>
-      <div class="boss-name">${boss ? boss.name_jp : ""}</div>
-      <div class="players">${playerTiles}</div>
+      <div class="header-wrap">
+        <div class="round-banner">${boss ? `${boss.name_jp}` : ""}</div>
+        <div class="stage">${svg}</div>
+        <div class="boss-name">${boss ? boss.name_jp : ""}</div>
+        <div class="players">${playerTiles}</div>
+      </div>
     `;
   }
 

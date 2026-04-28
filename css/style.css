@@ -49,8 +49,8 @@ html, body {
   transition: transform .08s ease;
 }
 .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0,0,0,.35); }
-.btn.big { min-height: 96px; font-size: 32px; padding: 18px 36px; min-width: 280px; }
-.btn.huge { min-height: 140px; font-size: 44px; padding: 24px 40px; min-width: 360px; }
+.btn.big { min-height: 96px; font-size: 32px; padding: 18px 36px; min-width: 240px; max-width: 100%; }
+.btn.huge { min-height: 120px; font-size: 40px; padding: 22px 28px; min-width: 280px; max-width: 100%; }
 .btn.cool { background: var(--cool); color: #002233; }
 .btn.hot { background: var(--hot); color: #fff; }
 .btn.good { background: var(--good); color: #04210f; }
@@ -307,13 +307,31 @@ h3 { font-size: 28px; margin: 4px 0; }
   z-index: 10;
 }
 
-/* Hand area — pinch */
+/* Phones */
 @media (max-width: 700px) {
-  .question-prompt-en { font-size: 28px; }
-  .opt { font-size: 22px; padding: 14px; }
-  h1 { font-size: 44px; }
-  .pass-big { font-size: 56px; }
-  .stage { height: 280px; }
-  .card { width: 110px; min-height: 170px; }
-  .btn.huge { font-size: 32px; min-height: 100px; }
+  .question-prompt-en { font-size: 26px; }
+  .opt { font-size: 20px; padding: 12px; min-height: 64px; }
+  h1 { font-size: 40px; }
+  h2 { font-size: 30px; }
+  .pass-big { font-size: 52px; }
+  .stage { height: 240px; }
+  .card { width: 100px; min-height: 150px; }
+  .card .icon { font-size: 32px; }
+  .card .cname { font-size: 13px; }
+  .card .ctext { font-size: 11px; }
+  .btn { font-size: 18px; min-height: 52px; min-width: 0; padding: 10px 18px; }
+  .btn.big { font-size: 22px; min-height: 64px; min-width: 0; padding: 12px 18px; }
+  .btn.huge { font-size: 26px; min-height: 80px; min-width: 0; padding: 14px 20px; }
+  .wager-grid { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .wager-btn .s { font-size: 28px; }
+  .wager-btn .lbl { font-size: 14px; }
+  .wager-btn .reward { font-size: 12px; }
+  .player { min-width: 88px; padding: 6px 8px; }
+  .player .name { font-size: 14px; }
+  .player .hp, .player .energy { font-size: 12px; }
+}
+@media (max-width: 380px) {
+  .stage { height: 200px; }
+  h1 { font-size: 32px; }
+  .pass-big { font-size: 40px; }
 }
