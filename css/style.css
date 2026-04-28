@@ -307,6 +307,38 @@ h3 { font-size: 28px; margin: 4px 0; }
   z-index: 10;
 }
 
+/* Boss hit speech bubble */
+.hit-bubble {
+  position: absolute; left: 50%; top: 8%;
+  transform: translateX(-50%);
+  background: #fffae6; color: #2a1500;
+  padding: 12px 18px; border-radius: 22px;
+  border: 4px solid #000;
+  font-weight: 900; font-size: 22px;
+  white-space: nowrap; max-width: 90%; text-overflow: ellipsis; overflow: hidden;
+  box-shadow: 0 6px 0 rgba(0,0,0,.3);
+  z-index: 6;
+  pointer-events: none;
+  animation: bubble-pop .3s cubic-bezier(.18,.89,.32,1.28) both, bubble-fade .35s ease 1s forwards;
+}
+.hit-bubble:after {
+  content:""; position:absolute; bottom:-14px; left:50%; transform:translateX(-50%);
+  border: 9px solid transparent; border-top-color:#000;
+}
+.hit-bubble:before {
+  content:""; position:absolute; bottom:-10px; left:50%; transform:translateX(-50%);
+  border: 7px solid transparent; border-top-color:#fffae6;
+  z-index: 1;
+}
+@keyframes bubble-pop {
+  0% { transform: translateX(-50%) scale(0); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+@keyframes bubble-fade {
+  0% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.9) translateY(-20px); }
+}
+
 /* Phones */
 @media (max-width: 700px) {
   .question-prompt-en { font-size: 26px; }

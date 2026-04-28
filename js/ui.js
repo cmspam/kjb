@@ -256,20 +256,26 @@ window.UI = (() => {
     show("action");
     const s = $("screen-action"); s.innerHTML = "";
     s.appendChild(el(buildHeader(boss, players, player)));
+    const hasAtk = player.attackPower > 0;
     s.appendChild(el(`
       <div class="center" style="width:100%;">
-        <h3>${JP.action_title}</h3>
-        <div class="subtle">エナジー ${player.energy} / こうげきパワー ${player.attackPower || 0}</div>
+        <h3>${hasAtk ? "カイジュウを やっつけろ！" : "ターンを おわるよ"}</h3>
+        <div class="subtle">エナジー ${player.energy}${hasAtk?` / こうげきパワー ${player.attackPower}`:""}</div>
         <div class="row">
-          <button class="btn big hot" id="atk" ${player.attackPower>0?"":"disabled style='opacity:.45'"}>${JP.action_attack} ⚔️</button>
-          <button class="btn big ghost" id="end">${JP.action_end}</button>
+          ${hasAtk
+            ? `<button class="btn huge hot" id="atk">⚔️ ${JP.action_attack}！</button>`
+            : `<button class="btn huge cool" id="end">${JP.action_end} →</button>`
+          }
         </div>
+        ${hasAtk ? `<button class="btn ghost" id="end" style="margin-top:8px;font-size:14px;">${JP.action_end}</button>` : ``}
         <h3 style="margin-top:16px;">カード</h3>
         <div id="hand-area"></div>
       </div>
     `));
-    $("atk").onclick = () => { if (player.attackPower>0) onAttack(); };
-    $("end").onclick = () => { SND.sfxPop(); onEnd(); };
+    if (hasAtk) {
+      $("atk").addEventListener("click", () => onAttack());
+    }
+    $("end").addEventListener("click", () => { SND.sfxPop(); onEnd(); });
     renderHandInto($("hand-area"), player, false, onCard);
   }
 

@@ -280,7 +280,18 @@ window.Monsters = (() => {
         { id:"mouth", type:"mouth", name_jp:"くち", maxHP:10, hp:10, geom:{x:400,y:250,w:38,h:18}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
         { id:"core", type:"core", name_jp:"ハート（よわてん）", maxHP:22, hp:22, geom:{x:400,y:90,r:24}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: ["イタ〜！","タコパ〜！","おしりが ピリピリ！","タコ・タコ・タコ〜！"]
+      hits: [
+        "イタタタ！", "タコパ〜！", "おしりが ピリピリ！", "タコ・タコ・タコ〜！",
+        "8本足が ピンチ！", "たこ焼きに しないで〜", "イカと ちがうんだよ！", "スミ かけるよ〜！",
+        "にゅるにゅる〜", "寿司ネタ いやだ！", "お風呂で 赤くなるよ", "ラーメンに 入れないで〜",
+        "ぐにゃぐにゃ〜", "きゅうばん ぺたぺた", "海の おどりて だぞ！", "たこ焼き パーティ〜",
+        "たこさん ウィンナー？", "カラオケ うまいんだぞ！", "8本で じゃんけん！", "ピース ピース ピース ✌️",
+        "色 かわるよ〜", "ぽよーん！", "イカフライ きらい！", "ママと はぐれた…",
+        "兄弟 100ぴき！", "ぼく 海のスター", "海賊の ともだち", "たこちゅー！💋",
+        "すいすい〜", "うずまき パワー！", "触手 ぱた ぱた", "もう 7本足や！",
+        "おいしそう…？", "やめて〜！", "ママ〜！", "うんちが もれる！",
+        "タコの きもち わかる？", "やわらかい から たべないで", "8本中 5本 のこってる！", "Tralalero TAKO！"
+      ]
     };
   }
 
@@ -327,7 +338,18 @@ window.Monsters = (() => {
         { id:"belly", type:"special", name_jp:"おなか", maxHP:9, hp:9, geom:{x:400,y:300,w:55,h:38}, draw:(p)=>drawBelly(p,color), effect:"weak-spot" },
         { id:"core", type:"core", name_jp:"コア（よわてん）", maxHP:24, hp:24, geom:{x:400,y:380,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: ["ウンコ もれる！","ブッ！","おなかが いたい！"]
+      hits: [
+        "ウンコ もれる〜！", "ブッ！", "おなかが いたい！", "うん？うんち？",
+        "うんこ・うんこ・うんこ！", "ボンバル・ボンバル！", "爆発する〜！", "ロボット なのに〜",
+        "中身 うんこ！", "リサイクル しない？", "もっと たべたい〜", "カレー だい好き！",
+        "うんち博士！", "茶色が テーマカラー", "臭い けど かわいい！", "ファブリーズ きらい！",
+        "ぷりぷり マシン", "爆弾 うんち！", "大砲 おなら！", "ミサイル ぶりっ！",
+        "うんちパワー 100％", "機関車 ぽっぽー！", "ぼくの 油 うんこ油", "バッテリー うんちパワー",
+        "走ると ぷりぷり〜", "止まると ぶー", "風が きもちいい〜", "においも 風と いっしょ〜",
+        "トイレ どこ？！", "紙 ある？", "流す ボタン あるよ", "押すと しょうり！",
+        "でも バクハツ する", "ふしぎ ロボット", "ふしぎ うんち", "永遠の しょうべん…",
+        "ジャパンの たから！", "茶色 だい好き", "ジムおじさん…？", "ぼくの 友だち だれ？"
+      ]
     };
   }
 
@@ -376,7 +398,18 @@ window.Monsters = (() => {
         { id:"tongue", type:"special", name_jp:"べろ", maxHP:6, hp:6, geom:{x:420,y:298,len:70}, draw:(p)=>drawTongue(p,color), effect:"weak-spot" },
         { id:"core", type:"core", name_jp:"ハート（よわてん）", maxHP:22, hp:22, geom:{x:420,y:235,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: ["パク！パク！","トラララ〜！","ピチピチ！"]
+      hits: [
+        "パク！パク！", "トラララ〜！", "ピチピチ！", "お魚 イタイ！",
+        "寿司ネタ いやだ！", "焼き魚も ダメ！", "お刺身 だめだめ！", "ぼく さかな じゃない！",
+        "かえる でもない！", "ハイブリッド だぞ！", "パクパクパクパク！", "食パン パクパク",
+        "ご飯 パクパク", "なんでも パクパク〜", "ぼくの 口 大きい！", "なんでも はいる",
+        "君も はいる？", "やめて〜 食べないよ", "うそ ちょっと たべる！", "Oh tralala~",
+        "イタリアン メロディ", "ベル カント！", "オペラ うた！", "海の カラオケ王",
+        "マイク かして〜", "1番 ぼく！", "2番も ぼく！", "3番 きみ？",
+        "歌 うますぎ〜", "海中 コンサート", "きゃー！ ファン！", "サインして〜！",
+        "かっこいい？かわいい！", "そう、両方！", "お魚 王子！", "カエル 王女！",
+        "でも ぼく ひとり…", "さびしい トラララ", "でも 元気！", "Tralala ピチピチ！"
+      ]
     };
   }
 
@@ -425,11 +458,238 @@ window.Monsters = (() => {
         { id:"butt", type:"special", name_jp:"おしり", maxHP:9, hp:9, geom:{x:400,y:340,w:50,h:24}, draw:(p)=>drawBelly(p,color), effect:"weak-spot" },
         { id:"core", type:"core", name_jp:"ハート（よわてん）", maxHP:23, hp:23, geom:{x:400,y:240,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: ["ブルブル〜！","パンパム！","ふわふわ いたい！"]
+      hits: [
+        "ブルブル〜！", "パンパム！", "ふわふわ いたい！", "もこもこ もこもこ！",
+        "けが 抜ける〜", "ふわふわ じゃ なくなる！", "ぼく もと ぬいぐるみ", "工場で 生まれた",
+        "でも 心が ある！", "なで なで して〜", "ハグ！ハグ！", "きゅーっと だっこ",
+        "でも 痛くしないで〜", "ぶる ぶる ぶる", "さむがり なんだ", "真夏でも セーター",
+        "秋でも コート", "冬は ふとん", "いつも ふわふわ", "抱きまくら じゃない！",
+        "ぼく かいじゅう だぞ！", "ふわふわ 怪獣！", "パンパムの 力！", "でも 弱い…",
+        "すぐ 泣く", "ママ よんで〜", "パパ どこ？", "きょうだい 5匹",
+        "みんな ふわふわ", "雲みたい？", "雪みたい？", "綿あめ みたい？",
+        "でも たべないで！", "おなら でた…", "ばれた？", "みんな ぼくの ファン？",
+        "パンパム ハッピー！", "Brr brr ブルブル！", "ふわっ！", "ゆ〜くん たすけて！"
+      ]
     };
   }
 
-  const factories = [makeTakoTakoSahur, makeBombardiroUnkodilo, makeTralaleroPakupaku, makeBrrPampamu];
+  function makeParfaitIwashi() {
+    const color = "#a8d4f0";
+    return {
+      id: "parfait",
+      name_jp: "パフェイワシ",
+      name_en: "Parfait Iwashi",
+      catchphrase: "パフェ・パフェ・パフェイワシ！",
+      color,
+      attacksPerRound: 2,
+      bodySVG: () => `
+        <defs>
+          <linearGradient id="iwashiBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#bce0fa"/>
+            <stop offset=".5" stop-color="#5a90c5"/>
+            <stop offset="1" stop-color="#345878"/>
+          </linearGradient>
+          <radialGradient id="whipGrad" cx=".4" cy=".3" r=".7">
+            <stop offset="0" stop-color="#fff"/>
+            <stop offset="1" stop-color="#ffe6e0"/>
+          </radialGradient>
+          <linearGradient id="parfaitGlass" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e0f0ff" stop-opacity=".7"/>
+            <stop offset="1" stop-color="#a0c8e8" stop-opacity=".5"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="408" cy="395" rx="180" ry="18" fill="#000" opacity=".3"/>
+        <!-- Parfait glass (V shape) behind -->
+        <path d="M 270 200 L 530 200 L 470 380 L 330 380 Z" fill="url(#parfaitGlass)" stroke="#88aacc" stroke-width="3"/>
+        <!-- Glass highlight -->
+        <line x1="290" y1="220" x2="345" y2="370" stroke="#fff" stroke-width="3" opacity=".5"/>
+        <!-- Yogurt/jelly bottom layer -->
+        <path d="M 340 350 L 460 350 L 470 380 L 330 380 Z" fill="#ffd58a" stroke="#000" stroke-width="2"/>
+        <!-- Sardine body horizontal -->
+        <ellipse cx="400" cy="290" rx="155" ry="55" fill="url(#iwashiBody)" stroke="#000" stroke-width="4"/>
+        <!-- Sardine fish tail -->
+        <path d="M 245 290 L 200 250 L 220 290 L 200 330 Z" fill="url(#iwashiBody)" stroke="#000" stroke-width="3"/>
+        <!-- Sardine spots -->
+        <circle cx="350" cy="280" r="4" fill="#0a1828" opacity=".6"/>
+        <circle cx="385" cy="295" r="4" fill="#0a1828" opacity=".6"/>
+        <circle cx="420" cy="278" r="4" fill="#0a1828" opacity=".6"/>
+        <circle cx="455" cy="293" r="4" fill="#0a1828" opacity=".6"/>
+        <!-- Silver belly stripe -->
+        <ellipse cx="400" cy="305" rx="120" ry="14" fill="#fff" opacity=".55"/>
+        <!-- Whipped cream pile -->
+        <path d="M 320 215 Q 320 195 340 190 Q 350 175 365 180 Q 380 165 400 170 Q 420 165 435 180 Q 450 175 460 190 Q 480 195 480 215 Q 470 230 400 230 Q 330 230 320 215 Z"
+              fill="url(#whipGrad)" stroke="#000" stroke-width="3"/>
+        <!-- Cream swirl details -->
+        <path d="M 350 195 Q 360 180 380 185 Q 400 170 420 185 Q 440 180 450 195" fill="url(#whipGrad)" stroke="none" opacity=".7"/>
+        <path d="M 360 210 Q 380 200 400 205 Q 420 200 440 210" stroke="#fff" stroke-width="2" fill="none" opacity=".6"/>
+        <!-- Strawberry left -->
+        <g transform="translate(265, 265)">
+          <ellipse cx="0" cy="3" rx="14" ry="13" fill="#ee2244" stroke="#000" stroke-width="2"/>
+          <ellipse cx="-4" cy="0" rx="3" ry="2" fill="#fff" opacity=".7"/>
+          <path d="M -8 -8 L -3 -12 L 0 -7 L 3 -12 L 8 -8 Z" fill="#3aaa3a" stroke="#1a6020" stroke-width="1.5"/>
+          <circle cx="-3" cy="3" r="1" fill="#fff8a0"/>
+          <circle cx="3" cy="6" r="1" fill="#fff8a0"/>
+        </g>
+        <!-- Blueberries right -->
+        <g transform="translate(540, 280)">
+          <circle cx="0" cy="0" r="10" fill="#3a4ab8" stroke="#000" stroke-width="2"/>
+          <ellipse cx="-3" cy="-3" rx="3" ry="2" fill="#fff" opacity=".5"/>
+        </g>
+        <g transform="translate(555, 305)">
+          <circle cx="0" cy="0" r="8" fill="#3a4ab8" stroke="#000" stroke-width="2"/>
+          <ellipse cx="-2" cy="-2" rx="2" ry="1.5" fill="#fff" opacity=".5"/>
+        </g>
+        <!-- Banana slice top right -->
+        <g transform="translate(530, 195)">
+          <ellipse cx="0" cy="0" rx="12" ry="10" fill="#ffe45c" stroke="#000" stroke-width="2"/>
+          <circle cx="0" cy="0" r="3" fill="#7a5a1c"/>
+        </g>
+        <!-- Mint leaf -->
+        <g transform="translate(425, 130) rotate(20)">
+          <path d="M 0 0 Q -5 -10 0 -18 Q 5 -10 0 0 Z" fill="#3aaa3a" stroke="#1a6020" stroke-width="1.5"/>
+          <line x1="0" y1="0" x2="0" y2="-15" stroke="#1a6020" stroke-width="1"/>
+        </g>
+        ${blushPair(400, 305, 90)}
+      `,
+      parts: [
+        { id:"cherry", type:"core", name_jp:"さくらんぼ（よわてん）", maxHP:20, hp:20, geom:{x:400,y:120,r:18}, draw:(p)=>drawCherryCore(p,color), effect:"win" },
+        { id:"whip", type:"special", name_jp:"ホイップ", maxHP:8, hp:8, geom:{x:400,y:175,h:30}, draw:(p)=>drawAntenna(p,"#fff"), effect:"weak-spot" },
+        { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:370,y:280,r:22,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
+        { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:430,y:280,r:22,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:9, hp:9, geom:{x:495,y:300,w:24,h:12}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"finT", type:"limb", name_jp:"せびれ", maxHP:6, hp:6, geom:{x:400,y:240,dir:270,len:50}, draw:(p)=>drawLeg(p,color), effect:"slow" },
+        { id:"finB", type:"limb", name_jp:"はらびれ", maxHP:6, hp:6, geom:{x:380,y:340,dir:90,len:40}, draw:(p)=>drawLeg(p,color), effect:"atk-1" },
+        { id:"tail", type:"limb", name_jp:"しっぽ", maxHP:8, hp:8, geom:{x:240,y:290,dir:180,len:60}, draw:(p)=>drawTail(p,color), effect:"slow" },
+      ],
+      hits: [
+        "パフェ・パフェ・パフェイワシ！", "うわ〜 ホイップが もれた！", "いちごが おちる〜", "アイス とけちゃう！",
+        "フルーツ ぼん！", "パフェの イワシ食べたい？", "スイーツ パワー！", "ぼくは あまい けど からい！",
+        "イワシだけど パフェだよ〜", "Oh my parfait!", "パフェッ！", "ぼくの アイス のせて〜",
+        "いわし いわし いわし〜", "カチコチ アイス！", "ぐにゃぐにゃ いわし！", "パパパパフェ！",
+        "ぼく スイーツいわし！", "イワシ・スプラッシュ！", "お皿 ガッシャン！", "パンケーキも〜",
+        "パフェの 中で およぐ いわし", "パフェ風呂 きもちぃ〜", "ホイップ ふわふわ", "ジャム どばー！",
+        "きょうの デザート ぼくだ！", "ヨーグルト つるつる", "バニラ えんちょー！", "マカロン ぱりぱり",
+        "カラメル しゅわしゅわ", "かき氷 だってある", "たべないで〜 ぼく ともだち", "イワシは からだに いいんだよ",
+        "カルシウム もあるんだよ！", "でも パフェは あまい", "どっちが すき？", "きもちわるい？でも おいしい？",
+        "Hello! ぱふぇいわし です！", "せかいで 1ぴきだけ", "妖怪 でも あるんだよ", "スプーンで すくわないで〜！"
+      ]
+    };
+  }
+
+  function makeAnpanmaguro() {
+    const color = "#ffb070";
+    return {
+      id: "anpan",
+      name_jp: "アンパンマグロ",
+      name_en: "Anpan Maguro",
+      catchphrase: "アンパン・アンパン・アンパンマグロ！",
+      color,
+      attacksPerRound: 2,
+      bodySVG: () => `
+        <defs>
+          <radialGradient id="anpanFace" cx=".4" cy=".3" r=".75">
+            <stop offset="0" stop-color="#ffe0b0"/>
+            <stop offset=".7" stop-color="#e0a060"/>
+            <stop offset="1" stop-color="#a05530"/>
+          </radialGradient>
+          <linearGradient id="tunaBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7090c0"/>
+            <stop offset=".5" stop-color="#3060a0"/>
+            <stop offset="1" stop-color="#102050"/>
+          </linearGradient>
+          <linearGradient id="capeRed" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ee3344"/>
+            <stop offset="1" stop-color="#a01524"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="408" cy="395" rx="190" ry="20" fill="#000" opacity=".3"/>
+        <!-- Tail fin (back) -->
+        <path d="M 220 290 L 130 230 L 155 290 L 130 350 L 220 320 Z" fill="url(#tunaBody)" stroke="#000" stroke-width="3"/>
+        <!-- Cape behind body -->
+        <path d="M 250 240 Q 200 320 230 380 Q 290 350 300 280 Z" fill="url(#capeRed)" stroke="#000" stroke-width="3"/>
+        <path d="M 550 240 Q 600 320 570 380 Q 510 350 500 280 Z" fill="url(#capeRed)" stroke="#000" stroke-width="3"/>
+        <!-- Tuna body -->
+        <ellipse cx="400" cy="310" rx="180" ry="75" fill="url(#tunaBody)" stroke="#000" stroke-width="4"/>
+        <!-- Belly -->
+        <ellipse cx="400" cy="335" rx="150" ry="30" fill="#a8c0e0" opacity=".7"/>
+        <!-- Side stripes -->
+        <path d="M 250 305 Q 320 295 400 300 Q 480 305 550 305" stroke="#0a1a40" stroke-width="3" fill="none" opacity=".7"/>
+        <path d="M 260 320 Q 330 315 400 318 Q 470 320 540 320" stroke="#0a1a40" stroke-width="2" fill="none" opacity=".5"/>
+        <!-- Top fin -->
+        <path d="M 380 235 L 400 200 L 420 235 Z" fill="url(#tunaBody)" stroke="#000" stroke-width="3"/>
+        <!-- Anpanman face circle -->
+        <circle cx="400" cy="190" r="115" fill="url(#anpanFace)" stroke="#000" stroke-width="5"/>
+        <!-- Highlight -->
+        <ellipse cx="370" cy="155" rx="48" ry="22" fill="#fff" opacity=".4"/>
+        <!-- Sesame seeds (dotted texture) -->
+        <circle cx="340" cy="135" r="2" fill="#5a3010"/>
+        <circle cx="430" cy="120" r="2" fill="#5a3010"/>
+        <circle cx="465" cy="155" r="2" fill="#5a3010"/>
+        <circle cx="335" cy="180" r="2" fill="#5a3010"/>
+        <circle cx="465" cy="200" r="2" fill="#5a3010"/>
+        <circle cx="305" cy="220" r="2" fill="#5a3010"/>
+        ${blushPair(400, 220, 90)}
+      `,
+      parts: [
+        { id:"nose", type:"core", name_jp:"おはな（よわてん）", maxHP:22, hp:22, geom:{x:400,y:200,r:18}, draw:(p)=>drawNoseCore(p,color), effect:"win" },
+        { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:365,y:175,r:14,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
+        { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:435,y:175,r:14,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:9, hp:9, geom:{x:400,y:235,w:30,h:14}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"capeL", type:"special", name_jp:"マントL", maxHP:6, hp:6, geom:{x:265,y:300,dir:200,len:60}, draw:(p)=>drawLeg(p,"#ee3344"), effect:"no-special" },
+        { id:"capeR", type:"special", name_jp:"マントR", maxHP:6, hp:6, geom:{x:535,y:300,dir:340,len:60}, draw:(p)=>drawLeg(p,"#ee3344"), effect:"no-special" },
+        { id:"finL", type:"limb", name_jp:"ひれ L", maxHP:7, hp:7, geom:{x:280,y:330,dir:185,len:70}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"finR", type:"limb", name_jp:"ひれ R", maxHP:7, hp:7, geom:{x:520,y:330,dir:355,len:70}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"tail", type:"limb", name_jp:"しっぽ", maxHP:8, hp:8, geom:{x:220,y:310,dir:180,len:60}, draw:(p)=>drawTail(p,"#3060a0"), effect:"slow" },
+      ],
+      hits: [
+        "アンパン・アンパン・アンパンマグロ！", "ぼくの あたま たべる？", "顔が ちょっと ぬれた…", "ジャムおじさんに いって！",
+        "バイキンマンに きをつけて！", "マグロパワー！", "元気 100倍！", "あんこ どばー！",
+        "ツナ ツナ ツナマヨ", "寿司に 売られる…", "海から こんにちは", "パン耳 たべて〜",
+        "お腹 すいた？", "ぼくの からだで たすけてあげる", "やさしい アンパンマグロ！", "ぼくに 顔 つけて〜",
+        "マグロサンド はじめました", "アンパン サーモンも あるよ", "カレーパン まぐろは ともだち", "ペンギンも びっくり",
+        "ねこも びっくり", "とどけ！愛と勇気！", "へんしん パワー！", "マグロロケット！",
+        "海の英雄！", "1巻 ¥500！", "とろ部分 すごい", "大トロは 心",
+        "中トロは 顔", "赤身は からだ", "ぼく 全身 マグロ！", "全身 アンパン！",
+        "どっちが ほんと？", "ぼくも しらない！", "ジャムおじさん〜！", "バタコさん〜！",
+        "Hi I'm anpan maguro!", "Take a bite of my head!", "Don't eat me!", "海も 陸も ぼくの すみか"
+      ]
+    };
+  }
+
+  // Cherry-styled core for parfait sardine
+  function drawCherryCore(part, color) {
+    const s = partState(part);
+    const { x, y, r } = part.geom;
+    if (s === 2) {
+      return `<g class="part"><text x="${x}" y="${y}" text-anchor="middle" font-size="${r*2}">💥</text></g>`;
+    }
+    const cracks = s===1 ? `<path d="M ${x-r*0.3} ${y-r*0.2} L ${x+r*0.1} ${y+r*0.2}" stroke="#000" stroke-width="2" fill="none"/>` : "";
+    return `<g class="part">
+      <line x1="${x}" y1="${y-r}" x2="${x-2}" y2="${y-r*2.5}" stroke="#3a8a3a" stroke-width="3"/>
+      <path d="M ${x-2} ${y-r*2.5} Q ${x-12} ${y-r*3} ${x-18} ${y-r*2.7} Q ${x-10} ${y-r*2.4} ${x-2} ${y-r*2.5} Z" fill="#3aaa3a" stroke="#1a6020" stroke-width="1.5"/>
+      <circle cx="${x}" cy="${y}" r="${r}" fill="#ee2244" stroke="#000" stroke-width="3"/>
+      <circle cx="${x-r*0.35}" cy="${y-r*0.35}" r="${r*0.3}" fill="#fff" opacity=".7"/>
+      ${cracks}
+    </g>`;
+  }
+
+  // Big round nose for Anpanman tuna
+  function drawNoseCore(part, color) {
+    const s = partState(part);
+    const { x, y, r } = part.geom;
+    if (s === 2) {
+      return `<g class="part"><text x="${x}" y="${y}" text-anchor="middle" font-size="${r*2}">💥</text></g>`;
+    }
+    const cracks = s===1 ? `<path d="M ${x-r*0.3} ${y-r*0.1} L ${x+r*0.2} ${y+r*0.2}" stroke="#000" stroke-width="2" fill="none"/>` : "";
+    return `<g class="part">
+      <circle cx="${x+2}" cy="${y+2}" r="${r}" fill="#000" opacity=".3"/>
+      <circle cx="${x}" cy="${y}" r="${r}" fill="#ee3344" stroke="#000" stroke-width="3"/>
+      <circle cx="${x-r*0.35}" cy="${y-r*0.35}" r="${r*0.35}" fill="#fff" opacity=".75"/>
+      ${cracks}
+    </g>`;
+  }
+
+  const factories = [makeTakoTakoSahur, makeBombardiroUnkodilo, makeTralaleroPakupaku, makeBrrPampamu, makeParfaitIwashi, makeAnpanmaguro];
 
   function randomBoss() { return factories[Math.floor(Math.random()*factories.length)](); }
 

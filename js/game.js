@@ -192,6 +192,15 @@ window.Game = (() => {
       num.className = "dmg-num"; num.textContent = "-" + dmg;
       stage.appendChild(num);
       setTimeout(() => num.remove(), 1200);
+      // Boss reaction speech bubble
+      const hits = S.boss.hits || [];
+      if (hits.length) {
+        const bubble = document.createElement("div");
+        bubble.className = "hit-bubble pop";
+        bubble.textContent = hits[(Math.random()*hits.length)|0];
+        stage.appendChild(bubble);
+        setTimeout(() => bubble.remove(), 1400);
+      }
     }
     UI.toast(JP.hit_part(p.name, part.name_jp, dmg), 1100);
     p.attackPower = 0;
@@ -205,7 +214,8 @@ window.Game = (() => {
     // Check win
     const core = S.boss.parts.find(x => x.effect === "win");
     if (core && core.hp <= 0) { return doVictory(); }
-    setTimeout(() => goAction(), 700);
+    // Show boss reaction bubble briefly, then auto-end turn (no extra screen tap needed).
+    setTimeout(() => endTurn(), 1400);
   }
 
   function endTurn() {
