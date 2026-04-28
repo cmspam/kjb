@@ -44,17 +44,28 @@ window.Game = (() => {
       rolesRevealed: false,
       revealedThisGame: [],
     };
-    // Deal starting hands
+    // Deal starting hands (3 cards default)
     players.forEach(p => { for (let i = 0; i < STARTING_HAND; i++) drawCard(p); });
-    // Solo balance: a single player on multiplayer damage curves is unwinnable.
-    // Boost HP, halve boss attacks, soften core armor, and start with extra cards.
-    if (S.solo) {
-      const p = S.players[0];
-      p.hp = 50; p.maxHp = 50;
-      p.energy = 4;
-      drawCard(p); drawCard(p); // 5-card opening hand
-      S.boss.attacksPerRound = 1;
-    }
+    // Per-count balancing. Goals:
+    //   • each player tanks ~the same wall-clock damage regardless of party size
+    //   • boss fight ends in ~6–11 rounds for any count
+    //   • core stays reachable (armor doesn't choke small parties)
+    const N = S.players.length;
+    const scaling = (function (n) {
+      if (n === 1) return { attacks: 1, hp: 50, energy: 4, extraCards: 2, armorDiv: 2 };
+      if (n === 2) return { attacks: 1, hp: 35, energy: 3, extraCards: 1, armorDiv: 1.5 };
+      if (n === 3) return { attacks: 2, hp: 25, energy: 2, extraCards: 0, armorDiv: 1 };
+      if (n === 4) return { attacks: 2, hp: 25, energy: 2, extraCards: 0, armorDiv: 1 };
+      if (n === 5) return { attacks: 3, hp: 25, energy: 2, extraCards: 0, armorDiv: 1 };
+      return        { attacks: 4, hp: 25, energy: 2, extraCards: 0, armorDiv: 1 };  // 6+
+    })(N);
+    S.scaling = scaling;
+    S.boss.attacksPerRound = scaling.attacks;
+    S.players.forEach(p => {
+      p.hp = scaling.hp; p.maxHp = scaling.hp;
+      p.energy = scaling.energy;
+      for (let i = 0; i < scaling.extraCards; i++) drawCard(p);
+    });
   }
 
   function drawCard(player) {
@@ -236,11 +247,10 @@ window.Game = (() => {
     }
     // Normal attack on a boss part
     const part = target.part;
-    // Armored core: damage to core reduced by intact non-core parts.
-    // Solo halves the armor so a single player can actually push damage through.
+    // Armored core: damage reduced by intact non-core parts, scaled per party size.
     if (part.effect === "win") {
-      let armor = Monsters.coreArmor(S.boss);
-      if (S.solo) armor = Math.floor(armor / 2);
+      const div = (S.scaling && S.scaling.armorDiv) || 1;
+      const armor = Math.floor(Monsters.coreArmor(S.boss) / div);
       const reduced = Math.max(1, dmg - armor);
       if (armor > 0 && reduced < dmg) {
         UI.toast(`コアの シールドが ${dmg - reduced} ダメージを ふせいだ！`, 1500);
