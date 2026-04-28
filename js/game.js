@@ -276,12 +276,13 @@ window.Game = (() => {
       const b = document.createElement("button");
       b.className = "vote-btn";
       b.textContent = p.name + (p.id===asker.id ? "（じぶん）" : "");
-      b.onclick = () => onPick(p);
+      UI.tap(b, () => onPick(p));
       row.appendChild(b);
     });
     s.appendChild(row);
     const c = document.createElement("button");
-    c.className = "btn ghost"; c.textContent = JP.cancel; c.onclick = onCancel;
+    c.className = "btn ghost"; c.textContent = JP.cancel;
+    UI.tap(c, onCancel);
     s.appendChild(c);
   }
 

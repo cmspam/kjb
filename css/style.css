@@ -122,7 +122,7 @@ h3 { font-size: 28px; margin: 4px 0; }
   padding: 24px;
   max-width: 720px; width: 100%;
   box-shadow: var(--shadow);
-  margin: 12px 0;
+  margin: 12px auto;
 }
 .question-prompt-jp { font-size: 22px; color: #d8c8ff; margin-bottom: 8px; }
 .question-prompt-en { font-size: 36px; font-weight: 900; margin: 12px 0; line-height: 1.25; }
@@ -148,7 +148,7 @@ h3 { font-size: 28px; margin: 4px 0; }
 
 /* Stars */
 .stars { font-size: 28px; color: var(--accent); letter-spacing: 4px; }
-.wager-grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; max-width: 720px; width:100%; }
+.wager-grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; max-width: 720px; width:100%; margin: 0 auto; }
 .wager-btn {
   background: var(--card);
   border-radius: 18px; padding: 18px;
@@ -183,7 +183,7 @@ h3 { font-size: 28px; margin: 4px 0; }
 /* Body part picker */
 .parts-pick {
   display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px; margin: 12px 0; width:100%; max-width: 720px;
+  gap: 10px; margin: 12px auto; width:100%; max-width: 720px;
 }
 .part-btn {
   background: var(--card); padding: 12px; border-radius: 14px;

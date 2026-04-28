@@ -2,6 +2,28 @@
 window.UI = (() => {
   const SCREENS = ["title","setup","pass","role","wager","question","result","action","boss","victory","defeat","vote"];
   function $(id) { return document.getElementById(id); }
+
+  // iOS-resilient tap handler: handles both touch and mouse, force-blurs any
+  // focused input on tap so the soft keyboard doesn't eat the first tap.
+  function tap(el, handler) {
+    if (!el) return;
+    let lastTouch = 0;
+    function blurActive() {
+      const a = document.activeElement;
+      if (a && a !== el && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && a.blur) a.blur();
+    }
+    el.addEventListener("touchend", (e) => {
+      if (e.cancelable) e.preventDefault();
+      lastTouch = Date.now();
+      blurActive();
+      handler(e);
+    }, { passive: false });
+    el.addEventListener("click", (e) => {
+      if (Date.now() - lastTouch < 800) return;
+      blurActive();
+      handler(e);
+    });
+  }
   function show(name) {
     SCREENS.forEach(n => {
       const el = $("screen-"+n);
@@ -37,11 +59,11 @@ window.UI = (() => {
         <button class="btn ghost" id="btn-rules" style="margin-top:8px;">あそびかた ❓</button>
         <div class="subtle" style="margin-top: 28px;">タップで おとが でます 🔊</div>
       </div>`));
-    $("btn-start").addEventListener("click", () => {
+    tap($("btn-start"), () => {
       try { SND.unlock(); SND.sfxPop(); } catch(e) {}
       onStart();
     });
-    $("btn-rules").addEventListener("click", () => {
+    tap($("btn-rules"), () => {
       try { SND.unlock(); } catch(e) {}
       showRules(() => renderTitle({onStart}));
     });
@@ -78,13 +100,13 @@ window.UI = (() => {
       const cr = $("count-row");
       [2,3,4,5,6].forEach(n => {
         const b = el(`<button class="toggle ${count===n?'on':''}">${n}</button>`);
-        b.onclick = () => { count = n; redraw(); };
+        tap(b, () => { count = n; redraw(); });
         cr.appendChild(b);
       });
       const lr = $("lvl-row");
       [[1,JP.level1],[2,JP.level2],[3,JP.level3]].forEach(([n, lbl]) => {
         const b = el(`<button class="toggle ${level===n?'on':''}" style="font-size:14px;">${lbl}</button>`);
-        b.onclick = () => { level = n; redraw(); };
+        tap(b, () => { level = n; redraw(); });
         lr.appendChild(b);
       });
       const nr = $("names-row");
@@ -93,13 +115,13 @@ window.UI = (() => {
         inp.oninput = (e) => { names[i] = e.target.value; };
         nr.appendChild(inp);
       }
-      $("jinro-toggle").onclick = () => { jinro = !jinro; redraw(); };
-      $("go").onclick = () => {
+      tap($("jinro-toggle"), () => { jinro = !jinro; redraw(); });
+      tap($("go"), () => {
         const finalNames = names.slice(0, count).map((n,i)=> n.trim() || JP.player_n(i+1));
         SND.sfxPop();
         onConfirm({ count, level, jinro: jinro && count >= 4, names: finalNames });
-      };
-      $("back").onclick = () => location.reload();
+      });
+      tap($("back"), () => location.reload());
     }
     redraw();
   }
@@ -115,7 +137,7 @@ window.UI = (() => {
         <div class="pass-instr" style="white-space: pre-line;">${JP.pass_instr}</div>
         <button class="btn huge cool" id="ready">${JP.ok}</button>
       </div>`;
-    $("ready").onclick = () => { SND.sfxPop(); onReady(); };
+    tap($("ready"), () => { SND.sfxPop(); onReady(); });
   }
 
   // -------- ROLE REVEAL (Jinro) --------
@@ -132,7 +154,7 @@ window.UI = (() => {
         <div class="subtle" style="margin-top:12px;">じぶんだけ みてね</div>
         <button class="btn huge ghost" id="ok">${JP.ok}</button>
       </div>`;
-    $("ok").onclick = () => onDone();
+    tap($("ok"), () => onDone());
   }
 
   // -------- WAGER --------
@@ -165,10 +187,10 @@ window.UI = (() => {
         </div>
         <div style="margin-top:14px;" id="hand-area"></div>
       </div>`));
-    s.querySelectorAll(".wager-btn").forEach(b => b.onclick = () => {
+    s.querySelectorAll(".wager-btn").forEach(b => tap(b, () => {
       SND.sfxPop();
       onPick(parseInt(b.dataset.stars,10));
-    });
+    }));
     renderHandInto($("hand-area"), player, /*beforeQ*/true, onCard);
   }
 
@@ -202,27 +224,25 @@ window.UI = (() => {
       const disabled = i === masked;
       const o = el(`<div class="opt ${disabled?'disabled':''}" data-i="${i}">${escapeHTML(opt)}</div>`);
       if (!disabled) {
-        o.onclick = () => {
+        tap(o, () => {
           const correct = i === question.answer;
           o.classList.add(correct ? "right" : "wrong");
           if (!correct) {
-            // Reveal correct
             const right = optsEl.querySelector(`[data-i="${question.answer}"]`);
             if (right) right.classList.add("right");
           }
-          // Disable all
           optsEl.querySelectorAll(".opt").forEach(x => x.classList.add("disabled"));
           if (correct) SND.sfxCorrect(); else SND.sfxWrong();
           setTimeout(() => onAnswer(correct, i), 850);
-        };
+        });
       }
       optsEl.appendChild(o);
     });
 
     if (question.audio) {
       const speak = () => SND.speak(question.audio);
-      const lb = $("listen-btn"); if (lb) lb.onclick = speak;
-      const sa = $("say-again"); if (sa) sa.onclick = speak;
+      const lb = $("listen-btn"); if (lb) tap(lb, speak);
+      const sa = $("say-again"); if (sa) tap(sa, speak);
       // Auto-speak after a tick if listen-only
       if (!question.prompt && !question.promptImage) {
         setTimeout(speak, 350);
@@ -248,7 +268,7 @@ window.UI = (() => {
         `}
         <button class="btn huge ${correct?'good':'ghost'}" id="cont">${JP.next}</button>
       </div>`));
-    $("cont").onclick = () => onContinue();
+    tap($("cont"), () => onContinue());
   }
 
   // -------- ACTION (attack / cards) --------
@@ -273,9 +293,9 @@ window.UI = (() => {
       </div>
     `));
     if (hasAtk) {
-      $("atk").addEventListener("click", () => onAttack());
+      tap($("atk"), () => onAttack());
     }
-    $("end").addEventListener("click", () => { SND.sfxPop(); onEnd(); });
+    tap($("end"), () => { SND.sfxPop(); onEnd(); });
     renderHandInto($("hand-area"), player, false, onCard);
   }
 
@@ -299,10 +319,10 @@ window.UI = (() => {
         <div class="ph">HP ${Math.max(0,p.hp)}/${p.maxHP}</div>
         <div class="pe">${effLabel}</div>
       </button>`);
-      if (!dead) node.onclick = () => { SND.sfxPop(); onPick(p); };
+      if (!dead) tap(node, () => { SND.sfxPop(); onPick(p); });
       partsEl.appendChild(node);
     });
-    $("cancel").onclick = () => onCancel();
+    tap($("cancel"), () => onCancel());
   }
 
   function effectLabel(p) {
@@ -338,7 +358,7 @@ window.UI = (() => {
       logEl.appendChild(p);
     });
     SND.sfxBoss();
-    $("cont").onclick = () => onContinue();
+    tap($("cont"), () => onContinue());
   }
 
   // -------- VICTORY / DEFEAT --------
@@ -362,8 +382,8 @@ window.UI = (() => {
           <button class="btn ghost" id="title">${JP.back_to_title}</button>
         </div>
       </div>`));
-    $("again").onclick = () => onAgain();
-    $("title").onclick = () => onTitle();
+    tap($("again"), () => onAgain());
+    tap($("title"), () => onTitle());
   }
 
   function renderDefeat({ players, jinro, spyWins }, onAgain, onTitle) {
@@ -385,8 +405,8 @@ window.UI = (() => {
           <button class="btn ghost" id="title">${JP.back_to_title}</button>
         </div>
       </div>`));
-    $("again").onclick = () => onAgain();
-    $("title").onclick = () => onTitle();
+    tap($("again"), () => onAgain());
+    tap($("title"), () => onTitle());
   }
 
   // -------- VOTE (Jinro mode) --------
@@ -403,10 +423,10 @@ window.UI = (() => {
     const vr = $("vrow");
     players.filter(p=>!p.dead).forEach(p => {
       const b = el(`<button class="vote-btn">${p.name}</button>`);
-      b.onclick = () => onVote(p);
+      tap(b, () => onVote(p));
       vr.appendChild(b);
     });
-    $("skip").onclick = () => onSkip();
+    tap($("skip"), () => onSkip());
   }
 
   // -------- HEADER (boss + players) --------
@@ -443,7 +463,7 @@ window.UI = (() => {
           <div class="ctext">${c.text_jp}</div>
           <div class="ccost">⚡${c.cost}</div>
         </div>`);
-        if (playable) node.onclick = () => { SND.sfxCard(); onCard(c, idx); };
+        if (playable) tap(node, () => { SND.sfxCard(); onCard(c, idx); });
         hand.appendChild(node);
       });
     }
@@ -473,10 +493,10 @@ window.UI = (() => {
         </div>
         <button class="btn huge cool" id="back-rules" style="margin-top:18px;">${JP.back}</button>
       </div>`));
-    $("back-rules").onclick = () => onBack();
+    tap($("back-rules"), () => onBack());
   }
 
   return { renderTitle, renderSetup, renderPass, renderRole, renderWager, renderQuestion,
            renderResult, renderAction, renderTargetPicker, renderBoss, renderVictory,
-           renderDefeat, renderVote, toast, show, showRules };
+           renderDefeat, renderVote, toast, show, showRules, tap };
 })();

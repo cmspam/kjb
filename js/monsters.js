@@ -5,6 +5,31 @@ window.Monsters = (() => {
 
   function partState(p) { if (p.hp <= 0) return 2; if (p.hp <= p.maxHP * 0.5) return 1; return 0; }
 
+  // Reusable injury decals used during state===1 (damaged but not destroyed)
+  function bandage(x, y, rot=15, w=22, h=8) {
+    return `<g transform="translate(${x},${y}) rotate(${rot})">
+      <rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="2" fill="#ffe5b8" stroke="#000" stroke-width="1.5"/>
+      <line x1="${-w/2+4}" y1="${-h/2+1}" x2="${-w/2+6}" y2="${h/2-1}" stroke="#000" stroke-width="1"/>
+      <line x1="${-w/2+10}" y1="${-h/2+1}" x2="${-w/2+12}" y2="${h/2-1}" stroke="#000" stroke-width="1"/>
+      <line x1="${-w/2+16}" y1="${-h/2+1}" x2="${-w/2+18}" y2="${h/2-1}" stroke="#000" stroke-width="1"/>
+    </g>`;
+  }
+  function bruise(x, y, w=10, h=6) {
+    return `<ellipse cx="${x}" cy="${y}" rx="${w}" ry="${h}" fill="#5a2a4a" opacity=".7"/>
+            <ellipse cx="${x-2}" cy="${y-1}" rx="${w*0.5}" ry="${h*0.4}" fill="#8a4070" opacity=".7"/>`;
+  }
+  function scratch(x, y, sz=10) {
+    return `<path d="M ${x-sz} ${y-sz*0.3} L ${x+sz} ${y+sz*0.3}" stroke="#a01" stroke-width="2" stroke-linecap="round"/>
+            <path d="M ${x-sz*0.6} ${y-sz*0.5} L ${x+sz*0.4} ${y+sz*0.4}" stroke="#a01" stroke-width="1.5" stroke-linecap="round"/>`;
+  }
+  function bump(x, y, r=6) {
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="#ff8888" stroke="#000" stroke-width="1.5"/>
+            <circle cx="${x-r*0.3}" cy="${y-r*0.3}" r="${r*0.3}" fill="#fff" opacity=".6"/>`;
+  }
+  function sweatDrop(x, y) {
+    return `<path d="M ${x} ${y-10} Q ${x-4} ${y-2} ${x} ${y+4} Q ${x+4} ${y-2} ${x} ${y-10} Z" fill="#7cd1ff" stroke="#0a3a5a" stroke-width="1.5"/>`;
+  }
+
   // -------- Reusable drawing helpers --------
 
   // Big cartoon eye with sparkle, eyebrow optionally
@@ -19,16 +44,21 @@ window.Monsters = (() => {
         <text x="${x}" y="${y+r*1.6}" text-anchor="middle" font-size="${r*0.9}">💫</text>
       </g>`;
     }
-    const tear = s === 1 ? `<path d="M ${x-r*0.3} ${y+r*0.4} Q ${x-r*0.5} ${y+r*1.2} ${x-r*0.1} ${y+r*1.6}" fill="#7cd1ff" stroke="#0a3a5a" stroke-width="2"/>` : "";
     const browL = mood === "angry" ? `<path d="M ${x-r} ${y-r*1.1} L ${x+r*0.4} ${y-r*0.5}" stroke="#000" stroke-width="${r*0.25}" stroke-linecap="round"/>` :
                                       `<path d="M ${x-r*0.9} ${y-r*1.2} Q ${x} ${y-r*1.6} ${x+r*0.7} ${y-r*1.1}" stroke="#000" stroke-width="${r*0.18}" fill="none" stroke-linecap="round"/>`;
+    const damage = s === 1 ? `
+      ${bruise(x-r*0.6, y+r*1.0, r*0.5, r*0.25)}
+      ${sweatDrop(x+r*0.9, y-r*0.6)}
+      <path d="M ${x-r*0.3} ${y+r*0.4} Q ${x-r*0.5} ${y+r*1.2} ${x-r*0.1} ${y+r*1.6}" fill="#7cd1ff" stroke="#0a3a5a" stroke-width="2"/>
+      ${bandage(x-r*0.1, y-r*0.95, -10, r*1.4, 6)}
+    ` : "";
     return `<g class="part bob" style="animation-delay:${(part.geom.delay||0)}s; transform-origin:${x}px ${y}px">
       <ellipse cx="${x+r*0.05}" cy="${y+r*0.15}" rx="${r}" ry="${r*1.05}" fill="#fff" stroke="#000" stroke-width="${Math.max(3,r*0.15)}"/>
       <ellipse cx="${x+r*0.1}" cy="${y+r*0.18}" rx="${r*0.55}" ry="${r*0.7}" fill="#222"/>
       <circle cx="${x+r*0.3}" cy="${y-r*0.1}" r="${r*0.22}" fill="#fff"/>
       <circle cx="${x-r*0.15}" cy="${y+r*0.35}" r="${r*0.1}" fill="#fff" opacity=".7"/>
       ${browL}
-      ${tear}
+      ${damage}
     </g>`;
   }
 
@@ -58,7 +88,10 @@ window.Monsters = (() => {
     const ex = x + Math.cos(rad)*len;
     const ey = y + Math.sin(rad)*len;
     const cracks = s === 1 ? `
-      <text x="${cx1}" y="${cy1}" text-anchor="middle" font-size="22" fill="#fff" stroke="#000" stroke-width="0.5">🩹</text>
+      ${bandage(cx1, cy1, dir-90, 28, 10)}
+      ${bandage((cx2+ex)/2, (cy2+ey)/2, dir+90, 22, 8)}
+      ${bruise(cx2, cy2, 8, 5)}
+      ${scratch(cx1+10, cy1+8, 8)}
     ` : "";
     // Suction cups along the way
     const cups = (s === 0) ? `
@@ -93,7 +126,12 @@ window.Monsters = (() => {
       <polygon points="${x-w*0.1},${y-h*0.3} ${x+w*0.05},${y+h*0.55} ${x+w*0.2},${y-h*0.3}" fill="#fff" stroke="#000" stroke-width="1.5"/>
       <polygon points="${x+w*0.35},${y-h*0.3} ${x+w*0.5},${y+h*0.55} ${x+w*0.65},${y-h*0.3}" fill="#fff" stroke="#000" stroke-width="1.5"/>`;
     const tongue = `<ellipse cx="${x}" cy="${y+h*0.4}" rx="${w*0.45}" ry="${h*0.3}" fill="#ff7099" stroke="#000" stroke-width="2"/>`;
-    const drool = s===1 ? `<path d="M ${x+w*0.3} ${y+h*0.4} Q ${x+w*0.4} ${y+h*1.2} ${x+w*0.5} ${y+h*1.6}" stroke="#7cd1ff" stroke-width="3" fill="none"/>` : "";
+    const drool = s===1 ? `
+      <path d="M ${x+w*0.3} ${y+h*0.4} Q ${x+w*0.4} ${y+h*1.2} ${x+w*0.5} ${y+h*1.6}" stroke="#7cd1ff" stroke-width="3" fill="none"/>
+      <path d="M ${x-w*0.4} ${y+h*0.3} Q ${x-w*0.45} ${y+h*1.0} ${x-w*0.5} ${y+h*1.4}" stroke="#7cd1ff" stroke-width="2" fill="none"/>
+      ${bandage(x-w*0.7, y+h*0.1, 30, 18, 6)}
+      ${bruise(x+w*0.6, y-h*0.7, 8, 4)}
+    ` : "";
     return `<g class="part">
       <path d="M ${x-w} ${y-h*0.4} Q ${x} ${y-h*0.6} ${x+w} ${y-h*0.4} Q ${x+w*1.05} ${y+h*0.7} ${x} ${y+h} Q ${x-w*1.05} ${y+h*0.7} ${x-w} ${y-h*0.4} Z"
             fill="#3a0d1a" stroke="#000" stroke-width="3"/>
@@ -113,13 +151,15 @@ window.Monsters = (() => {
         <text x="${x+12}" y="${y-h*0.3}" font-size="22">💥</text>
       </g>`;
     }
-    const wave = s === 1 ? "transform=\"rotate(8 "+x+" "+y+")\"" : "";
+    const wave = s === 1 ? "transform=\"rotate(15 "+x+" "+y+")\"" : "";
+    const dmg = s === 1 ? `${bandage(x, y-h*0.4, 70, 14, 5)}<text x="${x+18}" y="${y-h*0.6}" font-size="14">⚡</text>` : "";
     return `<g class="part bob" style="animation-delay:.3s" ${wave}>
       <path d="M ${x} ${y} Q ${x-8} ${y-h*0.5} ${x} ${y-h}" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/>
       <circle cx="${x}" cy="${y-h-12}" r="14" fill="${color}" stroke="#000" stroke-width="3"/>
       <circle cx="${x}" cy="${y-h-12}" r="14" fill="${color}" opacity=".4"/>
       <circle cx="${x-4}" cy="${y-h-16}" r="4" fill="#fff" opacity=".7"/>
       <text x="${x}" y="${y-h-7}" text-anchor="middle" font-size="14" fill="#000">★</text>
+      ${dmg}
     </g>`;
   }
 
@@ -142,12 +182,16 @@ window.Monsters = (() => {
       <circle cx="${ex-8}" cy="${ey-2}" r="5" fill="#fff" opacity=".6"/>` : "";
     const foot = opts.foot ? `<ellipse cx="${ex}" cy="${ey}" rx="24" ry="14" fill="${color}" stroke="#000" stroke-width="3"/>
       <ellipse cx="${ex-8}" cy="${ey-2}" rx="3" ry="2" fill="#fff" opacity=".6"/>` : "";
-    const bruise = s===1 ? `<circle cx="${(x+ex)/2}" cy="${(y+ey)/2}" r="10" fill="#7a3a55" opacity=".7"/>` : "";
+    const dmg = s===1 ? `
+      ${bruise((x+ex)/2, (y+ey)/2, 10, 6)}
+      ${bandage(x + (ex-x)*0.7, y + (ey-y)*0.7, dir+90, 22, 8)}
+      ${scratch(x + (ex-x)*0.4, y + (ey-y)*0.4, 8)}
+    ` : "";
     return `<g class="part">
       <line x1="${x}" y1="${y}" x2="${ex}" y2="${ey}" stroke="#000" stroke-width="32" stroke-linecap="round"/>
       <line x1="${x}" y1="${y}" x2="${ex}" y2="${ey}" stroke="${color}" stroke-width="24" stroke-linecap="round"/>
       <line x1="${x-2}" y1="${y-2}" x2="${ex-2}" y2="${ey-2}" stroke="rgba(255,255,255,.3)" stroke-width="8" stroke-linecap="round"/>
-      ${hand}${foot}${claw}${bruise}
+      ${hand}${foot}${claw}${dmg}
     </g>`;
   }
 
@@ -163,13 +207,19 @@ window.Monsters = (() => {
         <text x="${x+w*0.5}" y="${y-h*0.4}" font-size="20">💥</text>
       </g>`;
     }
-    const face = s === 1 ? ":(" : ":3";
+    const face = s === 1 ? ">_<" : ":3";
+    const dmg = s === 1 ? `
+      ${bandage(x-w*0.6, y-h*0.4, -20, w*0.8, 8)}
+      ${scratch(x+w*0.3, y+h*0.3, 12)}
+      <path d="M ${x-w*0.4} ${y-h*0.6} L ${x-w*0.2} ${y-h*0.2} L ${x-w*0.5} ${y-h*0.1} L ${x-w*0.3} ${y+h*0.3}" stroke="#000" stroke-width="2" fill="none"/>
+    ` : "";
     return `<g class="part">
       <rect x="${x-w-3}" y="${y-h-3}" width="${(w+3)*2}" height="${(h+3)*2}" rx="16" fill="#000"/>
       <rect x="${x-w}" y="${y-h}" width="${w*2}" height="${h*2}" rx="14" fill="#0a3548" stroke="#000" stroke-width="0"/>
       <rect x="${x-w+4}" y="${y-h+4}" width="${w*2-8}" height="${h*2-8}" rx="10" fill="#0fc4ff"/>
       <text x="${x}" y="${y+8}" text-anchor="middle" font-size="${h*0.9}" fill="#001a2e" font-weight="900">${face}</text>
       <rect x="${x-w}" y="${y-h}" width="${w*2}" height="${h*0.4}" rx="14" fill="#fff" opacity=".25"/>
+      ${dmg}
     </g>`;
   }
 
@@ -281,16 +331,29 @@ window.Monsters = (() => {
         { id:"core", type:"core", name_jp:"ハート", maxHP:30, hp:30, geom:{x:400,y:90,r:24}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
       hits: [
-        "イタタタ！", "タコパ〜！", "おしりが ピリピリ！", "タコ・タコ・タコ〜！",
-        "8本足が ピンチ！", "たこ焼きに しないで〜", "イカと ちがうんだよ！", "スミ かけるよ〜！",
-        "にゅるにゅる〜", "寿司ネタ いやだ！", "お風呂で 赤くなるよ", "ラーメンに 入れないで〜",
-        "ぐにゃぐにゃ〜", "きゅうばん ぺたぺた", "海の おどりて だぞ！", "たこ焼き パーティ〜",
-        "たこさん ウィンナー？", "カラオケ うまいんだぞ！", "8本で じゃんけん！", "ピース ピース ピース ✌️",
-        "色 かわるよ〜", "ぽよーん！", "イカフライ きらい！", "ママと はぐれた…",
-        "兄弟 100ぴき！", "ぼく 海のスター", "海賊の ともだち", "たこちゅー！💋",
-        "すいすい〜", "うずまき パワー！", "触手 ぱた ぱた", "もう 7本足や！",
-        "おいしそう…？", "やめて〜！", "ママ〜！", "うんちが もれる！",
-        "タコの きもち わかる？", "やわらかい から たべないで", "8本中 5本 のこってる！", "Tralalero TAKO！"
+        "イタタタ！", "タコパ〜！", "タコ・タコ・タコ〜！", "8本足が ピンチ！",
+        "たこ焼きに しないで〜", "イカと ちがうんだよ！", "スミ かけるよ〜！", "にゅるにゅる〜",
+        "寿司ネタ いやだ！", "お風呂で 赤くなるよ", "ぐにゃぐにゃ〜", "海の おどりて だぞ！",
+        "8本で じゃんけん！", "ピース ピース ピース ✌️", "色 かわるよ〜", "もう 7本足や！",
+        // Brainrot
+        "Tralalero Tralala！", "Bombardiro Tako！", "Tako Tako Sahur！", "Brr Brr タコ！",
+        // Chiikawa-style
+        "ハチワレ〜たすけて〜！", "うさぎ センパイ！", "ちいかわ より つよい？",
+        // Pokemon
+        "ピカチュウ！10まんボルト！", "げっとだぜ！", "タコ ポケモン あるよ", "タコ進化！",
+        // Doraemon
+        "どこでもドア ある？", "タケコプター ほしい〜", "ドラえも〜ん！", "もしもボックス〜！",
+        // Shinchan
+        "オラは タコ〜！", "おもしれ〜！", "ぞうさん！ぞうさん！", "ふんがふんが！",
+        // Anpanman
+        "アンパンマン たすけて！", "ばいきんまん きらい！",
+        // Memes
+        "それな〜", "ぴえん〜", "ぴえん超え ぱおん〜", "やばたん！", "むずすぎ！", "きまずい…",
+        "草 草 草", "うえ〜い！", "もう だめぽ", "8本足 草",
+        // Sounds
+        "ぽよーん！", "ぷにぷに〜", "ぴえぴえ", "ズッコケ〜", "シャキーン！",
+        // Self-deprecating cute
+        "ママ〜！", "兄弟 100ぴき！", "やわらかい から たべないで〜", "おいしそう…？"
       ]
     };
   }
@@ -339,16 +402,28 @@ window.Monsters = (() => {
         { id:"core", type:"core", name_jp:"コア", maxHP:30, hp:30, geom:{x:400,y:380,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
       hits: [
-        "ウンコ もれる〜！", "ブッ！", "おなかが いたい！", "うん？うんち？",
-        "うんこ・うんこ・うんこ！", "ボンバル・ボンバル！", "爆発する〜！", "ロボット なのに〜",
-        "中身 うんこ！", "リサイクル しない？", "もっと たべたい〜", "カレー だい好き！",
-        "うんち博士！", "茶色が テーマカラー", "臭い けど かわいい！", "ファブリーズ きらい！",
-        "ぷりぷり マシン", "爆弾 うんち！", "大砲 おなら！", "ミサイル ぶりっ！",
-        "うんちパワー 100％", "機関車 ぽっぽー！", "ぼくの 油 うんこ油", "バッテリー うんちパワー",
-        "走ると ぷりぷり〜", "止まると ぶー", "風が きもちいい〜", "においも 風と いっしょ〜",
-        "トイレ どこ？！", "紙 ある？", "流す ボタン あるよ", "押すと しょうり！",
-        "でも バクハツ する", "ふしぎ ロボット", "ふしぎ うんち", "永遠の しょうべん…",
-        "ジャパンの たから！", "茶色 だい好き", "ジムおじさん…？", "ぼくの 友だち だれ？"
+        "ボンバル・ボンバル！", "Bombardiro Crocodilo！", "Bombardiro Unkodilo！", "爆発する〜！",
+        "ロボット なのに〜", "中身 うんこ！", "うんちパワー 100％",
+        "機関車 ぽっぽー！", "走ると ぷりぷり〜", "止まると ぶー", "ぷりぷり マシン",
+        // Pop culture
+        "ガンダムじゃない…", "ドラえも〜ん", "助けてアンパンマン！", "Pikachuu〜！",
+        "うんこドリル No.1！", "ロボット ガッチャマン！", "メカ ゴジラ より つよい！",
+        "ベイマックス〜！", "ロックマン より つよい",
+        // Brainrot
+        "Tralalero Bomba！", "Tung Tung Tung Sahur！", "Brr Brr Bomba！",
+        // Chiikawa
+        "ハチワレ ヘルプ！", "ちいかわ こわい？",
+        // Shinchan
+        "オラの ロボット〜！", "おもしれ〜！", "ぞうさん 攻撃！",
+        // Memes
+        "それな〜", "ぴえん…", "やばたん！", "むずすぎ！", "草 草", "ぴえん超え ぱおん〜",
+        "もう だめぽ", "うえ〜い！", "きまずい…",
+        // Sounds
+        "ガシャーン！", "シャキーン！", "ピコピコ", "ぶり ぶり", "ボッ！",
+        // Robot character
+        "電池 切れる…", "オイル ください", "リサイクル しない？", "アップデート まだ？",
+        // Light toilet humor (some is fine)
+        "ブッ！", "ウンコ もれる〜！", "おなかが いたい！", "ファブリーズ きらい！"
       ]
     };
   }
@@ -399,16 +474,26 @@ window.Monsters = (() => {
         { id:"core", type:"core", name_jp:"ハート", maxHP:30, hp:30, geom:{x:420,y:235,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
       hits: [
-        "パク！パク！", "トラララ〜！", "ピチピチ！", "お魚 イタイ！",
-        "寿司ネタ いやだ！", "焼き魚も ダメ！", "お刺身 だめだめ！", "ぼく さかな じゃない！",
-        "かえる でもない！", "ハイブリッド だぞ！", "パクパクパクパク！", "食パン パクパク",
-        "ご飯 パクパク", "なんでも パクパク〜", "ぼくの 口 大きい！", "なんでも はいる",
-        "君も はいる？", "やめて〜 食べないよ", "うそ ちょっと たべる！", "Oh tralala~",
-        "イタリアン メロディ", "ベル カント！", "オペラ うた！", "海の カラオケ王",
-        "マイク かして〜", "1番 ぼく！", "2番も ぼく！", "3番 きみ？",
-        "歌 うますぎ〜", "海中 コンサート", "きゃー！ ファン！", "サインして〜！",
-        "かっこいい？かわいい！", "そう、両方！", "お魚 王子！", "カエル 王女！",
-        "でも ぼく ひとり…", "さびしい トラララ", "でも 元気！", "Tralala ピチピチ！"
+        "Tralalero Tralala！", "Tralalero Pakupaku！", "パク！パク！", "ピチピチ！",
+        "お魚 イタイ！", "寿司ネタ いやだ！", "ハイブリッド だぞ！", "パクパクパクパク！",
+        "ぼく さかな じゃない！", "かえる でもない！", "なんでも パクパク〜", "君も はいる？",
+        // Italian brainrot
+        "Tralalero Tralala！", "Bombardiro Tralala！", "Brr Brr Tralala！", "Tung Tung パクパク！",
+        // Pop culture
+        "ピカチュウ！パクッ！", "ドラえもん〜！", "アンパンマン うましそう…", "ねこ寿司！",
+        "クレヨン しんちゃん！", "オラ的 おさかな！", "ぞうさん 食べたい",
+        // Chiikawa
+        "ちいかわ より デカい！", "ハチワレ ハチワレ〜",
+        // Memes
+        "それな〜", "ぴえん〜", "やばたん！", "むずすぎ！", "草 草 草", "ぴえん超え ぱおん〜",
+        "むりむり！", "うえ〜い！",
+        // Operatic flair (matches name)
+        "Oh mamma mia！", "ベル カント！", "オペラ うた！", "海の カラオケ王",
+        // Self-aware
+        "回転寿司 NO！", "焼き魚も ダメ！", "お刺身 だめだめ！", "歌 うますぎ〜",
+        "1番 ぼく！", "2番も ぼく！", "ファン サイン して〜", "かっこいい？かわいい？",
+        // Sounds
+        "シャキーン！", "ぴょんぴょん", "ぴちぴち", "ぱくり〜"
       ]
     };
   }
@@ -459,16 +544,30 @@ window.Monsters = (() => {
         { id:"core", type:"core", name_jp:"ハート", maxHP:30, hp:30, geom:{x:400,y:240,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
       hits: [
-        "ブルブル〜！", "パンパム！", "ふわふわ いたい！", "もこもこ もこもこ！",
-        "けが 抜ける〜", "ふわふわ じゃ なくなる！", "ぼく もと ぬいぐるみ", "工場で 生まれた",
-        "でも 心が ある！", "なで なで して〜", "ハグ！ハグ！", "きゅーっと だっこ",
-        "でも 痛くしないで〜", "ぶる ぶる ぶる", "さむがり なんだ", "真夏でも セーター",
-        "秋でも コート", "冬は ふとん", "いつも ふわふわ", "抱きまくら じゃない！",
-        "ぼく かいじゅう だぞ！", "ふわふわ 怪獣！", "パンパムの 力！", "でも 弱い…",
-        "すぐ 泣く", "ママ よんで〜", "パパ どこ？", "きょうだい 5匹",
-        "みんな ふわふわ", "雲みたい？", "雪みたい？", "綿あめ みたい？",
-        "でも たべないで！", "おなら でた…", "ばれた？", "みんな ぼくの ファン？",
-        "パンパム ハッピー！", "Brr brr ブルブル！", "ふわっ！", "ゆ〜くん たすけて！"
+        "Brr Brr Patapim！", "Brr Brr Pampamu！", "ブルブル〜！", "パンパム！",
+        "ふわふわ いたい！", "もこもこ もこもこ！", "けが 抜ける〜", "ぼく もと ぬいぐるみ",
+        "なで なで して〜", "ハグ！ハグ！", "きゅーっと だっこ", "ぶる ぶる ぶる",
+        // Brainrot
+        "Tralalero Pampamu！", "Bombardiro Pampam！", "Brr Brr Brr！", "Tung Tung Pampam！",
+        // Chiikawa (PERFECT for fluffy character)
+        "ちいかわ パンパム！", "ハチワレ〜！", "うさぎ センパイ！", "もきゅ もきゅ",
+        "ちいかわ より ふわふわ！",
+        // Pokemon
+        "ピチュー！", "ピカチュウ ふわふわ！", "ジグザグマ みたい？",
+        // Anpanman
+        "アンパンマン より つよい？", "ジャムおじさん〜！", "バタコさん〜！",
+        // Doraemon
+        "ドラえも〜ん！", "タケコプター ある！", "ねむり マスク〜",
+        // Shinchan
+        "オラは ふわふわ〜！", "ぞうさん もこもこ！", "おもしれ〜！",
+        // Memes
+        "それな〜", "ぴえん〜！", "ぴえん超え ぱおん〜！", "やばたん！", "むずすぎ！", "草 草",
+        "もきゅん", "ばぶみ〜", "うえ〜い！",
+        // Sounds & cuteness
+        "ふわっ！", "もふもふ！", "ぴくぴく", "ぷにぷに〜", "ズッコケ〜",
+        // Self
+        "綿あめ みたい？", "雲みたい？", "雪みたい？", "ママ よんで〜！", "パパ どこ？",
+        "ぼく ぬいぐるみ じゃない！", "おなら でた…", "ばれた？"
       ]
     };
   }
@@ -562,16 +661,24 @@ window.Monsters = (() => {
         { id:"tail", type:"limb", name_jp:"しっぽ", maxHP:8, hp:8, geom:{x:240,y:290,dir:180,len:60}, draw:(p)=>drawTail(p,color), effect:"slow" },
       ],
       hits: [
-        "パフェ・パフェ・パフェイワシ！", "うわ〜 ホイップが もれた！", "いちごが おちる〜", "アイス とけちゃう！",
-        "フルーツ ぼん！", "パフェの イワシ食べたい？", "スイーツ パワー！", "ぼくは あまい けど からい！",
-        "イワシだけど パフェだよ〜", "Oh my parfait!", "パフェッ！", "ぼくの アイス のせて〜",
-        "いわし いわし いわし〜", "カチコチ アイス！", "ぐにゃぐにゃ いわし！", "パパパパフェ！",
-        "ぼく スイーツいわし！", "イワシ・スプラッシュ！", "お皿 ガッシャン！", "パンケーキも〜",
-        "パフェの 中で およぐ いわし", "パフェ風呂 きもちぃ〜", "ホイップ ふわふわ", "ジャム どばー！",
-        "きょうの デザート ぼくだ！", "ヨーグルト つるつる", "バニラ えんちょー！", "マカロン ぱりぱり",
-        "カラメル しゅわしゅわ", "かき氷 だってある", "たべないで〜 ぼく ともだち", "イワシは からだに いいんだよ",
-        "カルシウム もあるんだよ！", "でも パフェは あまい", "どっちが すき？", "きもちわるい？でも おいしい？",
-        "Hello! ぱふぇいわし です！", "せかいで 1ぴきだけ", "妖怪 でも あるんだよ", "スプーンで すくわないで〜！"
+        "パフェ・パフェ・パフェイワシ！", "Tralalero パフェ！", "Bombardiro パフェ！", "Brr Brr パフェ！",
+        "うわ〜 ホイップが もれた！", "いちごが おちる〜", "アイス とけちゃう！", "Oh my parfait！",
+        "ぼく スイーツいわし！", "イワシ・スプラッシュ！", "パパパパフェ！", "パフェッ！",
+        // Pop culture
+        "コンビニデザート No.1！", "セブン アイス〜", "ハーゲンダッツ かんじ！", "ピカチュウ パフェ！",
+        "アンパンマンの デザート", "ドラえも〜ん！", "オラは スイーツ〜！", "おもしれ〜！",
+        "ちいかわ パフェ かわいい！", "ハチワレ デザート", "うさぎ パフェ召し上がれ",
+        // Memes
+        "それな〜", "ぴえん〜", "ぴえん超え ぱおん〜", "やばたん！", "むずすぎ！", "草 草 草",
+        "ばぶみ〜", "もきゅ", "うえ〜い！",
+        // Self-deprecating cute
+        "たべないで〜 ぼく ともだち", "イワシは からだに いいんだよ", "カルシウム あるんだよ！",
+        "せかいで 1ぴきだけ", "Hello! ぱふぇいわし です！",
+        // Food jokes
+        "ホイップ ふわふわ〜", "ジャム どばー！", "バニラ えんちょー！", "マカロン ぱりぱり",
+        "カラメル しゅわしゅわ", "かき氷 だってある", "ヨーグルト つるつる",
+        // Sounds
+        "シャキーン！", "ぴちぴち", "とけとけ〜", "つるん"
       ]
     };
   }
@@ -642,16 +749,25 @@ window.Monsters = (() => {
         { id:"tail", type:"limb", name_jp:"しっぽ", maxHP:8, hp:8, geom:{x:220,y:310,dir:180,len:60}, draw:(p)=>drawTail(p,"#3060a0"), effect:"slow" },
       ],
       hits: [
-        "アンパン・アンパン・アンパンマグロ！", "ぼくの あたま たべる？", "顔が ちょっと ぬれた…", "ジャムおじさんに いって！",
-        "バイキンマンに きをつけて！", "マグロパワー！", "元気 100倍！", "あんこ どばー！",
-        "ツナ ツナ ツナマヨ", "寿司に 売られる…", "海から こんにちは", "パン耳 たべて〜",
-        "お腹 すいた？", "ぼくの からだで たすけてあげる", "やさしい アンパンマグロ！", "ぼくに 顔 つけて〜",
-        "マグロサンド はじめました", "アンパン サーモンも あるよ", "カレーパン まぐろは ともだち", "ペンギンも びっくり",
-        "ねこも びっくり", "とどけ！愛と勇気！", "へんしん パワー！", "マグロロケット！",
-        "海の英雄！", "1巻 ¥500！", "とろ部分 すごい", "大トロは 心",
+        "アンパン・アンパン・アンパンマグロ！", "Tralalero アンパン！", "Bombardiro マグロ！",
+        "ぼくの あたま たべる？", "顔が ちょっと ぬれた…", "ジャムおじさん〜！", "バタコさん〜！",
+        "バイキンマンに きをつけて！", "アンパンチ！", "新しい 顔 ちょうだい〜", "とどけ！愛と勇気！",
+        "元気 100倍！", "へんしん パワー！", "マグロパワー！", "海の英雄！",
+        // Anpanman friends
+        "カレーパンマン！", "しょくぱんマン！", "ドキンちゃん〜", "メロンパンナ〜",
+        "コキンちゃん！", "ロールパンナ！", "チーズ〜！",
+        // Pop culture beyond Anpanman
+        "ピカチュウ マグロ！", "ドラえもん〜！", "オラは アンパン〜！", "おもしれ〜！",
+        "ちいかわ アンパン！", "ハチワレ〜！", "うさぎ マグロ！",
+        // Sushi/food jokes
+        "1巻 ¥500！", "回転寿司 NO！", "とろ部分 すごい", "大トロは 心",
         "中トロは 顔", "赤身は からだ", "ぼく 全身 マグロ！", "全身 アンパン！",
-        "どっちが ほんと？", "ぼくも しらない！", "ジャムおじさん〜！", "バタコさん〜！",
-        "Hi I'm anpan maguro!", "Take a bite of my head!", "Don't eat me!", "海も 陸も ぼくの すみか"
+        // Memes
+        "それな〜", "ぴえん〜", "ぴえん超え ぱおん〜", "やばたん！", "むずすぎ！", "草 草",
+        "ばぶみ〜", "うえ〜い！",
+        // Self-aware
+        "どっちが ほんと？", "ぼくも しらない！", "Hi I'm anpan maguro!",
+        "Don't eat me!", "海も 陸も ぼくの すみか", "あんこ どばー！"
       ]
     };
   }
