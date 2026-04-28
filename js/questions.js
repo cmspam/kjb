@@ -1,7 +1,8 @@
-// Question picker. Avoids repeating recently-asked IDs.
+// Question picker. Avoids repeating recently-asked IDs and biases toward
+// question types the player has been struggling with.
 window.Questions = (() => {
-  const recent = [];
-  const RECENT_MAX = 60;
+  const recentGlobal = [];
+  const RECENT_MAX = 80;
 
   function pool(level) {
     if (level === 1) return window.QUESTIONS_LEVEL1 || [];
@@ -9,19 +10,30 @@ window.Questions = (() => {
     return window.QUESTIONS_LEVEL3 || [];
   }
 
-  function pick(level, stars) {
+  // ctx: { misses: {ptype: count}, seenIds: [..ids..] }
+  function pick(level, stars, ctx) {
     const all = pool(level).filter(q => q.stars === stars);
     if (all.length === 0) {
-      // fall back if no Qs at requested star
       const any = pool(level);
       if (!any.length) return null;
       return any[(Math.random()*any.length)|0];
     }
-    let candidates = all.filter(q => !recent.includes(q.id));
+    const seen = (ctx && ctx.seenIds) || [];
+    const misses = (ctx && ctx.misses) || {};
+    // Prefer unseen first; fall back to all.
+    let candidates = all.filter(q => !seen.includes(q.id) && !recentGlobal.includes(q.id));
+    if (candidates.length === 0) candidates = all.filter(q => !recentGlobal.includes(q.id));
     if (candidates.length === 0) candidates = all;
+    // 35% of the time, if the player has missed any ptype 2+ times this session,
+    // pick from those missed types so they get a re-attempt.
+    const struggling = Object.entries(misses).filter(([_, n]) => n >= 2).map(([t])=>t);
+    if (struggling.length && Math.random() < 0.35) {
+      const restrict = candidates.filter(q => struggling.includes(q.ptype));
+      if (restrict.length) candidates = restrict;
+    }
     const q = candidates[(Math.random()*candidates.length)|0];
-    recent.push(q.id);
-    while (recent.length > RECENT_MAX) recent.shift();
+    recentGlobal.push(q.id);
+    while (recentGlobal.length > RECENT_MAX) recentGlobal.shift();
     return q;
   }
 

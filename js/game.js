@@ -9,9 +9,12 @@ window.Game = (() => {
   function newGame(opts) {
     const players = opts.names.map((name, i) => ({
       id: "p"+i, name, hp: STARTING_HP, maxHp: STARTING_HP,
+      level: (opts.levels && opts.levels[i]) || opts.level,
       energy: 2, hand: [], role: "hero",
       shield: false, skipBossAtk: false,
       attackPower: 0, dead: false, scanned: false,
+      misses: {},   // {ptype: count} - tracks struggle areas for adaptive picking
+      seenIds: [],  // recent question ids — avoid repeats
     }));
     if (opts.jinro && players.length >= 4) {
       const spyIdx = Math.floor(Math.random()*players.length);
@@ -22,6 +25,7 @@ window.Game = (() => {
       boss: Monsters.randomBoss(),
       level: opts.level,
       jinro: opts.jinro && players.length >= 4,
+      solo: players.length === 1,
       currentIdx: 0,
       round: 1,
       voteUsedThisRound: false,
@@ -34,9 +38,9 @@ window.Game = (() => {
       rerolledThisQ: false,
       currentQuestion: null,
       currentWager: null,
-      doubleNextAttack: false, // combo: next teammate's attack ×2
-      rolesRevealed: false,    // each player has been shown role at least once
-      revealedThisGame: [],    // players' roles revealed to all (jinro)
+      doubleNextAttack: false,
+      rolesRevealed: false,
+      revealedThisGame: [],
     };
     // Deal starting hands
     players.forEach(p => { for (let i = 0; i < STARTING_HAND; i++) drawCard(p); });
@@ -98,7 +102,6 @@ window.Game = (() => {
     // Skip dead players
     while (S.currentIdx < S.players.length && S.players[S.currentIdx].dead) S.currentIdx++;
     if (S.currentIdx >= S.players.length) {
-      // End of player turns: boss
       bossTurn();
       return;
     }
@@ -109,7 +112,9 @@ window.Game = (() => {
     S.rerolledThisQ = false;
     S.currentQuestion = null;
     S.currentWager = null;
-    UI.renderPass(p.name, () => goWager());
+    // Solo mode: skip the pass screen — there's no one to hand off to.
+    if (S.solo) goWager();
+    else UI.renderPass(p.name, () => goWager());
   }
 
   function currentPlayer() { return S.players[S.currentIdx]; }
@@ -120,11 +125,13 @@ window.Game = (() => {
     UI.renderWager(p, S.boss, S.players,
       (stars) => {
         S.currentWager = stars;
-        S.currentQuestion = Questions.pick(S.level, stars);
+        S.currentQuestion = Questions.pick(p.level || S.level, stars, { misses: p.misses, seenIds: p.seenIds });
         if (!S.currentQuestion) {
           UI.toast("もんだいが ない…");
           return;
         }
+        p.seenIds.push(S.currentQuestion.id);
+        if (p.seenIds.length > 80) p.seenIds.shift();
         showQuestion();
       },
       (card, idx) => playCardBeforeQuestion(p, card, idx, () => goWager())
@@ -150,12 +157,16 @@ window.Game = (() => {
     if (correct) {
       energyEarned = S.currentWager;
       p.energy += energyEarned;
-      p.attackPower = S.currentWager; // base damage
+      p.attackPower = S.currentWager;
       drawCard(p); cardsDrawn = 1;
+    } else {
+      // Track miss so future Questions.pick can rebalance
+      const t = S.currentQuestion?.ptype;
+      if (t) p.misses[t] = (p.misses[t] || 0) + 1;
     }
-    // Boss reaction bubble flavor handled in result screen
     UI.renderResult({
       correct, energyEarned, cardsDrawn,
+      question: S.currentQuestion, chosen,
       player: p, boss: S.boss, players: S.players
     }, () => goAction());
   }
@@ -173,16 +184,56 @@ window.Game = (() => {
   function goPickTarget() {
     const p = currentPlayer();
     UI.renderTargetPicker(p, S.boss, S.players,
-      (part) => doAttack(p, part),
+      (target) => doAttack(p, target),
       () => goAction());
   }
 
-  function doAttack(p, part) {
+  function doAttack(p, target) {
     if (p.attackPower <= 0) { UI.toast("こうげきパワーが ないよ！"); return goAction(); }
     let dmg = p.attackPower + S.pendingDamageBonus;
     const mult = Monsters.damageMultiplier(S.boss);
     dmg = Math.round(dmg * mult);
     if (S.doubleNextAttack) { dmg *= 2; S.doubleNextAttack = false; }
+
+    // Spy sabotage paths
+    if (target.kind === "teammate") {
+      const t = target.target;
+      t.hp = Math.max(0, t.hp - dmg);
+      SND.sfxHit();
+      UI.toast(`😈 ${p.name} が ${t.name} を こうげき！ ${dmg} ダメージ！`, 1800);
+      S.log.push(`${p.name} → ${t.name}: ${dmg} ダメージ (なかまを こうげき!)`);
+      if (t.hp === 0) { t.dead = true; S.log.push(`${t.name} は たおれた…`); }
+      p.attackPower = 0;
+      S.pendingDamageBonus = 0;
+      if (S.players.every(x => x.dead)) return doDefeat();
+      setTimeout(() => endTurn(), 1400);
+      return;
+    }
+    if (target.kind === "heal-boss") {
+      const heal = 5;
+      const aliveParts = S.boss.parts.filter(pp => pp.hp > 0 && pp.hp < pp.maxHP);
+      if (aliveParts.length) {
+        const r = aliveParts[(Math.random()*aliveParts.length)|0];
+        r.hp = Math.min(r.maxHP, r.hp + heal);
+      }
+      SND.sfxCard();
+      UI.toast(`😈 ${p.name} が ボスを かいふく！ +${heal} HP`, 1800);
+      S.log.push(`${p.name}: ボスを かいふく (なかまを うらぎる!)`);
+      p.attackPower = 0;
+      setTimeout(() => endTurn(), 1400);
+      return;
+    }
+    // Normal attack on a boss part
+    const part = target.part;
+    // Armored core: damage to core reduced by number of intact non-core parts (max 1, min reflects armor)
+    if (part.effect === "win") {
+      const armor = Monsters.coreArmor(S.boss);
+      const reduced = Math.max(1, dmg - armor);
+      if (armor > 0 && reduced < dmg) {
+        UI.toast(`コアの シールドが ${dmg - reduced} ダメージを ふせいだ！`, 1500);
+      }
+      dmg = reduced;
+    }
     part.hp = Math.max(0, part.hp - dmg);
     SND.sfxHit();
     const stage = document.querySelector(".stage");

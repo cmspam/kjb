@@ -404,23 +404,43 @@
 
   // ============= EIKEN 4 STYLE EXTENSIONS =============
 
+  function fmt(words, punct) {
+    if (!words.length) return "";
+    const a = words.slice();
+    a[0] = a[0][0].toUpperCase() + a[0].slice(1);
+    return a.join(" ") + punct;
+  }
   function shuffleWords(correct) {
     const words = correct.replace(/[?.,]/g,"").split(/\s+/);
     const punct = correct.match(/[?.]$/) ? correct.match(/[?.]$/)[0] : "";
-    const wrongs = new Set();
-    let tries = 0;
-    while (wrongs.size < 3 && tries++ < 80) {
+    const out = new Set();
+    if (words.length >= 3) {
+      const a = words.slice();
+      const i = Math.max(0, Math.min(a.length-2, Math.floor(Math.random()*(a.length-1))));
+      [a[i], a[i+1]] = [a[i+1], a[i]];
+      out.add(fmt(a, punct));
+    }
+    if (words.length >= 3) {
+      const a = words.slice();
+      const last = a.pop();
+      a.splice(1, 0, last);
+      out.add(fmt(a, punct));
+    }
+    if (words.length >= 4) {
+      const a = words.slice();
+      a.splice(0, 3, ...a.slice(0, 3).reverse());
+      out.add(fmt(a, punct));
+    }
+    while (out.size < 3) {
       const a = words.slice();
       for (let i = a.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random()*(i+1));
         [a[i], a[j]] = [a[j], a[i]];
       }
-      const cap = a[0][0].toUpperCase() + a[0].slice(1);
-      a[0] = cap;
-      const cand = a.join(" ") + punct;
-      if (cand !== correct) wrongs.add(cand);
+      const cand = fmt(a, punct);
+      if (cand !== correct) out.add(cand);
     }
-    return Array.from(wrongs);
+    return Array.from(out).filter(s => s !== correct).slice(0, 3);
   }
 
   // ★3 SENTENCE ORDERING (Eiken 4 Section 3)

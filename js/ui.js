@@ -29,12 +29,25 @@ window.UI = (() => {
       const el = $("screen-"+n);
       if (!el) return;
       el.classList.toggle("hidden", n !== name);
-      // clear hidden screens to prevent stale ID collisions (#cont, etc.)
       if (n !== name) el.innerHTML = "";
     });
+    // Exit button is visible during a fight (any in-game screen except title/setup/victory/defeat)
+    const exitBtn = $("exit-btn");
+    if (exitBtn) {
+      const inFight = !["title","setup","victory","defeat"].includes(name);
+      exitBtn.classList.toggle("hidden", !inFight);
+    }
     window.scrollTo(0,0);
   }
-  function el(html) { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; }
+  function el(html) {
+    const t = document.createElement("template");
+    t.innerHTML = html.trim();
+    if (t.content.childElementCount > 1) {
+      // Footgun: multiple top-level children would silently drop all but the first.
+      console.warn("UI.el(): multiple top-level children — wrap them in a single element. Got:", html.slice(0, 120));
+    }
+    return t.content.firstElementChild;
+  }
   function clear(id) { $("screen-"+id).innerHTML = ""; }
 
   let toastTimer = null;
@@ -56,7 +69,10 @@ window.UI = (() => {
         <div class="title-en bob">${JP.titleEn}</div>
         <div style="font-size: 80px; margin: 20px 0;" class="bob">🐙💩👾🦑</div>
         <button class="btn huge hot" id="btn-start">${JP.start} ⚔️</button>
-        <button class="btn ghost" id="btn-rules" style="margin-top:8px;">あそびかた ❓</button>
+        <div class="row" style="margin-top:8px;">
+          <button class="btn ghost" id="btn-rules">あそびかた ❓</button>
+          <button class="btn ghost" id="btn-settings">せってい ⚙️</button>
+        </div>
         <div class="subtle" style="margin-top: 28px;">タップで おとが でます 🔊</div>
       </div>`));
     tap($("btn-start"), () => {
@@ -67,6 +83,44 @@ window.UI = (() => {
       try { SND.unlock(); } catch(e) {}
       showRules(() => renderTitle({onStart}));
     });
+    tap($("btn-settings"), () => {
+      try { SND.unlock(); } catch(e) {}
+      showSettings(() => renderTitle({onStart}));
+    });
+  }
+
+  function showSettings(onBack) {
+    show("title");
+    const s = $("screen-title"); s.innerHTML = "";
+    const isMuted = SND.isMuted();
+    const voices = SND.listVoices ? SND.listVoices() : [];
+    const currentName = (() => {
+      try { return localStorage.getItem("kjb_voice") || ""; } catch(e) { return ""; }
+    })();
+    s.appendChild(el(`
+      <div class="center" style="max-width: 600px; margin: 32px auto; padding: 0 12px;">
+        <h2>せってい ⚙️</h2>
+        <div style="background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow); text-align:left;">
+          <div style="font-size:18px; margin-bottom:8px;">おと</div>
+          <button class="toggle ${isMuted?'':'on'}" id="mute-on" style="font-size:18px;padding:10px 16px;">🔊 おと ON</button>
+          <button class="toggle ${isMuted?'on':''}" id="mute-off" style="font-size:18px;padding:10px 16px;">🔇 おと OFF (ミュート)</button>
+          <div style="font-size:18px; margin:14px 0 8px;">えいごの こえ</div>
+          <select id="voice-pick" style="font-size:16px; padding:8px; border-radius:8px; width:100%; max-width:340px;">
+            <option value="">じどうで えらぶ</option>
+            ${voices.map(v => `<option value="${escapeHTML(v.name)}" ${v.name===currentName?'selected':''}>${escapeHTML(v.name)} (${escapeHTML(v.lang)})</option>`).join("")}
+          </select>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn cool" id="voice-test" style="font-size:16px;min-height:44px;">🔊 テスト</button>
+          </div>
+        </div>
+        <button class="btn huge cool" id="back-settings" style="margin-top:18px;">${JP.back}</button>
+      </div>`));
+    tap($("mute-on"), () => { SND.setMuted(false); SND.sfxPop(); showSettings(onBack); });
+    tap($("mute-off"), () => { SND.setMuted(true); showSettings(onBack); });
+    tap($("voice-test"), () => { SND.speak("Hello! Let's play."); });
+    const vsel = $("voice-pick");
+    if (vsel) vsel.onchange = () => { SND.setVoice(vsel.value || null); };
+    tap($("back-settings"), () => onBack());
   }
 
   // -------- SETUP --------
@@ -75,9 +129,17 @@ window.UI = (() => {
     clear("setup");
     const s = $("screen-setup");
     let count = 3;
-    let level = 2;
+    let level = 2;        // global default level
     let jinro = false;
+    let advanced = false; // show per-player level overrides
     const names = ["","","","","",""];
+    const playerLevels = [null,null,null,null,null,null]; // null = use global
+
+    function pickFunnyName(usedNames) {
+      const pool = (window.FUNNY_NAMES || []).filter(n => !usedNames.includes(n));
+      if (!pool.length) return JP.player_n(usedNames.length+1);
+      return pool[(Math.random()*pool.length)|0];
+    }
 
     function redraw() {
       s.innerHTML = "";
@@ -86,11 +148,16 @@ window.UI = (() => {
           <h2>${JP.setup_title}</h2>
           <div class="subtle">${JP.player_count}</div>
           <div class="row" id="count-row"></div>
-          <div class="subtle" style="margin-top:12px;">${JP.level}</div>
+          <div class="subtle" style="margin-top:12px;">${JP.level}（みんなの デフォルト）</div>
           <div class="row" id="lvl-row"></div>
           <div class="row" id="names-row"></div>
-          <div class="subtle" style="margin-top:12px;">${JP.jinro_hint}</div>
-          <div class="row"><button class="toggle ${jinro?'on':''}" id="jinro-toggle">${jinro?JP.jinro_on:JP.jinro_off}</button></div>
+          <div class="row" style="margin-top:8px;">
+            <button class="toggle ${advanced?'on':''}" id="adv-toggle">${advanced?'こべつレベル ON':'こべつレベル OFF'}</button>
+          </div>
+          ${count >= 4 ? `
+            <div class="subtle" style="margin-top:12px;">${JP.jinro_hint}</div>
+            <div class="row"><button class="toggle ${jinro?'on':''}" id="jinro-toggle">${jinro?JP.jinro_on:JP.jinro_off}</button></div>
+          ` : ``}
           <div class="row" style="margin-top:24px;">
             <button class="btn huge good" id="go">${JP.start_battle} 🚀</button>
             <button class="btn ghost" id="back">${JP.back}</button>
@@ -98,9 +165,9 @@ window.UI = (() => {
         </div>
       `));
       const cr = $("count-row");
-      [2,3,4,5,6].forEach(n => {
+      [1,2,3,4,5,6].forEach(n => {
         const b = el(`<button class="toggle ${count===n?'on':''}">${n}</button>`);
-        tap(b, () => { count = n; redraw(); });
+        tap(b, () => { count = n; if (count < 4) jinro = false; redraw(); });
         cr.appendChild(b);
       });
       const lr = $("lvl-row");
@@ -110,16 +177,37 @@ window.UI = (() => {
         lr.appendChild(b);
       });
       const nr = $("names-row");
+      nr.style.flexDirection = "column";
+      nr.style.alignItems = "center";
       for (let i = 0; i < count; i++) {
-        const inp = el(`<input class="player-input" maxlength="8" placeholder="${JP.player_n(i+1)}" value="${names[i]||""}"/>`);
+        const wrap = document.createElement("div");
+        wrap.style.cssText = "display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap;justify-content:center;";
+        const inp = el(`<input class="player-input" maxlength="10" placeholder="${JP.player_n(i+1)}" value="${names[i]||""}"/>`);
         inp.oninput = (e) => { names[i] = e.target.value; };
-        nr.appendChild(inp);
+        wrap.appendChild(inp);
+        if (advanced) {
+          [["★",1],["★★",2],["★★★",3]].forEach(([lbl, n]) => {
+            const cur = playerLevels[i] ?? level;
+            const b = el(`<button class="toggle ${cur===n?'on':''}" style="font-size:14px;padding:6px 10px;">L${n}</button>`);
+            tap(b, () => { playerLevels[i] = n; redraw(); });
+            wrap.appendChild(b);
+          });
+        }
+        nr.appendChild(wrap);
       }
-      tap($("jinro-toggle"), () => { jinro = !jinro; redraw(); });
+      tap($("adv-toggle"), () => { advanced = !advanced; redraw(); });
+      const jinroBtn = $("jinro-toggle"); if (jinroBtn) tap(jinroBtn, () => { jinro = !jinro; redraw(); });
       tap($("go"), () => {
-        const finalNames = names.slice(0, count).map((n,i)=> n.trim() || JP.player_n(i+1));
+        const used = [];
+        const finalNames = names.slice(0, count).map((n,i) => {
+          const trimmed = n.trim();
+          if (trimmed) { used.push(trimmed); return trimmed; }
+          const fn = pickFunnyName(used);
+          used.push(fn); return fn;
+        });
+        const finalLevels = playerLevels.slice(0, count).map(l => l ?? level);
         SND.sfxPop();
-        onConfirm({ count, level, jinro: jinro && count >= 4, names: finalNames });
+        onConfirm({ count, level, levels: finalLevels, jinro: jinro && count >= 4, names: finalNames });
       });
       tap($("back"), () => location.reload());
     }
@@ -251,24 +339,43 @@ window.UI = (() => {
   }
 
   // -------- RESULT --------
-  function renderResult({ correct, energyEarned, cardsDrawn, dmgPreview, player, boss, players }, onContinue) {
+  function renderResult({ correct, energyEarned, cardsDrawn, question, chosen, player, boss, players }, onContinue) {
     show("result");
     const s = $("screen-result"); s.innerHTML = "";
     s.appendChild(el(buildHeader(boss, players, player)));
     const cheer = correct ? pickRand(JP.correct_cheer) : pickRand(JP.wrong_burn);
+    let wrongDetail = "";
+    if (!correct && question) {
+      const correctText = question.options[question.answer];
+      const yourAnswer = (typeof chosen === "number" && chosen >= 0) ? question.options[chosen] : "—";
+      const explainHtml = question.explain ? `<div style="font-size:18px;color:#d8c8ff;margin-top:8px;">💡 ${escapeHTML(question.explain)}</div>` : "";
+      wrongDetail = `
+        <div style="background:var(--card);border-radius:14px;padding:14px 18px;margin:12px auto;max-width:560px;text-align:left;box-shadow:var(--shadow);">
+          <div style="font-size:16px;color:#aaa;">あなたの こたえ:</div>
+          <div style="font-size:22px;color:var(--bad);font-weight:900;">${escapeHTML(yourAnswer)}</div>
+          <div style="font-size:16px;color:#aaa;margin-top:8px;">ただしい こたえ:</div>
+          <div style="font-size:24px;color:var(--good);font-weight:900;">${escapeHTML(correctText)}</div>
+          ${explainHtml}
+        </div>`;
+    }
     s.appendChild(el(`
       <div class="center" style="width:100%;">
         <h2 class="${correct?'pop':''}">${correct?JP.correct:JP.wrong}</h2>
-        <div style="font-size:28px;color:${correct?'var(--good)':'var(--bad)'};margin: 6px 0;">${cheer}</div>
+        <div style="font-size:24px;color:${correct?'var(--good)':'var(--bad)'};margin: 6px 0;">${cheer}</div>
         ${correct ? `
-          <div style="font-size:22px;">${JP.earned_energy(energyEarned)}</div>
-          <div style="font-size:22px;">${JP.draw_card(cardsDrawn)}</div>
-        ` : `
-          <div style="font-size:80px;">😝</div>
-        `}
+          <div style="font-size:20px;">${JP.earned_energy(energyEarned)}</div>
+          <div style="font-size:20px;">${JP.draw_card(cardsDrawn)}</div>
+        ` : wrongDetail}
         <button class="btn huge ${correct?'good':'ghost'}" id="cont">${JP.next}</button>
       </div>`));
     tap($("cont"), () => onContinue());
+    // Speak the correct answer on wrong-answer to help kids who can't read it yet.
+    if (!correct && question && question.options && typeof question.answer === "number") {
+      const txt = question.options[question.answer];
+      if (typeof txt === "string" && /[a-zA-Z]/.test(txt)) {
+        setTimeout(() => SND.speak(txt), 350);
+      }
+    }
   }
 
   // -------- ACTION (attack / cards) --------
@@ -300,14 +407,20 @@ window.UI = (() => {
   }
 
   // -------- TARGET PICKER --------
+  // If active player is a spy, also show teammate-attack and boss-heal sabotage options.
   function renderTargetPicker(player, boss, players, onPick, onCancel) {
     show("action");
     const s = $("screen-action"); s.innerHTML = "";
     s.appendChild(el(buildHeader(boss, players, player)));
+    const isSpy = player.role === "spy";
     s.appendChild(el(`
       <div class="center" style="width:100%;">
         <h3>${JP.pick_target}</h3>
         <div class="parts-pick" id="parts"></div>
+        ${isSpy ? `
+          <div class="subtle" style="margin-top:14px;color:#ff7799;font-weight:900;">🕵️ スパイの ひみつ オプション</div>
+          <div class="parts-pick" id="spy-targets"></div>
+        ` : ``}
         <button class="btn ghost" id="cancel">${JP.cancel}</button>
       </div>`));
     const partsEl = $("parts");
@@ -319,9 +432,28 @@ window.UI = (() => {
         <div class="ph">HP ${Math.max(0,p.hp)}/${p.maxHP}</div>
         <div class="pe">${effLabel}</div>
       </button>`);
-      if (!dead) tap(node, () => { SND.sfxPop(); onPick(p); });
+      if (!dead) tap(node, () => { SND.sfxPop(); onPick({ kind: "boss-part", part: p }); });
       partsEl.appendChild(node);
     });
+    if (isSpy) {
+      const sp = $("spy-targets");
+      players.filter(pp => !pp.dead && pp.id !== player.id).forEach(teammate => {
+        const node = el(`<button class="part-btn" style="border-color:#ff7799;">
+          <div class="pn">😈 ${escapeHTML(teammate.name)}</div>
+          <div class="ph">HP ${teammate.hp}/${teammate.maxHp}</div>
+          <div class="pe" style="color:#ff7799;">なかまを こうげき！</div>
+        </button>`);
+        tap(node, () => { SND.sfxPop(); onPick({ kind: "teammate", target: teammate }); });
+        sp.appendChild(node);
+      });
+      const healBoss = el(`<button class="part-btn" style="border-color:#ff7799;">
+        <div class="pn">💚 ボスを かいふく</div>
+        <div class="ph">+5 ボスHP</div>
+        <div class="pe" style="color:#ff7799;">こっそり たすける</div>
+      </button>`);
+      tap(healBoss, () => { SND.sfxPop(); onPick({ kind: "heal-boss" }); });
+      sp.appendChild(healBoss);
+    }
     tap($("cancel"), () => onCancel());
   }
 

@@ -367,18 +367,24 @@
     Q({ stars:3, ptype:"tprep", prompt_jp:"in / on / at", prompt:s, options: m.opts, answer: m.pos });
   });
 
-  // ★3 Listening comprehension (multi-fact in audio, recall a detail)
+  // ★3 Listening comprehension (multi-fact in audio, recall a detail).
+  // All distractors are plausible alternatives drawn from the same category.
   const listenComp = [
     ["I have a brother and two sisters.", "How many sisters?", "two", ["one","two","three","four"]],
-    ["My cat is white and small.", "What color is the cat?", "white", ["white","black","brown","pink"]],
-    ["I like apples and grapes.", "Does he like grapes?", "Yes", ["Yes","No","Maybe","Don't know"]],
+    ["My cat is white and small.", "What color is the cat?", "white", ["white","black","brown","gray"]],
+    ["I like apples and grapes, but I don't like bananas.", "What does he NOT like?", "bananas", ["apples","grapes","bananas","oranges"]],
     ["The book is on the desk.", "Where is the book?", "on the desk", ["on the desk","in the bag","on the bed","under the chair"]],
     ["I have three cats and one dog.", "How many pets in total?", "four", ["three","four","five","six"]],
-    ["My dad is a doctor.", "What is his job?", "doctor", ["doctor","teacher","cook","driver"]],
+    ["My dad is a doctor and my mom is a teacher.", "What is dad's job?", "doctor", ["doctor","teacher","cook","driver"]],
     ["It's three thirty.", "What time is it?", "3:30", ["3:00","3:30","2:30","4:30"]],
-    ["I want pizza for dinner.", "What does she want?", "pizza", ["pizza","sushi","ramen","curry"]],
+    ["I want pizza for dinner, not ramen.", "What does she want for dinner?", "pizza", ["pizza","ramen","sushi","curry"]],
     ["My birthday is May fifth.", "When is the birthday?", "May 5", ["May 5","May 15","June 5","April 5"]],
     ["The dog is in the garden.", "Where is the dog?", "in the garden", ["in the garden","in the house","at school","on the bed"]],
+    ["I drink milk every morning.", "What does he drink every morning?", "milk", ["milk","juice","tea","water"]],
+    ["My favorite season is summer.", "What's her favorite season?", "summer", ["spring","summer","fall","winter"]],
+    ["I have ten yellow pencils.", "How many pencils?", "ten", ["five","ten","fifteen","twenty"]],
+    ["The bus comes at 8 AM.", "When does the bus come?", "8 AM", ["7 AM","8 AM","9 AM","10 AM"]],
+    ["I live in Osaka now, but I was born in Tokyo.", "Where does he live now?", "Osaka", ["Tokyo","Osaka","Kyoto","Nagoya"]],
   ];
   listenComp.forEach(([sent, q, ans, opts]) => {
     const m = mc(ans, opts);
@@ -418,26 +424,55 @@
   // Inspired by actual Eiken 5 past papers — vocab/grammar fills, conversation
   // responses, sentence ordering (the genuine 3★ test format), and listening responses.
 
-  // ★3 SENTENCE ORDERING (Eiken 5 Section 3 format) — 40+ items
-  // Pick the correctly-ordered English sentence.
+  // ★3 SENTENCE ORDERING (Eiken 5 Section 3 format)
+  // Distractors target specific error patterns so kids learn from the wrong choices.
+  function fmt(words, punct) {
+    if (!words.length) return "";
+    const a = words.slice();
+    a[0] = a[0][0].toUpperCase() + a[0].slice(1);
+    // Lowercase any other capitalized words that aren't 'I' (best-effort)
+    for (let i = 1; i < a.length; i++) {
+      if (a[i] !== "I" && a[i][0] === a[i][0].toUpperCase() && /^[A-Z][a-z]/.test(a[i])) {
+        // keep proper nouns capitalized: simple heuristic — leave as-is
+      }
+    }
+    return a.join(" ") + punct;
+  }
   function shuffleWords(correct) {
-    // Make 3 wrong orderings of the same words
     const words = correct.replace(/[?.]/g,"").split(/\s+/);
-    const punct = correct.match(/[?.]/) ? correct.match(/[?.]/)[0] : "";
-    const wrongs = new Set();
-    let tries = 0;
-    while (wrongs.size < 3 && tries++ < 60) {
+    const punct = correct.match(/[?.]$/) ? correct.match(/[?.]$/)[0] : "";
+    const out = new Set();
+    // Distractor 1: swap two adjacent words (small but plausible mistake)
+    if (words.length >= 3) {
+      const a = words.slice();
+      const i = Math.max(0, Math.min(a.length-2, Math.floor(Math.random()*(a.length-1))));
+      [a[i], a[i+1]] = [a[i+1], a[i]];
+      out.add(fmt(a, punct));
+    }
+    // Distractor 2: move last meaningful word to position 1 (subject-verb error)
+    if (words.length >= 3) {
+      const a = words.slice();
+      const last = a.pop();
+      a.splice(1, 0, last);
+      out.add(fmt(a, punct));
+    }
+    // Distractor 3: reverse first three words (question-word order error)
+    if (words.length >= 3) {
+      const a = words.slice();
+      a.splice(0, 3, ...a.slice(0, 3).reverse());
+      out.add(fmt(a, punct));
+    }
+    // Fallback: random shuffle to fill
+    while (out.size < 3) {
       const a = words.slice();
       for (let i = a.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random()*(i+1));
         [a[i], a[j]] = [a[j], a[i]];
       }
-      const cap = a[0][0].toUpperCase() + a[0].slice(1);
-      a[0] = cap;
-      const cand = a.join(" ") + punct;
-      if (cand !== correct) wrongs.add(cand);
+      const cand = fmt(a, punct);
+      if (cand !== correct) out.add(cand);
     }
-    return Array.from(wrongs);
+    return Array.from(out).filter(s => s !== correct).slice(0, 3);
   }
   const orderings = [
     ["これらの くつは いくらですか？", "How much are these shoes?"],

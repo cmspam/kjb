@@ -2,13 +2,36 @@
 window.SND = (() => {
   let voiceEn = null, voiceJa = null;
   let unlocked = false;
+  let muted = false;
+  let preferredVoiceName = null;
+  try {
+    muted = localStorage.getItem("kjb_muted") === "1";
+    preferredVoiceName = localStorage.getItem("kjb_voice") || null;
+  } catch(e) {}
+  function setMuted(v) { muted = !!v; try { localStorage.setItem("kjb_muted", muted?"1":"0"); } catch(e) {} }
+  function isMuted() { return muted; }
+  function setVoice(name) {
+    preferredVoiceName = name || null;
+    try { localStorage.setItem("kjb_voice", preferredVoiceName || ""); } catch(e) {}
+    refreshVoices();
+  }
+  function listVoices() {
+    if (typeof speechSynthesis === "undefined") return [];
+    return speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+  }
 
   function refreshVoices() {
     const vs = speechSynthesis.getVoices();
-    voiceEn = vs.find(v => /en[-_]US/i.test(v.lang) && /female|samantha|karen|moira|kid|child/i.test(v.name))
-           || vs.find(v => /en[-_]US/i.test(v.lang))
-           || vs.find(v => /^en/i.test(v.lang))
-           || null;
+    if (preferredVoiceName) {
+      const pv = vs.find(v => v.name === preferredVoiceName);
+      if (pv) { voiceEn = pv; }
+    }
+    if (!voiceEn) {
+      voiceEn = vs.find(v => /en[-_]US/i.test(v.lang) && /female|samantha|karen|moira|kid|child/i.test(v.name))
+             || vs.find(v => /en[-_]US/i.test(v.lang))
+             || vs.find(v => /^en/i.test(v.lang))
+             || null;
+    }
     voiceJa = vs.find(v => /ja[-_]JP/i.test(v.lang)) || null;
   }
   if (typeof speechSynthesis !== "undefined") {
@@ -17,6 +40,7 @@ window.SND = (() => {
   }
 
   function speak(text, opts = {}) {
+    if (muted) return;
     if (typeof speechSynthesis === "undefined") return;
     if (opts.cancel !== false) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
@@ -54,6 +78,7 @@ window.SND = (() => {
     return actx;
   }
   function tone(freq, dur, type="square", vol=0.15) {
+    if (muted) return;
     const a = ctx(); if (!a) return;
     if (a.state === "suspended") a.resume();
     const o = a.createOscillator(); const g = a.createGain();
@@ -84,5 +109,6 @@ window.SND = (() => {
     o.start(); o.stop(a.currentTime + .4);
   }
 
-  return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat, sfxPop, sfxFart };
+  return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat, sfxPop, sfxFart,
+           setMuted, isMuted, setVoice, listVoices };
 })();
