@@ -185,6 +185,14 @@ window.Game = (() => {
     if (S.doubleNextAttack) { dmg *= 2; S.doubleNextAttack = false; }
     part.hp = Math.max(0, part.hp - dmg);
     SND.sfxHit();
+    const stage = document.querySelector(".stage");
+    if (stage) {
+      stage.classList.remove("shake"); void stage.offsetWidth; stage.classList.add("shake");
+      const num = document.createElement("div");
+      num.className = "dmg-num"; num.textContent = "-" + dmg;
+      stage.appendChild(num);
+      setTimeout(() => num.remove(), 1200);
+    }
     UI.toast(JP.hit_part(p.name, part.name_jp, dmg), 1100);
     p.attackPower = 0;
     S.pendingDamageBonus = 0;
