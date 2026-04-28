@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>カイジュウバトル！ Kaiju Brawl</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <div id="screen-title" class="screen"></div>
+  <div id="screen-setup" class="screen hidden"></div>
+  <div id="screen-pass" class="screen hidden"></div>
+  <div id="screen-role" class="screen hidden"></div>
+  <div id="screen-wager" class="screen hidden"></div>
+  <div id="screen-question" class="screen hidden"></div>
+  <div id="screen-result" class="screen hidden"></div>
+  <div id="screen-action" class="screen hidden"></div>
+  <div id="screen-boss" class="screen hidden"></div>
+  <div id="screen-victory" class="screen hidden"></div>
+  <div id="screen-defeat" class="screen hidden"></div>
+  <div id="screen-vote" class="screen hidden"></div>
+  <div id="toast"></div>
+</div>
+
+<!-- Question banks (plain JS so file:// double-click works) -->
+<script src="data/questions_level1.js"></script>
+<script src="data/questions_level2.js"></script>
+<script src="data/questions_level3.js"></script>
+
+<!-- Engine -->
+<script src="js/i18n.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/monsters.js"></script>
+<script src="js/questions.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

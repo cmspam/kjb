@@ -1,0 +1,308 @@
+// Level 2 — Eiken 5 grammar + vocab. Mix of JP→EN, EN→JP, fill-in, listening.
+(function () {
+  const all = [];
+  let nid = 0;
+  const Q = (o) => { all.push({ id: "L2-" + (++nid).toString().padStart(3,"0"), level:2, type:"mc", ...o }); };
+
+  // Helper: build MC options from a pool
+  function mc(answer, pool, count=4) {
+    const distract = [];
+    while (distract.length < count-1) { const x = pool[(Math.random()*pool.length)|0]; if (x!==answer && !distract.includes(x)) distract.push(x); }
+    const opts = distract.slice(); const pos = (Math.random()*count)|0; opts.splice(pos, 0, answer);
+    return { opts, pos };
+  }
+
+  // ========== VOCABULARY ==========
+  // Animals
+  const animals = [
+    ["cat","ねこ","🐱"],["dog","いぬ","🐶"],["bird","とり","🐦"],["fish","さかな","🐟"],["pig","ぶた","🐷"],
+    ["cow","うし","🐮"],["horse","うま","🐴"],["sheep","ひつじ","🐑"],["mouse","ねずみ","🐭"],["rabbit","うさぎ","🐰"],
+    ["bear","くま","🐻"],["lion","ライオン","🦁"],["tiger","とら","🐯"],["monkey","さる","🐵"],["elephant","ぞう","🐘"],
+    ["snake","へび","🐍"],["frog","かえる","🐸"],["duck","あひる","🦆"],["panda","パンダ","🐼"],["chicken","にわとり","🐔"],
+  ];
+  // Food
+  const food = [
+    ["apple","りんご","🍎"],["banana","バナナ","🍌"],["bread","パン","🍞"],["rice","ごはん","🍚"],["egg","たまご","🥚"],
+    ["milk","ぎゅうにゅう","🥛"],["water","みず","💧"],["juice","ジュース","🧃"],["cake","ケーキ","🍰"],["candy","あめ","🍬"],
+    ["pizza","ピザ","🍕"],["fish","さかな","🐟"],["meat","にく","🥩"],["soup","スープ","🍲"],["salad","サラダ","🥗"],
+    ["cheese","チーズ","🧀"],["tea","おちゃ","🍵"],["coffee","コーヒー","☕"],["sushi","おすし","🍣"],["noodles","めん","🍜"],
+  ];
+  // Family
+  const family = [
+    ["father","おとうさん","👨"],["mother","おかあさん","👩"],["brother","おにいさん","👦"],["sister","おねえさん","👧"],
+    ["grandfather","おじいさん","👴"],["grandmother","おばあさん","👵"],["uncle","おじさん","🧑"],["aunt","おばさん","👩"],
+    ["family","かぞく","👨‍👩‍👧"],["friend","ともだち","🧑‍🤝‍🧑"],["baby","あかちゃん","👶"],["boy","おとこのこ","👦"],["girl","おんなのこ","👧"],
+  ];
+  // Classroom
+  const classroom = [
+    ["pen","ペン","🖊️"],["pencil","えんぴつ","✏️"],["book","ほん","📕"],["bag","かばん","👜"],["desk","つくえ","🪑"],
+    ["chair","いす","💺"],["eraser","けしごむ","🧽"],["ruler","じょうぎ","📏"],["paper","かみ","📄"],["notebook","ノート","📓"],
+    ["scissors","はさみ","✂️"],["glue","のり","🩹"],["board","こくばん","🟩"],["clock","とけい","🕒"],["map","ちず","🗺️"],
+  ];
+  // Weather
+  const weather = [
+    ["sunny","はれ","☀️"],["rainy","あめ","🌧️"],["cloudy","くもり","☁️"],["snowy","ゆき","❄️"],["windy","かぜ","💨"],
+    ["hot","あつい","🥵"],["cold","さむい","🥶"],["warm","あたたかい","🌤️"],["cool","すずしい","🍃"],
+  ];
+  // Sports & Hobbies
+  const hobbies = [
+    ["soccer","サッカー","⚽"],["baseball","やきゅう","⚾"],["tennis","テニス","🎾"],["swimming","すいえい","🏊"],
+    ["running","ランニング","🏃"],["dancing","ダンス","💃"],["singing","うた","🎤"],["reading","どくしょ","📖"],
+    ["drawing","おえかき","🎨"],["games","ゲーム","🎮"],["music","おんがく","🎵"],["piano","ピアノ","🎹"],
+  ];
+  // Places
+  const places = [
+    ["school","がっこう","🏫"],["park","こうえん","🏞️"],["library","としょかん","📚"],["hospital","びょういん","🏥"],
+    ["station","えき","🚉"],["store","おみせ","🏬"],["house","いえ","🏠"],["zoo","どうぶつえん","🦁"],
+    ["pool","プール","🏊"],["beach","ビーチ","🏖️"],["restaurant","レストラン","🍽️"],
+  ];
+  // Body & Clothes
+  const clothes = [
+    ["shirt","シャツ","👕"],["pants","ズボン","👖"],["shoes","くつ","👟"],["hat","ぼうし","🎩"],["socks","くつした","🧦"],
+    ["jacket","ジャケット","🧥"],["dress","ドレス","👗"],["gloves","てぶくろ","🧤"],
+  ];
+
+  // For each vocab list: JP→EN, EN→JP, picture→EN, picture→JP
+  function vocabBundle(list, ptype) {
+    const ens = list.map(x => x[0]);
+    const jps = list.map(x => x[1]);
+    list.forEach(([en, jp, emoji]) => {
+      // JP → EN
+      let m = mc(en, ens);
+      Q({ stars: 1, ptype: ptype+"_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+      // EN → JP
+      m = mc(jp, jps);
+      Q({ stars: 1, ptype: ptype+"_en2jp", prompt_jp:`「${en}」の にほんごは？`, prompt: en, options: m.opts, answer: m.pos, audio: en });
+      // Picture → EN
+      m = mc(en, ens);
+      Q({ stars: 2, ptype: ptype+"_pic2en", prompt_jp:`これは えいごで？`, promptImage: emoji, options: m.opts, answer: m.pos });
+    });
+  }
+  vocabBundle(animals, "animal");
+  vocabBundle(food, "food");
+  vocabBundle(family, "family");
+  vocabBundle(classroom, "class");
+  vocabBundle(weather, "weather");
+  vocabBundle(hobbies, "hobby");
+  vocabBundle(places, "place");
+  vocabBundle(clothes, "clothes");
+
+  // ========== GRAMMAR ==========
+  // Be verbs
+  const beq = [
+    ["I ___ a student.", "am", ["am","is","are","be"], "わたしは せいとです"],
+    ["She ___ my friend.", "is", ["am","is","are","be"], "かのじょは ともだち"],
+    ["They ___ happy.", "are", ["am","is","are","be"], "かれらは うれしい"],
+    ["He ___ tall.", "is", ["am","is","are","be"], "かれは せが たかい"],
+    ["You ___ smart.", "are", ["am","is","are","be"], "あなたは あたまがいい"],
+    ["We ___ from Japan.", "are", ["am","is","are","be"], "わたしたちは にほんから"],
+    ["It ___ a cat.", "is", ["am","is","are","be"], "それは ねこです"],
+    ["My dad ___ a cook.", "is", ["am","is","are","be"], "ちちは コックです"],
+    ["The dogs ___ cute.", "are", ["am","is","are","be"], "いぬたちは かわいい"],
+    ["I ___ ten years old.", "am", ["am","is","are","be"], "10さい"],
+  ];
+  beq.forEach(([s, ans, opts, jp]) => {
+    const m = mc(ans, opts);
+    Q({ stars:2, ptype:"be", prompt_jp: jp, prompt: s, options: m.opts, answer: m.pos });
+  });
+
+  // Pronouns
+  const pron = [
+    ["___ am Yuki.", "I", ["I","You","He","She"]],
+    ["___ are my friend.", "You", ["I","You","He","She"]],
+    ["___ is a doctor. (man)", "He", ["I","You","He","She"]],
+    ["___ is a teacher. (woman)", "She", ["I","You","He","She"]],
+    ["___ are happy. (us)", "We", ["We","They","I","He"]],
+    ["___ are dogs.", "They", ["We","They","I","He"]],
+    ["This is ___ pencil. (mine)", "my", ["my","your","his","her"]],
+    ["That is ___ bag. (yours)", "your", ["my","your","his","her"]],
+    ["He likes ___ cat. (his cat)", "his", ["my","your","his","her"]],
+    ["She loves ___ mom. (her mom)", "her", ["my","your","his","her"]],
+  ];
+  pron.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:2, ptype:"pron", prompt_jp:"あてはまる ことばは？", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // a / an
+  const aan = [
+    ["I have ___ apple.","an"], ["She has ___ dog.","a"], ["He is ___ student.","a"],
+    ["This is ___ egg.","an"], ["I see ___ orange.","an"], ["I want ___ banana.","a"],
+    ["She is ___ artist.","an"], ["I have ___ umbrella.","an"], ["He has ___ pen.","a"],
+    ["Look at ___ elephant.","an"],
+  ];
+  aan.forEach(([s, ans]) => {
+    const m = mc(ans, ["a","an","the","is"]);
+    Q({ stars:1, ptype:"a_an", prompt_jp:"「a」か「an」？", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // Plurals
+  const plurals = [
+    ["one cat, two ___","cats",["cat","cats","cates","caties"]],
+    ["one box, two ___","boxes",["boxes","boxs","box","boxies"]],
+    ["one dog, two ___","dogs",["dog","dogs","dogges","doges"]],
+    ["one baby, two ___","babies",["babys","babies","baby","babes"]],
+    ["one bus, two ___","buses",["buss","buses","bus","busies"]],
+    ["one child, two ___","children",["childs","childes","children","childies"]],
+    ["one foot, two ___","feet",["foots","feets","feet","feeties"]],
+    ["one fish, two ___","fish",["fish","fishs","fishes","fishies"]],
+    ["one tooth, two ___","teeth",["tooths","teeth","tothes","toothies"]],
+    ["one mouse, two ___","mice",["mouses","mice","mices","mousies"]],
+  ];
+  plurals.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"plural", prompt_jp:"ふくすうけい は？", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // this / that / these / those
+  const tt = [
+    ["___ is my pen. (close)", "This"],
+    ["___ is your bag. (far)", "That"],
+    ["___ are my books. (close, plural)", "These"],
+    ["___ are her shoes. (far, plural)", "Those"],
+    ["What is ___? (close)", "this"],
+    ["Who is ___? (far)", "that"],
+    ["I like ___ apples. (close)", "these"],
+    ["Look at ___ stars. (far)", "those"],
+  ];
+  tt.forEach(([s, ans]) => {
+    const m = mc(ans, ["This","That","These","Those","this","that","these","those"]);
+    Q({ stars:2, ptype:"this_that", prompt_jp:"あてはまる ことば？", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // simple present 3rd person
+  const sp = [
+    ["He ___ apples.","likes",["like","likes","liking","liked"]],
+    ["She ___ tennis.","plays",["play","plays","playing","played"]],
+    ["My dad ___ to work.","goes",["go","goes","going","gone"]],
+    ["The cat ___ milk.","drinks",["drink","drinks","drinking","drunk"]],
+    ["Yuki ___ a book.","reads",["read","reads","reading","red"]],
+    ["I ___ apples.","like",["like","likes","liking","liked"]],
+    ["We ___ soccer.","play",["play","plays","playing","played"]],
+    ["They ___ to school.","go",["go","goes","going","gone"]],
+    ["Mom ___ dinner.","cooks",["cook","cooks","cooking","cooked"]],
+    ["The bird ___ in the tree.","sings",["sing","sings","singing","sang"]],
+  ];
+  sp.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:2, ptype:"present", prompt_jp:"ただしい かたちは？", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // can / can't
+  const can = [
+    ["I ___ swim. (はい、できます)", "can"],
+    ["She ___ fly. (とべない)", "can't"],
+    ["A bird ___ fly.", "can"],
+    ["A fish ___ walk.", "can't"],
+    ["My dog ___ run fast.", "can"],
+    ["I ___ read kanji. (できない)", "can't"],
+    ["___ you sing? — Yes, I can.", "Can"],
+    ["___ you play piano? — No, I can't.", "Can"],
+    ["Bats ___ see well.", "can't"],
+    ["My baby brother ___ talk yet.", "can't"],
+  ];
+  can.forEach(([s, ans]) => {
+    const m = mc(ans, ["can","can't","Can","do"]);
+    Q({ stars:2, ptype:"can", prompt_jp:"can / can't どっち？", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // want to / don't want to
+  const want = [
+    ["I ___ eat ice cream. (たべたい)", "want to"],
+    ["I ___ go to bed. (いきたくない)", "don't want to"],
+    ["She ___ play. (したい)", "wants to"],
+    ["He ___ study. (したくない)", "doesn't want to"],
+    ["___ you want to go?", "Do"],
+    ["I want ___ go home.", "to"],
+    ["I ___ eat poop. (たべたくない)", "don't want to"],
+    ["My cat ___ sleep. (したい)", "wants to"],
+  ];
+  want.forEach(([s, ans]) => {
+    const m = mc(ans, ["want to","don't want to","wants to","doesn't want to","Do","to","Does","want"]);
+    Q({ stars:3, ptype:"want", prompt_jp:"したい / したくない", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // Prepositions
+  const prep = [
+    ["The cat is ___ the box. (中)", "in"],
+    ["The book is ___ the desk. (上)", "on"],
+    ["The ball is ___ the chair. (下)", "under"],
+    ["The dog is ___ the tree. (横)", "next to"],
+    ["The bird is ___ the sky. (中)", "in"],
+    ["The picture is ___ the wall. (上 / かべ)", "on"],
+    ["The shoes are ___ the bed. (下)", "under"],
+    ["The poop is ___ the toilet. 🚽", "in"],
+  ];
+  prep.forEach(([s, ans]) => {
+    const m = mc(ans, ["in","on","under","next to","at","by"]);
+    Q({ stars:2, ptype:"prep", prompt_jp:"あてはまる ばしょは？", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // WH questions
+  const wh = [
+    ["___ is your name? — I'm Yuki.","What"],
+    ["___ are you? — I'm fine.","How"],
+    ["___ old are you? — Ten.","How"],
+    ["___ is that? — It's my dad.","Who"],
+    ["___ do you live? — In Tokyo.","Where"],
+    ["___ is your birthday? — May 5.","When"],
+    ["___ is this? — A book.","What"],
+    ["___ many cats? — Three.","How"],
+    ["___ color is it? — Red.","What"],
+    ["___ is the bag? — On the chair.","Where"],
+    ["___ time is it? — 3 o'clock.","What"],
+    ["___ are you sad? — I lost my dog.","Why"],
+  ];
+  wh.forEach(([s, ans]) => {
+    const m = mc(ans, ["What","Who","Where","When","Why","How"]);
+    Q({ stars:2, ptype:"wh", prompt_jp:"WHしつもん:", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // Days / months
+  const days = [["Monday","げつようび"],["Tuesday","かようび"],["Wednesday","すいようび"],["Thursday","もくようび"],
+                ["Friday","きんようび"],["Saturday","どようび"],["Sunday","にちようび"]];
+  days.forEach(([en, jp]) => {
+    const m = mc(en, days.map(d=>d[0]));
+    Q({ stars:2, ptype:"day", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+  });
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const mjp = ["1がつ","2がつ","3がつ","4がつ","5がつ","6がつ","7がつ","8がつ","9がつ","10がつ","11がつ","12がつ"];
+  months.forEach((en, i) => {
+    const m = mc(en, months);
+    Q({ stars:2, ptype:"month", prompt_jp:`「${mjp[i]}」は えいごで？`, options: m.opts, answer: m.pos });
+  });
+
+  // Time / numbers extended
+  const moreNums = [["11","eleven"],["12","twelve"],["13","thirteen"],["14","fourteen"],["15","fifteen"],
+                    ["20","twenty"],["30","thirty"],["50","fifty"],["100","one hundred"]];
+  const numWords = moreNums.map(n=>n[1]).concat(["one","two","three","four","five","six","seven","eight","nine","ten"]);
+  moreNums.forEach(([n, en]) => {
+    const m = mc(en, numWords);
+    Q({ stars:2, ptype:"num", prompt_jp:`「${n}」は えいごで？`, prompt:n, options: m.opts, answer: m.pos });
+  });
+
+  // Listening
+  const listenWords = ["apple","banana","cat","dog","school","friend","happy","big","red","fish","mom","dad","run","jump","book","chair"];
+  listenWords.forEach((w) => {
+    const m = mc(w, listenWords);
+    Q({ stars:3, ptype:"listen_word", prompt_jp:`きこえた えいたん は？ 🔊`, audio:w, options: m.opts, answer: m.pos });
+  });
+
+  // Q&A scenarios
+  const qa = [
+    ["What's this?","It's a pen.",["It's a pen.","I'm Yuki.","Yes, I do.","On the desk."]],
+    ["How are you?","I'm fine.",["I'm fine.","It's red.","I have a dog.","No, I'm not."]],
+    ["Where do you live?","In Osaka.",["In Osaka.","I'm ten.","I like fish.","Yes, I am."]],
+    ["What color is it?","It's blue.",["It's blue.","I'm a boy.","No, thanks.","On Monday."]],
+    ["How old is your sister?","She's seven.",["She's seven.","She's a doctor.","Yes, she does.","In school."]],
+    ["Do you like pizza?","Yes, I do.",["Yes, I do.","I'm fine.","It's hot.","On Sunday."]],
+    ["Can you swim?","Yes, I can.",["Yes, I can.","I'm Yuki.","It's a dog.","On Monday."]],
+    ["What time is it?","It's 3 o'clock.",["It's 3 o'clock.","I have a pen.","I'm a girl.","Yes, please."]],
+  ];
+  qa.forEach(([q, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"qa", prompt_jp:"よい こたえは？", prompt:`Q: ${q}`, options: m.opts, answer: m.pos });
+  });
+
+  window.QUESTIONS_LEVEL2 = all;
+})();
