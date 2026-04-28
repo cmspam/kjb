@@ -391,6 +391,201 @@ window.UI = (() => {
     }
   }
 
+  // -------- RANDOM POP-IN EVENTS (fairy / bomb / thief) --------
+  // Each shows in a modal overlay. Caller passes `onResolve(effect)` where
+  // effect is whatever the event decided to do.
+
+  const FAIRY_SVG = `
+    <svg viewBox="0 0 200 240" class="event-svg" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="55" cy="105" rx="42" ry="55" fill="#ffc8e0" opacity=".75" stroke="#ff7aa8" stroke-width="2.5" transform="rotate(-22 55 105)"/>
+      <ellipse cx="145" cy="105" rx="42" ry="55" fill="#ffc8e0" opacity=".75" stroke="#ff7aa8" stroke-width="2.5" transform="rotate(22 145 105)"/>
+      <rect x="80" y="98" width="40" height="55" fill="#ff8ecf" stroke="#000" stroke-width="3"/>
+      <path d="M 70 145 Q 100 178 130 145 L 142 175 Q 100 195 58 175 Z" fill="#ffaadc" stroke="#000" stroke-width="3"/>
+      <path d="M 75 165 Q 100 195 125 165 L 138 198 Q 100 215 62 198 Z" fill="#ff8ecf" stroke="#000" stroke-width="3"/>
+      <line x1="92" y1="200" x2="84" y2="232" stroke="#fde0c0" stroke-width="7" stroke-linecap="round"/>
+      <line x1="108" y1="200" x2="116" y2="232" stroke="#fde0c0" stroke-width="7" stroke-linecap="round"/>
+      <ellipse cx="84" cy="234" rx="8" ry="4" fill="#000"/>
+      <ellipse cx="116" cy="234" rx="8" ry="4" fill="#000"/>
+      <circle cx="100" cy="65" r="36" fill="#fde0c0" stroke="#000" stroke-width="3"/>
+      <ellipse cx="100" cy="48" rx="22" ry="10" fill="#f4caa0" opacity=".7"/>
+      <path d="M 65 70 Q 60 55 70 50 L 76 76 Q 70 80 65 70 Z" fill="#3a2a1a" stroke="#000" stroke-width="2"/>
+      <path d="M 135 70 Q 140 55 130 50 L 124 76 Q 130 80 135 70 Z" fill="#3a2a1a" stroke="#000" stroke-width="2"/>
+      <path d="M 75 78 Q 100 105 125 78 L 122 100 Q 100 115 78 100 Z" fill="#fff" stroke="#000" stroke-width="2.5"/>
+      <path d="M 85 95 Q 100 110 115 95" stroke="#ddd" stroke-width="1.5" fill="none"/>
+      <path d="M 84 60 Q 90 55 96 60" stroke="#000" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M 104 60 Q 110 55 116 60" stroke="#000" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="80" cy="73" rx="6" ry="3" fill="#ff88bb" opacity=".7"/>
+      <ellipse cx="120" cy="73" rx="6" ry="3" fill="#ff88bb" opacity=".7"/>
+      <line x1="135" y1="138" x2="172" y2="78" stroke="#a06030" stroke-width="4" stroke-linecap="round"/>
+      <g class="fairy-wand-star">
+        <path d="M 168 70 L 174 81 L 186 81 L 176 89 L 180 100 L 168 93 L 156 100 L 160 89 L 150 81 L 162 81 Z" fill="#ffe45c" stroke="#000" stroke-width="2"/>
+      </g>
+    </svg>`;
+
+  const BOMB_SVG = `
+    <svg viewBox="0 0 200 220" class="event-svg" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 100 50 Q 115 35 100 18 Q 85 0 105 -8" stroke="#a06030" stroke-width="4" fill="none" transform="translate(0 28)"/>
+      <circle cx="105" cy="22" r="10" fill="#ffaa00"/>
+      <circle cx="105" cy="22" r="6" fill="#ffe45c"/>
+      <circle cx="98" cy="14" r="3" fill="#ff5500"/>
+      <circle cx="100" cy="135" r="68" fill="#222" stroke="#000" stroke-width="3"/>
+      <ellipse cx="78" cy="105" rx="22" ry="11" fill="#fff" opacity=".25"/>
+      <circle cx="80" cy="125" r="14" fill="#fff"/>
+      <circle cx="120" cy="125" r="14" fill="#fff"/>
+      <circle cx="83" cy="129" r="7" fill="#000"/>
+      <circle cx="123" cy="129" r="7" fill="#000"/>
+      <circle cx="86" cy="125" r="2.5" fill="#fff"/>
+      <circle cx="126" cy="125" r="2.5" fill="#fff"/>
+      <path d="M 85 155 Q 100 168 115 155" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <text x="100" y="195" text-anchor="middle" font-size="14" fill="#ff8888" font-weight="900">DON'T MESS UP!</text>
+    </svg>`;
+
+  const THIEF_SVG = `
+    <svg viewBox="0 0 220 200" class="event-svg" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="110" cy="148" rx="55" ry="42" fill="#1a1a1a" stroke="#000" stroke-width="3"/>
+      <circle cx="110" cy="80" r="42" fill="#1a1a1a" stroke="#000" stroke-width="3"/>
+      <polygon points="78,55 82,28 96,52" fill="#1a1a1a" stroke="#000" stroke-width="3"/>
+      <polygon points="142,55 138,28 124,52" fill="#1a1a1a" stroke="#000" stroke-width="3"/>
+      <polygon points="80,55 84,38 92,52" fill="#ff88bb"/>
+      <polygon points="140,55 136,38 128,52" fill="#ff88bb"/>
+      <rect x="68" y="70" width="84" height="20" fill="#fff" stroke="#000" stroke-width="2.5"/>
+      <ellipse cx="92" cy="80" rx="6" ry="9" fill="#88ff44"/>
+      <ellipse cx="128" cy="80" rx="6" ry="9" fill="#88ff44"/>
+      <ellipse cx="92" cy="80" rx="2.2" ry="7" fill="#000"/>
+      <ellipse cx="128" cy="80" rx="2.2" ry="7" fill="#000"/>
+      <polygon points="106,95 110,100 114,95" fill="#ff88bb"/>
+      <path d="M 100 105 Q 110 112 120 105 Q 124 108 128 102" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <line x1="65" y1="98" x2="82" y2="100" stroke="#fff" stroke-width="1.5"/>
+      <line x1="138" y1="100" x2="155" y2="98" stroke="#fff" stroke-width="1.5"/>
+      <ellipse cx="50" cy="135" rx="22" ry="28" fill="#e8c890" stroke="#000" stroke-width="3"/>
+      <path d="M 38 113 Q 50 108 62 113 L 60 116 Q 50 112 40 116 Z" fill="#a07030" stroke="#000" stroke-width="2"/>
+      <text x="50" y="146" text-anchor="middle" font-size="28" font-weight="900" fill="#000">¥</text>
+      <path d="M 160 145 Q 195 138 198 105 Q 198 80 178 90" stroke="#1a1a1a" stroke-width="14" fill="none" stroke-linecap="round"/>
+    </svg>`;
+
+  function showModal(html) {
+    const modal = document.createElement("div");
+    modal.className = "event-modal";
+    modal.innerHTML = `<div class="event-card">${html}</div>`;
+    document.body.appendChild(modal);
+    return modal;
+  }
+  function closeModal(modal) { if (modal && modal.remove) modal.remove(); }
+
+  // ✨ Fairy: bald ojisan in a tutu. Heals player to full no matter what they say.
+  function renderFairyEvent(player, onResolve) {
+    SND.unlock(); SND.sfxPop();
+    const stage1 = `
+      <div class="event-rare">★ レアキャラ あらわれた！ ★</div>
+      <div class="event-name">きせき フェアリー</div>
+      ${FAIRY_SVG}
+      <div class="event-line">「ねえ ${escapeHTML(player.name)}くん〜 ✨<br>ぼく かわいい？」</div>
+      <div class="event-buttons">
+        <button class="btn good" id="ev-yes">うん かわいい！💖</button>
+        <button class="btn bad" id="ev-no">ブサイク… 😬</button>
+      </div>`;
+    const modal = showModal(stage1);
+    const finish = (saidYes) => {
+      const reaction = saidYes
+        ? "「うそ つかないで！しってる、ブサイクだって おもってる！😭」"
+        : "「ひどい！なんて こと いうの！😡」";
+      modal.querySelector(".event-card").innerHTML = `
+        <div class="event-rare">★ レアキャラ ★</div>
+        <div class="event-name">きせき フェアリー</div>
+        ${FAIRY_SVG}
+        <div class="event-line">${reaction}</div>
+        <div class="event-line" style="color: var(--good);">「まあ いいや... HP ぜんぶ かいふくする！💖」</div>
+        <div class="event-buttons">
+          <button class="btn huge good" id="ev-ok">ありがとう ✨</button>
+        </div>`;
+      tap(modal.querySelector("#ev-ok"), () => {
+        closeModal(modal);
+        onResolve({ kind: "heal-full" });
+      });
+    };
+    tap(modal.querySelector("#ev-yes"), () => finish(true));
+    tap(modal.querySelector("#ev-no"), () => finish(false));
+  }
+
+  // 💣 Bomb-kun: gives a quick question. Right = boss takes 15 dmg, wrong = player takes 8.
+  function renderBombEvent(player, question, onResolve) {
+    SND.unlock(); SND.sfxBoss();
+    let displayPrompt = "";
+    if (question.promptImage) displayPrompt += `<div style="font-size:64px;line-height:1;">${question.promptImage}</div>`;
+    if (question.prompt) displayPrompt += `<div class="question-prompt-en" style="font-size:24px;">${escapeHTML(question.prompt).replace(/\n/g,"<br>")}</div>`;
+    const html = `
+      <div class="event-rare">★ レアキャラ ★</div>
+      <div class="event-name">ジバク くん 💣</div>
+      ${BOMB_SVG}
+      <div class="event-line">「シュー〜… こたえれば<br>ボスに ばくはつ！まちがえたら キミに ばくはつ！」</div>
+      <div style="background:rgba(0,0,0,.4); padding:12px; border-radius:14px; margin:8px 0;">
+        <div class="question-prompt-jp">${question.prompt_jp}</div>
+        ${displayPrompt}
+        <div class="options" id="bomb-opts" style="margin-top:8px;"></div>
+      </div>`;
+    const modal = showModal(html);
+    const optsEl = modal.querySelector("#bomb-opts");
+    let answered = false;
+    question.options.forEach((opt, i) => {
+      const o = document.createElement("div");
+      o.className = "opt"; o.dataset.i = i; o.textContent = opt;
+      tap(o, () => {
+        if (answered) return; answered = true;
+        const correct = i === question.answer;
+        o.classList.add(correct ? "right" : "wrong");
+        if (!correct) {
+          const right = optsEl.querySelector(`[data-i="${question.answer}"]`);
+          if (right) right.classList.add("right");
+        }
+        optsEl.querySelectorAll(".opt").forEach(x => x.classList.add("disabled"));
+        if (correct) SND.sfxCorrect(); else SND.sfxWrong();
+        const reaction = correct ? "「ドカーン！ボスを ふっとばす！💥」" : "「ばくはつ ミス…キミに あたる！💥」";
+        modal.querySelector(".event-card").innerHTML = `
+          <div class="event-rare">★ レアキャラ ★</div>
+          <div class="event-name">ジバク くん 💣</div>
+          ${BOMB_SVG}
+          <div class="event-line">${reaction}</div>
+          <div class="event-buttons">
+            <button class="btn huge ${correct?'good':'bad'}" id="ev-ok">${correct?'やったー！':'いてて…'}</button>
+          </div>`;
+        tap(modal.querySelector("#ev-ok"), () => {
+          closeModal(modal);
+          onResolve({ kind: "bomb", correct });
+        });
+      });
+      optsEl.appendChild(o);
+    });
+    if (question.audio) {
+      setTimeout(() => SND.speak(question.audio), 250);
+    }
+  }
+
+  // 🐱 Thief Cat: steals HP from boss, gives to player.
+  function renderThiefEvent(player, onResolve) {
+    SND.unlock(); SND.sfxPop();
+    const sassy = pickRand([
+      "「にゃー！ボスから ちょっと かりてきた！🎒」",
+      "「すきあり！ ボスの エナジー いただき〜！」",
+      "「キミに あげる、ぼくは いそがしいから！にゃっ！」",
+      "「コソコソ コソコソ… うふふ〜！」",
+      "「ボスの しっぽから 5 もらってきた！」"
+    ]);
+    const html = `
+      <div class="event-rare">★ レアキャラ ★</div>
+      <div class="event-name">どろぼう ねこ 🐈‍⬛</div>
+      ${THIEF_SVG}
+      <div class="event-line">${sassy}</div>
+      <div class="event-line" style="color:var(--good);">「ボスに 5ダメージ、キミに +5 HP！」</div>
+      <div class="event-buttons">
+        <button class="btn huge good" id="ev-ok">サンキュー！🐾</button>
+      </div>`;
+    const modal = showModal(html);
+    tap(modal.querySelector("#ev-ok"), () => {
+      closeModal(modal);
+      onResolve({ kind: "thief" });
+    });
+  }
+
   // -------- DEFENSE Q (hard mode) --------
   // Boss is about to attack `player` for `dmg`. Show a fast 6s question — right answer dodges.
   function renderDefenseQ(player, question, dmg, boss, players, onResolve) {
@@ -753,5 +948,6 @@ window.UI = (() => {
 
   return { renderTitle, renderSetup, renderPass, renderRole, renderWager, renderQuestion,
            renderResult, renderAction, renderTargetPicker, renderBoss, renderVictory,
-           renderDefeat, renderVote, renderDefenseQ, toast, show, showRules, tap };
+           renderDefeat, renderVote, renderDefenseQ, toast, show, showRules, tap,
+           renderFairyEvent, renderBombEvent, renderThiefEvent };
 })();

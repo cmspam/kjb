@@ -135,8 +135,61 @@ window.Game = (() => {
     S.currentQuestion = null;
     S.currentWager = null;
     // Solo mode: skip the pass screen — there's no one to hand off to.
-    if (S.solo) goWager();
-    else UI.renderPass(p.name, () => goWager());
+    if (S.solo) maybeRandomEvent(p, () => goWager());
+    else UI.renderPass(p.name, () => maybeRandomEvent(p, () => goWager()));
+  }
+
+  // ~5% chance of a random pop-in event (~1.7% each: fairy, bomb-kun, thief cat).
+  function maybeRandomEvent(p, onContinue) {
+    const r = Math.random();
+    if (r >= 0.05) return onContinue();
+    const which = Math.floor((r / 0.05) * 3); // 0,1,2
+    if (which === 0) {
+      UI.renderFairyEvent(p, () => {
+        p.hp = p.maxHp;
+        UI.toast(`✨ ${p.name} は HP まんたん！`, 1600);
+        onContinue();
+      });
+    } else if (which === 1) {
+      const q = Questions.pick(p.level || S.level, 1, { misses: p.misses, seenIds: p.seenIds });
+      if (!q) return onContinue();
+      p.seenIds.push(q.id);
+      UI.renderBombEvent(p, q, ({ correct }) => {
+        if (correct) {
+          // Hit a random non-core part (or core if everything else is dead) for 15
+          const aliveNonCore = S.boss.parts.filter(pp => pp.hp > 0 && pp.effect !== "win");
+          const targets = aliveNonCore.length ? aliveNonCore : S.boss.parts.filter(pp => pp.hp > 0);
+          if (targets.length) {
+            const tp = targets[(Math.random()*targets.length)|0];
+            tp.hp = Math.max(0, tp.hp - 15);
+            UI.toast(`💥 ${tp.name_jp} に 15 ダメージ！`, 1800);
+            const core = S.boss.parts.find(x => x.effect === "win");
+            if (core && core.hp <= 0) return doVictory();
+          }
+        } else {
+          p.hp = Math.max(0, p.hp - 8);
+          UI.toast(`💥 ${p.name} に 8 ダメージ！`, 1800);
+          if (p.hp === 0) {
+            p.dead = true;
+            if (S.players.every(x => x.dead)) return doDefeat();
+          }
+        }
+        onContinue();
+      });
+    } else {
+      UI.renderThiefEvent(p, () => {
+        const aliveParts = S.boss.parts.filter(pp => pp.hp > 0);
+        if (aliveParts.length) {
+          const tp = aliveParts[(Math.random()*aliveParts.length)|0];
+          tp.hp = Math.max(0, tp.hp - 5);
+        }
+        p.hp = Math.min(p.maxHp, p.hp + 5);
+        UI.toast(`🐱 ${p.name} は HP +5！ボス -5！`, 1600);
+        const core = S.boss.parts.find(x => x.effect === "win");
+        if (core && core.hp <= 0) return doVictory();
+        onContinue();
+      });
+    }
   }
 
   function currentPlayer() { return S.players[S.currentIdx]; }
