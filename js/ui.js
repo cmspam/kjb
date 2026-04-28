@@ -133,6 +133,7 @@ window.UI = (() => {
     let jinro = false;
     let advanced = false; // show per-player level overrides
     let timerSec = 0;     // 0 = no timer; otherwise seconds per question
+    let hardMode = false; // boss attacks require defensive Q to dodge
     const names = ["","","","","",""];
     const playerLevels = [null,null,null,null,null,null]; // null = use global
 
@@ -161,6 +162,9 @@ window.UI = (() => {
             <button class="toggle ${timerSec===30?'on':''}" data-sec="30">30びょう</button>
             <button class="toggle ${timerSec===20?'on':''}" data-sec="20">20びょう</button>
             <button class="toggle ${timerSec===10?'on':''}" data-sec="10">10びょう</button>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button class="toggle ${hardMode?'on':''}" id="hard-toggle">${hardMode?'ハードモード ON (こたえて かわす!)':'ハードモード OFF'}</button>
           </div>
           ${count >= 4 ? `
             <div class="subtle" style="margin-top:12px;">${JP.jinro_hint}</div>
@@ -204,6 +208,7 @@ window.UI = (() => {
         nr.appendChild(wrap);
       }
       tap($("adv-toggle"), () => { advanced = !advanced; redraw(); });
+      tap($("hard-toggle"), () => { hardMode = !hardMode; redraw(); });
       // Timer buttons (data-sec attribute on each toggle)
       s.querySelectorAll("[data-sec]").forEach(b => tap(b, () => { timerSec = parseInt(b.dataset.sec,10); redraw(); }));
       const jinroBtn = $("jinro-toggle"); if (jinroBtn) tap(jinroBtn, () => { jinro = !jinro; redraw(); });
@@ -217,7 +222,7 @@ window.UI = (() => {
         });
         const finalLevels = playerLevels.slice(0, count).map(l => l ?? level);
         SND.sfxPop();
-        onConfirm({ count, level, levels: finalLevels, jinro: jinro && count >= 4, names: finalNames, timerSec });
+        onConfirm({ count, level, levels: finalLevels, jinro: jinro && count >= 4, names: finalNames, timerSec, hardMode });
       });
       tap($("back"), () => location.reload());
     }
@@ -375,6 +380,76 @@ window.UI = (() => {
       if (!question.prompt && !question.promptImage) {
         setTimeout(speak, 350);
       }
+    }
+  }
+
+  // -------- DEFENSE Q (hard mode) --------
+  // Boss is about to attack `player` for `dmg`. Show a fast 6s question — right answer dodges.
+  function renderDefenseQ(player, question, dmg, boss, players, onResolve) {
+    show("question");
+    const s = $("screen-question"); s.innerHTML = "";
+    s.appendChild(el(buildHeader(boss, players, player)));
+    let displayPrompt = "";
+    if (question.promptImage) displayPrompt += `<div style="font-size:84px;line-height:1;">${question.promptImage}</div>`;
+    if (question.prompt) displayPrompt += `<div class="question-prompt-en">${escapeHTML(question.prompt).replace(/\n/g,"<br>")}</div>`;
+    if (!question.prompt && !question.promptImage && question.audio) {
+      displayPrompt += `<button class="listen-btn" id="listen-btn">🔊</button>`;
+    }
+    s.appendChild(el(`
+      <div class="question-card" style="border:4px solid var(--bad);">
+        <div class="q-timer" id="q-timer">⏱️ <span id="q-timer-num">6</span></div>
+        <div style="font-size:22px;color:var(--hot);font-weight:900;">⚠️ ${escapeHTML(player.name)}, こたえて かわせ！</div>
+        <div class="subtle">あたると ${dmg} ダメージ！</div>
+        <div class="question-prompt-jp">${question.prompt_jp}</div>
+        ${displayPrompt}
+        <div class="options" id="opts"></div>
+      </div>
+    `));
+    let answered = false;
+    let timerHandle = null;
+    let remaining = 6;
+    const tn = $("q-timer-num");
+    const optsEl = $("opts");
+    timerHandle = setInterval(() => {
+      if (answered) { clearInterval(timerHandle); return; }
+      remaining--;
+      if (tn) tn.textContent = remaining;
+      const t = $("q-timer");
+      if (t && remaining <= 3) t.classList.add("low");
+      if (remaining <= 0) {
+        clearInterval(timerHandle);
+        if (!answered) {
+          answered = true;
+          const right = optsEl.querySelector(`[data-i="${question.answer}"]`);
+          if (right) right.classList.add("right");
+          optsEl.querySelectorAll(".opt").forEach(x => x.classList.add("disabled"));
+          SND.sfxWrong();
+          setTimeout(() => onResolve(false), 700);
+        }
+      }
+    }, 1000);
+    question.options.forEach((opt, i) => {
+      const o = el(`<div class="opt" data-i="${i}">${escapeHTML(opt)}</div>`);
+      tap(o, () => {
+        if (answered) return;
+        answered = true;
+        clearInterval(timerHandle);
+        const correct = i === question.answer;
+        o.classList.add(correct ? "right" : "wrong");
+        if (!correct) {
+          const right = optsEl.querySelector(`[data-i="${question.answer}"]`);
+          if (right) right.classList.add("right");
+        }
+        optsEl.querySelectorAll(".opt").forEach(x => x.classList.add("disabled"));
+        if (correct) SND.sfxCorrect(); else SND.sfxWrong();
+        setTimeout(() => onResolve(correct), 700);
+      });
+      optsEl.appendChild(o);
+    });
+    if (question.audio) {
+      const speak = () => SND.speak(question.audio);
+      const lb = $("listen-btn"); if (lb) tap(lb, speak);
+      if (!question.prompt && !question.promptImage) setTimeout(speak, 250);
     }
   }
 
@@ -670,5 +745,5 @@ window.UI = (() => {
 
   return { renderTitle, renderSetup, renderPass, renderRole, renderWager, renderQuestion,
            renderResult, renderAction, renderTargetPicker, renderBoss, renderVictory,
-           renderDefeat, renderVote, toast, show, showRules, tap };
+           renderDefeat, renderVote, renderDefenseQ, toast, show, showRules, tap };
 })();

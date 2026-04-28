@@ -27,6 +27,7 @@ window.Game = (() => {
       jinro: opts.jinro && players.length >= 4,
       solo: players.length === 1,
       timerSec: opts.timerSec || 0,
+      hardMode: !!opts.hardMode,
       currentIdx: 0,
       round: 1,
       voteUsedThisRound: false,
@@ -398,39 +399,72 @@ window.Game = (() => {
     if (mods.atks <= 0) {
       lines.push("こうげき できない！ 😆");
       lines.push(pickRand(JP.boss_taunt_low_hp));
+      return finishBossTurn(lines);
+    }
+    // Pre-determine the targeted attacks (without yet applying damage)
+    const queue = [];
+    for (let i = 0; i < mods.atks; i++) {
+      const aliveHeroes = S.players.filter(p => !p.dead);
+      if (aliveHeroes.length === 0) break;
+      const target = aliveHeroes[(Math.random()*aliveHeroes.length)|0];
+      if (target.skipBossAtk) {
+        lines.push(`${target.name} は うまく にげた！ 🏃`);
+        target.skipBossAtk = false; continue;
+      }
+      if (Math.random() < mods.missChance) {
+        lines.push(`${target.name} に ${pickRand(JP.boss_atk_words)} … はずれ〜！`);
+        continue;
+      }
+      if (target.shield) {
+        lines.push(`${target.name} は シールドで ふせいだ！ 🛡️`);
+        target.shield = false; continue;
+      }
+      let dmg = 4 + Math.floor(S.round/2);
+      const mouthAlive = S.boss.parts.find(p=>p.type==="mouth" && p.hp>0);
+      if (mouthAlive && mods.hasSpecial && Math.random() < 0.35) dmg += 2;
+      queue.push({ target, dmg });
+    }
+    if (S.hardMode && queue.length) {
+      processBossAttack(queue, 0, lines);
     } else {
-      for (let i = 0; i < mods.atks; i++) {
-        const aliveHeroes = S.players.filter(p => !p.dead);
-        if (aliveHeroes.length === 0) break;
-        const target = aliveHeroes[(Math.random()*aliveHeroes.length)|0];
-        if (target.skipBossAtk) {
-          lines.push(`${target.name} は うまく にげた！ 🏃`);
-          target.skipBossAtk = false; continue;
-        }
-        if (Math.random() < mods.missChance) {
-          lines.push(`${target.name} に ${pickRand(JP.boss_atk_words)} … はずれ〜！`);
-          continue;
-        }
-        if (target.shield) {
-          lines.push(`${target.name} は シールドで ふせいだ！ 🛡️`);
-          target.shield = false; continue;
-        }
-        let dmg = 4 + Math.floor(S.round/2);
-        // Bonus damage if mouth alive (poison)
-        const mouthAlive = S.boss.parts.find(p=>p.type==="mouth" && p.hp>0);
-        if (mouthAlive && mods.hasSpecial && Math.random() < 0.35) dmg += 2;
+      queue.forEach(({target, dmg}) => {
         target.hp = Math.max(0, target.hp - dmg);
         lines.push(`${target.name} に ${pickRand(JP.boss_atk_words)} → ${dmg} ダメージ！`);
-        if (target.hp === 0) {
-          target.dead = true;
-          lines.push(`${target.name} は たおれた…💀`);
-        }
-      }
+        if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…💀`); }
+      });
+      finishBossTurn(lines);
     }
+  }
+
+  // Hard mode: targeted player must answer a quick question to dodge.
+  function processBossAttack(queue, idx, lines) {
+    if (idx >= queue.length) return finishBossTurn(lines);
+    const { target, dmg } = queue[idx];
+    if (target.dead) return processBossAttack(queue, idx+1, lines);
+    const q = Questions.pick(target.level || S.level, 1, { misses: target.misses, seenIds: target.seenIds });
+    if (!q) {
+      target.hp = Math.max(0, target.hp - dmg);
+      lines.push(`${target.name} に ${dmg} ダメージ！`);
+      if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…`); }
+      return processBossAttack(queue, idx+1, lines);
+    }
+    target.seenIds.push(q.id);
+    UI.renderDefenseQ(target, q, dmg, S.boss, S.players, (correct) => {
+      if (correct) {
+        lines.push(`${target.name} は こたえて かわした！ ✨`);
+      } else {
+        target.hp = Math.max(0, target.hp - dmg);
+        lines.push(`${target.name} に ${pickRand(JP.boss_atk_words)} → ${dmg} ダメージ！`);
+        if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…💀`); }
+        const t = q.ptype; if (t) target.misses[t] = (target.misses[t]||0)+1;
+      }
+      setTimeout(() => processBossAttack(queue, idx+1, lines), 600);
+    });
+  }
+
+  function finishBossTurn(lines) {
     UI.renderBoss(S.boss, S.players, lines, () => {
-      // Defeat check
       if (S.players.every(p => p.dead)) return doDefeat();
-      // Vote phase if jinro mode
       if (S.jinro && !S.voteUsedThisRound) {
         showVoteOption();
       } else {
