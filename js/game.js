@@ -336,8 +336,8 @@ window.Game = (() => {
       lines.push("こうげき できない！ 😆");
       lines.push(pickRand(JP.boss_taunt_low_hp));
     } else {
-      const aliveHeroes = S.players.filter(p => !p.dead);
       for (let i = 0; i < mods.atks; i++) {
+        const aliveHeroes = S.players.filter(p => !p.dead);
         if (aliveHeroes.length === 0) break;
         const target = aliveHeroes[(Math.random()*aliveHeroes.length)|0];
         if (target.skipBossAtk) {
