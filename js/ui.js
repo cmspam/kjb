@@ -323,7 +323,7 @@ window.UI = (() => {
       <div class="center" style="width:100%;">
         <h2>${JP.boss_turn} 👹</h2>
         <div class="boss-bubble" style="position:static;display:inline-block;margin:12px;">${pickRand([boss.catchphrase, ...JP.boss_atk_words])}</div>
-        <div id="log" style="font-size:20px; margin: 12px; line-height:1.6; max-width:600px;"></div>
+        <div id="log" style="font-size:18px; margin: 12px auto; line-height:1.6; max-width:600px; max-height: 30vh; overflow-y: auto;"></div>
         <button class="btn huge cool" id="cont">${JP.next}</button>
       </div>`));
     const logEl = $("log");
