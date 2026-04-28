@@ -745,8 +745,11 @@ window.UI = (() => {
     boss.parts.forEach(p => {
       const dead = p.hp <= 0;
       const effLabel = effectLabel(p);
-      const node = el(`<button class="part-btn ${dead?'dead':''}">
-        <div class="pn">${p.name_jp}</div>
+      const isCore = p.effect === "win";
+      const cls = `part-btn ${dead?'dead':''} ${isCore?'core-btn':''}`;
+      const icon = isCore ? "⭐ " : "";
+      const node = el(`<button class="${cls}">
+        <div class="pn">${icon}${p.name_jp}${isCore?' （よわてん）':''}</div>
         <div class="ph">HP ${Math.max(0,p.hp)}/${p.maxHP}</div>
         <div class="pe">${effLabel}</div>
       </button>`);

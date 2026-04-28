@@ -208,6 +208,17 @@ h3 { font-size: 28px; margin: 4px 0; }
 .part-btn .pe { font-size: 12px; color: #cfc0ff; margin-top: 4px; }
 .part-btn.dead { opacity: .35; pointer-events:none; }
 .part-btn:active { transform: translateY(2px); }
+.part-btn.core-btn {
+  border-color: #ffcc00;
+  background: linear-gradient(160deg, #5a3a00, #2a1500);
+  box-shadow: 0 6px 0 rgba(0,0,0,.4), 0 0 16px rgba(255,204,0,.5);
+  animation: core-pulse 1.4s ease-in-out infinite;
+}
+.part-btn.core-btn .pn { color: var(--accent); }
+@keyframes core-pulse {
+  0%,100% { box-shadow: 0 6px 0 rgba(0,0,0,.4), 0 0 12px rgba(255,204,0,.4); }
+  50% { box-shadow: 0 6px 0 rgba(0,0,0,.4), 0 0 24px rgba(255,204,0,.8); }
+}
 
 /* Toast */
 #toast {
