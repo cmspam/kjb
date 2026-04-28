@@ -46,6 +46,15 @@ window.Game = (() => {
     };
     // Deal starting hands
     players.forEach(p => { for (let i = 0; i < STARTING_HAND; i++) drawCard(p); });
+    // Solo balance: a single player on multiplayer damage curves is unwinnable.
+    // Boost HP, halve boss attacks, soften core armor, and start with extra cards.
+    if (S.solo) {
+      const p = S.players[0];
+      p.hp = 50; p.maxHp = 50;
+      p.energy = 4;
+      drawCard(p); drawCard(p); // 5-card opening hand
+      S.boss.attacksPerRound = 1;
+    }
   }
 
   function drawCard(player) {
@@ -227,9 +236,11 @@ window.Game = (() => {
     }
     // Normal attack on a boss part
     const part = target.part;
-    // Armored core: damage to core reduced by number of intact non-core parts (max 1, min reflects armor)
+    // Armored core: damage to core reduced by intact non-core parts.
+    // Solo halves the armor so a single player can actually push damage through.
     if (part.effect === "win") {
-      const armor = Monsters.coreArmor(S.boss);
+      let armor = Monsters.coreArmor(S.boss);
+      if (S.solo) armor = Math.floor(armor / 2);
       const reduced = Math.max(1, dmg - armor);
       if (armor > 0 && reduced < dmg) {
         UI.toast(`コアの シールドが ${dmg - reduced} ダメージを ふせいだ！`, 1500);
