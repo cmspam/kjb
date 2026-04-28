@@ -868,5 +868,5 @@ window.Monsters = (() => {
     return m;
   }
 
-  return { randomBoss, renderBossSVG, alive, aliveTargets, partById, bossModifiers, damageMultiplier };
+  return { randomBoss, renderBossSVG, alive, aliveTargets, partById, bossModifiers, damageMultiplier, coreArmor };
 })();
