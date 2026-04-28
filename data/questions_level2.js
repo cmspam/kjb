@@ -103,7 +103,8 @@
   ];
   beq.forEach(([s, ans, opts, jp]) => {
     const m = mc(ans, opts);
-    Q({ stars:2, ptype:"be", prompt_jp: jp, prompt: s, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"be", prompt_jp: jp, prompt: s, options: m.opts, answer: m.pos,
+        explain: "I→am / He,She,It→is / We,You,They→are" });
   });
 
   // Pronouns
@@ -133,7 +134,8 @@
   ];
   aan.forEach(([s, ans]) => {
     const m = mc(ans, ["a","an","the","is"]);
-    Q({ stars:1, ptype:"a_an", prompt_jp:"「a」か「an」？", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:1, ptype:"a_an", prompt_jp:"「a」か「an」？", prompt:s, options: m.opts, answer: m.pos,
+        explain: "つぎの ことばが a,e,i,o,u (ぼいん) で はじまるなら → an / それ以外 → a" });
   });
 
   // Plurals
@@ -185,7 +187,8 @@
   ];
   sp.forEach(([s, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:2, ptype:"present", prompt_jp:"ただしい かたちは？", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"present", prompt_jp:"ただしい かたちは？", prompt:s, options: m.opts, answer: m.pos,
+        explain: "He / She / It の とき、どうしに -s を つけよう（goes, plays, likes）" });
   });
 
   // can / can't
@@ -319,7 +322,8 @@
   ];
   tIsAre.forEach(([s, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:3, ptype:"there_is", prompt_jp:"There is / There are どっち？", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:3, ptype:"there_is", prompt_jp:"There is / There are どっち？", prompt:s, options: m.opts, answer: m.pos,
+        explain: "1つ・かぞえられない → There is / 2つ以上 (ふくすう) → There are" });
   });
 
   // ★3 some/any
@@ -334,7 +338,8 @@
   ];
   someAny.forEach(([s, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:3, ptype:"some_any", prompt_jp:"some / any?", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:3, ptype:"some_any", prompt_jp:"some / any?", prompt:s, options: m.opts, answer: m.pos,
+        explain: "ふつうの ぶん → some / ぎもん文・ひてい文 → any" });
   });
 
   // ★3 frequency adverbs
@@ -348,7 +353,8 @@
   ];
   freq.forEach(([s, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:3, ptype:"frequency", prompt_jp:"ひんどの ことば", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:3, ptype:"frequency", prompt_jp:"ひんどの ことば", prompt:s, options: m.opts, answer: m.pos,
+        explain: "always いつも / usually たいてい / sometimes ときどき / never けっして〜ない" });
   });
 
   // ★3 Time prepositions (in/on/at)
@@ -364,7 +370,8 @@
   ];
   tPrep.forEach(([s, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:3, ptype:"tprep", prompt_jp:"in / on / at", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:3, ptype:"tprep", prompt_jp:"in / on / at", prompt:s, options: m.opts, answer: m.pos,
+        explain: "in: 月・年・季節 (in May, in 2020) / on: 曜日・日 (on Monday) / at: 時刻 (at 7)" });
   });
 
   // ★3 Listening comprehension (multi-fact in audio, recall a detail).

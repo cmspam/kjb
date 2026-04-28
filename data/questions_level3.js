@@ -77,7 +77,8 @@
   ];
   pastReg.forEach(([s, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:2, ptype:"past", prompt_jp:"かこけい は？", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"past", prompt_jp:"かこけい は？", prompt:s, options: m.opts, answer: m.pos,
+        explain: "yesterday や last weekなどの ことばが あれば、かこけい (-ed や ふきそく動詞)" });
   });
 
   // Past tense — JP→EN
@@ -110,7 +111,8 @@
   ];
   fut.forEach(([s, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:3, ptype:"future", prompt_jp:"みらい かたち", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:3, ptype:"future", prompt_jp:"みらい かたち", prompt:s, options: m.opts, answer: m.pos,
+        explain: "みらい: will + どうし / be going to + どうし" });
   });
 
   // ========= SHOULD / SHOULDN'T =========
@@ -142,7 +144,8 @@
   ];
   comp.forEach(([s, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:3, ptype:"compare", prompt_jp:"くらべる ことば", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:3, ptype:"compare", prompt_jp:"くらべる ことば", prompt:s, options: m.opts, answer: m.pos,
+        explain: "くらべる: -er than (みじかい けいようし) / more ___ than (ながい けいようし) / good→better, bad→worse" });
   });
 
   // ========= TIME WORDS =========
@@ -190,7 +193,8 @@
   ];
   conj.forEach(([s, ans]) => {
     const m = mc(ans, ["because","but","so","when","and","or","if"]);
-    Q({ stars:3, ptype:"conj", prompt_jp:"つなぎ ことば", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:3, ptype:"conj", prompt_jp:"つなぎ ことば", prompt:s, options: m.opts, answer: m.pos,
+        explain: "because: りゆう / but: しかし / so: だから / when: 〜とき / and: と / or: または / if: もし" });
   });
 
   // ========= QUESTIONS — wh + how =========
@@ -266,7 +270,8 @@
   ];
   pastCont.forEach(([s, ans, opts]) => {
     const m = mc(ans, opts);
-    Q({ stars:3, ptype:"past_cont", prompt_jp:"かこ しんこうけい", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:3, ptype:"past_cont", prompt_jp:"かこ しんこうけい", prompt:s, options: m.opts, answer: m.pos,
+        explain: "かこ しんこうけい: was/were + …ing。I/he/she/it→was, we/you/they→were" });
   });
 
   // ★3 Present continuous
@@ -293,7 +298,8 @@
   ];
   modal.forEach(([s, ans]) => {
     const m = mc(ans, ["must","must not","should","have to","can","can't"]);
-    Q({ stars:3, ptype:"modal", prompt_jp:"モーダル どうし", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:3, ptype:"modal", prompt_jp:"モーダル どうし", prompt:s, options: m.opts, answer: m.pos,
+        explain: "must: ぜったい (きまり) / should: したほうが いい / have to: しなければ ならない / must not: ぜったい だめ" });
   });
 
   // ★3 Conditional (if)
@@ -386,7 +392,8 @@
   ];
   quant.forEach(([s, ans]) => {
     const m = mc(ans, ["many","much","a lot of","few","little"]);
-    Q({ stars:3, ptype:"quant", prompt_jp:"りょうの ことば", prompt:s, options: m.opts, answer: m.pos });
+    Q({ stars:3, ptype:"quant", prompt_jp:"りょうの ことば", prompt:s, options: m.opts, answer: m.pos,
+        explain: "かぞえられる (cats, books): many / かぞえられない (water, time): much / どっちも OK: a lot of" });
   });
 
   // ========= Idioms / Common phrases =========
