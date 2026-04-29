@@ -192,6 +192,70 @@ window.I18N.register("ja", {
     "おむつ かえて！"
   ],
 
+  // Contextual mid-fight taunts. Shown as a small bubble on the player's
+  // action screen; choice depends on game state.
+  boss_taunts: {
+    healthy: [
+      "ぼくは つよいぞ！",
+      "そんなんで たおせると おもうな！",
+      "もっと もんだい とけ〜",
+      "へへへ、まだまだ！",
+      "がんばれよ〜",
+      "ふっ、よわいな〜",
+      "ぼくは げんき そのもの！",
+      "100 もん せいかい しても むり！"
+    ],
+    hurt: [
+      "ちょっと いたいぞ！",
+      "やられたな…！",
+      "まだ おわらん！",
+      "もう ゆるさん…！",
+      "ぼくも ほんき だす！",
+      "つぎは あたるぞ！",
+      "ちっ、ナイス アタック…",
+      "やるな…！"
+    ],
+    desperate: [
+      "もう だめぽ…",
+      "ぴえん〜",
+      "ママ〜！",
+      "おむつ かえて〜",
+      "ぼくも まけそう…",
+      "もう ゆるして！",
+      "おなかが いたい…",
+      "ねむい…！"
+    ],
+    raged: [
+      "ぐぉぉ！本気[ほんき]！",
+      "もう おこったぞ！",
+      "なめるなよ！",
+      "ぜったい ゆるさん！",
+      "まだまだ！ぐぉぉ！",
+      "おに モード！"
+    ],
+    player_low_hp: [
+      "あと ちょっとで たおれるな！",
+      "へへ、よわってきたな〜",
+      "もう おわりだ！",
+      "ふっふっふ…！",
+      "やめておけ よわむし〜"
+    ],
+    high_combo: [
+      "やめろ〜 まちがえろ〜！",
+      "コンボ、こわい…！",
+      "そんなに れんぞく できるとは！",
+      "ちっ、すごいな…",
+      "これは ピンチ！"
+    ],
+    part_lost: [
+      "ぼくの たいせつな パーツ〜！",
+      "それは ずるい！",
+      "いたっ！",
+      "それを とるなよ〜！",
+      "あぁぁ〜！"
+    ]
+  },
+
   // === BOSSES ===
   // Each boss's locale-coupled strings live here. The factory in monsters.js
   // reads these via window.I18N.boss(id) and merges them with the geometry/SVG.

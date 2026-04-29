@@ -189,6 +189,28 @@ window.SND = (() => {
   }
   function isThemePlaying() { return !!currentTheme && !currentTheme.paused; }
 
+  // ---------- SIREN SFX (warning splashes) ----------
+  // Brief siren burst played during the boss-attack WARNING screen and the
+  // RARE EVENT splash. Lazy-loaded HTMLAudioElement, plays from the start each
+  // time, auto-stops after `durationMs` (default 1200ms).
+  let _siren = null;
+  function playSiren(durationMs) {
+    if (muted) return;
+    if (!_siren) {
+      try { _siren = new Audio("assets/sfx/siren.mp3"); _siren.preload = "auto"; }
+      catch(_) { return; }
+    }
+    try {
+      _siren.pause();
+      _siren.currentTime = 0;
+      _siren.volume = 0.6;
+      const p = _siren.play();
+      if (p && p.catch) p.catch(() => {}); // iOS gesture-blocked: silent no-op
+      const dur = durationMs || 1200;
+      setTimeout(() => { try { _siren.pause(); _siren.currentTime = 0; } catch(_){} }, dur);
+    } catch(_) {}
+  }
+
   function playTheme(bossId, opts = {}) {
     if (muted || !getThemes()) return null;
     const loop    = !!opts.loop;
@@ -287,6 +309,6 @@ window.SND = (() => {
            setMuted, isMuted, setVoice, listVoices,
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
            getThemes, setThemes, getSpellMode, setSpellMode, getA11y, setA11y,
-           playTheme, playThemeSnippet, stopTheme, isThemePlaying,
+           playTheme, playThemeSnippet, stopTheme, isThemePlaying, playSiren,
            isSpeechSupported, recognizeOnce };
 })();

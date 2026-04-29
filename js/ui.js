@@ -894,6 +894,7 @@ window.UI = (() => {
         <div style="font-size: 22px; color: #fff; margin-top: 6px;">${escapeHTML(targetName)} ねらわれた！</div>
       </div>`;
     SND.sfxBoss();
+    if (SND.playSiren) SND.playSiren(1200);
     // Keep translate(-50%, -50%) in every keyframe so the centering transform
     // isn't clobbered by the scale/rotate keyframes (the bug where it slid right).
     overlay.querySelector(".boss-warn-text").animate(
@@ -1049,6 +1050,7 @@ window.UI = (() => {
       </div>`;
     document.body.appendChild(overlay);
     SND.sfxVictory();
+    if (SND.playSiren) SND.playSiren(1200);
     overlay.querySelector(".rare-content").animate(
       [
         { transform: "translate(-50%, -50%) scale(0) rotate(-20deg)", opacity: 0 },
@@ -1109,6 +1111,40 @@ window.UI = (() => {
         { background: "rgba(255,255,255,0)" }
       ],
       { duration: 500, iterations: 2 }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 2400);
+  }
+
+  // -------- CLIFFHANGER (boss core at 1 HP) --------
+  // Music drops out, "あと 1ポイント…" splash, beat of silence, then continue.
+  // Builds tension before the killing blow.
+  function showCliffhanger(boss, onDone) {
+    SND.unlock();
+    SND.stopTheme(150);
+    const overlay = document.createElement("div");
+    overlay.className = "cliffhanger-overlay";
+    overlay.innerHTML = `
+      <div class="cliff-flash"></div>
+      <div class="cliff-content">
+        <div class="cliff-svg">${boss ? Monsters.renderBossSVG(boss) : ''}</div>
+        <div class="cliff-label">あと 1ポイント…</div>
+        <div class="cliff-sub">息[いき]を のんだ！</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector(".cliff-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0.85)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1)",    opacity: 1 }
+      ],
+      { duration: 500, easing: "ease-out", fill: "forwards" }
+    );
+    overlay.querySelector(".cliff-svg").animate(
+      [
+        { filter: "brightness(1)" },
+        { filter: "brightness(.4) saturate(0.5)", offset: 0.5 },
+        { filter: "brightness(.7) saturate(0.8)" }
+      ],
+      { duration: 2200, easing: "ease-out", fill: "forwards" }
     );
     setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 2400);
   }
@@ -1860,6 +1896,17 @@ window.UI = (() => {
     const speakHTML = (ptarget && SND.isSpeechSupported && SND.isSpeechSupported())
       ? `<button class="btn cool" id="speak-bonus" style="font-size:14px; min-height:44px; min-width:0; padding: 8px 14px; margin: 8px 0;">🎤 「${escapeHTML(ptarget)}」 を いって +2 ボーナス！</button>`
       : ``;
+    // Boss taunt bubble — contextual line picked by game.js based on HP/combo/etc.
+    const tauntText = extras && extras.taunt;
+    if (tauntText) {
+      const stage = s.querySelector(".stage");
+      if (stage) {
+        const bubble = document.createElement("div");
+        bubble.className = "boss-bubble taunt-bubble";
+        bubble.innerHTML = furigana(tauntText);
+        stage.appendChild(bubble);
+      }
+    }
     s.appendChild(el(`
       <div class="center" style="width:100%;">
         ${hasAtk ? `
@@ -2269,10 +2316,65 @@ window.UI = (() => {
           <div class="ccost">⚡${c.cost}</div>
         </div>`);
         if (playable) tap(node, () => { SND.sfxCard(); onCard(c, idx); });
+        // Long-press (≥500ms) opens a big-card preview modal so kids can read
+        // what the card does without committing to play. Movement during the
+        // hold cancels (treated as a scroll).
+        attachLongPress(node, 500, () => showCardPreview(c));
         hand.appendChild(node);
       });
     }
     container.appendChild(hand);
+  }
+
+  // Long-press detector for any element. Cancels on move > a few px or on
+  // pointerup before duration. Fires onLongPress() once.
+  function attachLongPress(elNode, durationMs, onLongPress) {
+    let timer = null;
+    let startX = 0, startY = 0;
+    let cancelled = false;
+    function clear() { if (timer) { clearTimeout(timer); timer = null; } }
+    elNode.addEventListener("pointerdown", (e) => {
+      cancelled = false;
+      startX = e.clientX; startY = e.clientY;
+      clear();
+      timer = setTimeout(() => {
+        if (!cancelled) onLongPress();
+      }, durationMs);
+    }, { passive: true });
+    elNode.addEventListener("pointermove", (e) => {
+      if (Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8) {
+        cancelled = true; clear();
+      }
+    }, { passive: true });
+    elNode.addEventListener("pointerup",     () => { cancelled = true; clear(); }, { passive: true });
+    elNode.addEventListener("pointercancel", () => { cancelled = true; clear(); }, { passive: true });
+    elNode.addEventListener("pointerleave",  () => { cancelled = true; clear(); }, { passive: true });
+  }
+
+  // Big card preview modal — tap outside to dismiss. Cards in hand can be
+  // long-pressed to see this; useful for new players figuring out what a
+  // card does before committing to play it.
+  function showCardPreview(card) {
+    if (!card) return;
+    const overlay = document.createElement("div");
+    overlay.className = "card-preview-overlay";
+    overlay.innerHTML = `
+      <div class="card-preview">
+        <div class="card-preview-icon">${card.icon||"🎴"}</div>
+        <div class="card-preview-name">${escapeHTML(card.name_jp||card.id||"")}</div>
+        <div class="card-preview-text">${escapeHTML(card.text_jp||"")}</div>
+        <div class="card-preview-cost">⚡ コスト: ${card.cost ?? 0}</div>
+        <div class="card-preview-hint">タップで とじる</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector(".card-preview").animate(
+      [
+        { transform: "scale(0.6) translateY(20px)", opacity: 0 },
+        { transform: "scale(1) translateY(0)", opacity: 1 }
+      ],
+      { duration: 220, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    tap(overlay, () => overlay.remove());
   }
 
   // True if two strings differ by at most one edit (insert / delete / substitute).
@@ -2389,5 +2491,5 @@ window.UI = (() => {
            renderMonsterPick, renderPvpAction, showRareEventIntro,
            showRoundIntro, showRageIntro, showKO, spawnConfetti,
            showCompendium, runSpeechChallenge,
-           menuModal, showPvpFaceoff };
+           menuModal, showPvpFaceoff, showCliffhanger };
 })();

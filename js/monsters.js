@@ -760,15 +760,20 @@ window.Monsters = (() => {
     let hasSpecial = true;
     for (const p of boss.parts) {
       if (p.hp > 0) continue;
-      if (p.effect === "atk-1") atks -= 1;
+      // atk-1 / slow parts no longer zero out attacks — they convert into miss
+      // chance so a player who breaks every leg still gets the dramatic boss
+      // attack animation, just with a much higher chance the boss whiffs.
+      if (p.effect === "atk-1") { atks -= 1; missChance += 0.20; }
+      if (p.effect === "slow")  { atks -= 0.5; missChance += 0.15; }
       if (p.effect === "miss-50") missChance += 0.5;
       if (p.effect === "miss-40") missChance += 0.4;
       if (p.effect === "miss-30") missChance += 0.3;
       if (p.effect === "no-special" || p.effect === "no-poison") hasSpecial = false;
-      if (p.effect === "slow") atks -= 0.5;
     }
-    atks = Math.max(0, Math.floor(atks));
-    missChance = Math.min(0.85, missChance);
+    // Floor attacks-per-round at 1 — the boss is never completely powerless.
+    // Caller can use missChance to keep the threat reduced when legs are gone.
+    atks = Math.max(1, Math.floor(atks));
+    missChance = Math.min(0.90, missChance);
     return { atks, missChance, hasSpecial };
   }
 

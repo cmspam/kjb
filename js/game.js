@@ -7,6 +7,30 @@ window.Game = (() => {
   // Shows on player tiles, pass screen, etc., for instant "this is me" recognition.
   const AVATAR_POOL = ['🐶','🦄','🥷','👻','🤖','🐱','🐰','🐯','🐼','🦊','🐲','👽','🎃','🌟','🍕','🍣','⚔️','🔥','💎','🎨','🐸','🐙','🐝','🦖'];
   function pickRandAvatar() { return AVATAR_POOL[(Math.random()*AVATAR_POOL.length)|0]; }
+  // Damage tier — drives the dmg-num font size, the .stage shake intensity,
+  // and whether to flash the screen for crits. Thresholds tuned so a typical
+  // ★1 hit feels light and a combo+weakness+wager stack feels huge.
+  function dmgTier(d) {
+    if (d >= 16) return "crit";
+    if (d >= 8)  return "heavy";
+    if (d >= 4)  return "medium";
+    return "light";
+  }
+  function applyDamageTier(stage, dmg) {
+    if (!stage) return;
+    const tier = dmgTier(dmg);
+    stage.classList.remove("shake","shake-light","shake-medium","shake-heavy");
+    void stage.offsetWidth; // restart the animation
+    stage.classList.add("shake-" + (tier === "crit" ? "heavy" : tier));
+    if (tier === "crit") {
+      const flash = document.createElement("div");
+      flash.className = "crit-flash";
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 600);
+      UI.toast("⚡ クリティカル！", 1400);
+    }
+    return tier;
+  }
 
   let S = null; // current game state
 
@@ -479,7 +503,8 @@ window.Game = (() => {
       S.pronounceTarget = null;
       goAction();
     };
-    const extras = { pronounceTarget: S.pronounceTarget, onSpeak };
+    const taunt = (S.mode !== "pvp") ? pickBossTaunt(p) : null;
+    const extras = { pronounceTarget: S.pronounceTarget, onSpeak, taunt };
     if (S.mode === "pvp") {
       UI.renderPvpAction(p, S.players,
         (opp) => goPvpPickPart(p, opp),
@@ -509,6 +534,40 @@ window.Game = (() => {
       },
       () => goAction()
     );
+  }
+
+  // Pick a contextual boss taunt based on the current game state. Returns a
+  // string from the JP.boss_taunts pool best matching the situation, or null
+  // if nothing fits / the data isn't loaded.
+  function pickBossTaunt(p) {
+    if (!S.boss || S.boss._lostPartTaunt) {
+      // _lostPartTaunt is one-shot — applyPartHit sets it after a part dies
+      // so the next render's taunt reflects that, then we clear it below.
+    }
+    const T = (window.JP && JP.boss_taunts) || null;
+    if (!T) return null;
+    const core = S.boss.parts.find(x => x.effect === "win");
+    const corePct = core ? core.hp / core.maxHP : 1;
+    // One-shot: a part was just destroyed → boss whines about it.
+    if (S.boss._lostPartTaunt) {
+      S.boss._lostPartTaunt = false;
+      const pool = T.part_lost; if (pool && pool.length) return pool[(Math.random()*pool.length)|0];
+    }
+    if (S.boss.raged && T.raged && T.raged.length) {
+      return T.raged[(Math.random()*T.raged.length)|0];
+    }
+    if (p && p.combo >= 3 && T.high_combo && T.high_combo.length) {
+      return T.high_combo[(Math.random()*T.high_combo.length)|0];
+    }
+    if (p && p.maxHp && p.hp <= p.maxHp * 0.3 && T.player_low_hp && T.player_low_hp.length) {
+      return T.player_low_hp[(Math.random()*T.player_low_hp.length)|0];
+    }
+    let pool;
+    if (corePct <= 0.30)      pool = T.desperate;
+    else if (corePct <= 0.65) pool = T.hurt;
+    else                       pool = T.healthy;
+    if (pool && pool.length) return pool[(Math.random()*pool.length)|0];
+    return null;
   }
 
   // Classify a question's ptype into broad categories so a single boss
@@ -559,9 +618,9 @@ window.Game = (() => {
         SND.sfxHit();
         const stage = document.querySelector(".stage");
         if (stage) {
-          stage.classList.remove("shake"); void stage.offsetWidth; stage.classList.add("shake");
+          const tier = applyDamageTier(stage, dmg);
           const num = document.createElement("div");
-          num.className = "dmg-num"; num.textContent = "-" + dmg;
+          num.className = "dmg-num tier-" + tier; num.textContent = "-" + dmg;
           stage.appendChild(num);
           setTimeout(() => num.remove(), 1100);
           // Hold the monster's reaction until the damage number has floated up and out
@@ -599,8 +658,14 @@ window.Game = (() => {
           });
           return;
         }
-        // Rage activation on the opponent's monster — independent per monster in PvP.
+        // Cliffhanger on opponent's monster (core at 1 HP) — same one-shot pattern as hero mode.
         const opMon = opponent.monster;
+        if (!opMon._cliffShown && oppCore && oppCore.hp === 1) {
+          opMon._cliffShown = true;
+          setTimeout(() => UI.showCliffhanger(opMon, () => endTurn()), 1300);
+          return;
+        }
+        // Rage activation on the opponent's monster — independent per monster in PvP.
         if (!opMon.raged && oppCore && oppCore.hp > 0 && oppCore.hp <= oppCore.maxHP * 0.25) {
           opMon.raged = true;
           UI.toast(`😡 ${opMon.name_jp} は ぶちぎれた！`, 2000);
@@ -676,9 +741,9 @@ window.Game = (() => {
     SND.sfxHit();
     const stage = document.querySelector(".stage");
     if (stage) {
-      stage.classList.remove("shake"); void stage.offsetWidth; stage.classList.add("shake");
+      const tier = applyDamageTier(stage, dmg);
       const num = document.createElement("div");
-      num.className = "dmg-num"; num.textContent = "-" + dmg;
+      num.className = "dmg-num tier-" + tier; num.textContent = "-" + dmg;
       stage.appendChild(num);
       setTimeout(() => num.remove(), 1100);
       // Boss reaction speech bubble — sequenced AFTER the damage number floats away
@@ -704,11 +769,19 @@ window.Game = (() => {
     if (part.hp === 0) {
       S.log.push(`${part.name_jp} を こわした！`);
       SND.sfxPop();
+      S.boss._lostPartTaunt = true; // one-shot: next taunt reflects this loss
     }
     // Check win — doVictory wraps the K.O. cinematic so all kill paths
     // (this one, card effects, etc.) get the same reveal.
     const core = S.boss.parts.find(x => x.effect === "win");
     if (core && core.hp <= 0) { return doVictory(); }
+    // Cliffhanger: core sits at exactly 1 HP. Drop the music, show a splash,
+    // beat of silence — then continue. One shot per fight.
+    if (!S.boss._cliffShown && core && core.hp === 1) {
+      S.boss._cliffShown = true;
+      setTimeout(() => UI.showCliffhanger(S.boss, () => endTurn()), 1300);
+      return;
+    }
     // Rage activation: core just dropped to ≤25% maxHP. Bumps the boss's
     // attacks-per-round and shows a dramatic splash. Only fires once per fight.
     if (!S.boss.raged && core && core.hp > 0 && core.hp <= core.maxHP * 0.25) {
@@ -898,16 +971,12 @@ window.Game = (() => {
     const bossAttacks = (S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words;
 
     const queue = [];
-    if (mods.atks <= 0) {
-      // Boss is too damaged to attack — but still play the full dramatic
-      // buildup, then fizzle on the resolution. Pick a random hero as the
-      // would-be target so the WARNING text has someone to call out.
-      const t = aliveHeroes[(Math.random()*aliveHeroes.length)|0];
-      queue.push({ target: t, dmg: 0, missed: true, missReason: "fizzle" });
-    } else {
+    {
       // Pre-determine the targeted attacks (without yet applying damage). All
       // "didn't damage" outcomes (escape / miss / shield) still queue so they
-      // get the full animation; only the final reveal text differs.
+      // get the full animation; only the final reveal text differs. The boss
+      // always attacks ≥1 time per round (bossModifiers floors atks at 1) —
+      // when legs are destroyed the missChance climbs instead.
       for (let i = 0; i < mods.atks; i++) {
         const stillAlive = S.players.filter(p => !p.dead);
         if (stillAlive.length === 0) break;
@@ -931,12 +1000,12 @@ window.Game = (() => {
         if (mouthAlive && mods.hasSpecial && Math.random() < 0.35) dmg += 2;
         queue.push({ target, dmg });
       }
-      // If for some reason the loop produced no items (heroes all died mid-turn,
-      // edge case), still give the kid one fizzle for the warning beat.
-      if (queue.length === 0) {
-        const t = aliveHeroes[(Math.random()*aliveHeroes.length)|0];
-        queue.push({ target: t, dmg: 0, missed: true, missReason: "fizzle" });
-      }
+    }
+    // Defensive fallback: if the loop produced nothing (all heroes died
+    // mid-turn, etc.), still give the kid one fizzle for the warning beat.
+    if (queue.length === 0) {
+      const t = aliveHeroes[(Math.random()*aliveHeroes.length)|0];
+      queue.push({ target: t, dmg: 0, missed: true, missReason: "fizzle" });
     }
     processBossAttack(queue, 0, lines);
   }
