@@ -356,40 +356,57 @@ window.Game = (() => {
 
   // Cards usable BEFORE the question (wager phase)
   function playCardBeforeQuestion(p, card, idx, redrawCb) {
-    if (p.energy < card.cost) return;
-    p.energy -= card.cost;
-    p.hand.splice(idx, 1);
-    S.discard.push(card);
-    const ef = card.effect;
-    if (ef.type === Cards.C.HINT) { S.hintForCurrentQ = true; UI.toast("ヒント! まちがいを 1つ けすよ"); }
-    else if (ef.type === Cards.C.REROLL_Q) { S.rerolledThisQ = true; UI.toast("やりなおし！"); }
-    else if (ef.type === Cards.C.ENERGY) { p.energy += ef.v; UI.toast(`エナジー +${ef.v}`); }
-    else if (ef.type === Cards.C.DRAW) { for (let i=0;i<ef.v;i++) drawCard(p); UI.toast(`カードを ${ef.v}まい ひいた`); }
-    else { UI.toast("いま つかえないよ"); p.energy += card.cost; p.hand.push(card); S.discard.pop(); return redrawCb(); }
-    redrawCb();
+    try {
+      if (p.energy < card.cost) return;
+      p.energy -= card.cost;
+      p.hand.splice(idx, 1);
+      S.discard.push(card);
+      const ef = card.effect;
+      if (ef.type === Cards.C.HINT) { S.hintForCurrentQ = true; UI.toast("ヒント! まちがいを 1つ けすよ"); }
+      else if (ef.type === Cards.C.REROLL_Q) { S.rerolledThisQ = true; UI.toast("やりなおし！"); }
+      else if (ef.type === Cards.C.ENERGY) { p.energy += ef.v; UI.toast(`エナジー +${ef.v}`); }
+      else if (ef.type === Cards.C.DRAW) { for (let i=0;i<ef.v;i++) drawCard(p); UI.toast(`カードを ${ef.v}まい ひいた`); }
+      else { UI.toast("いま つかえないよ"); p.energy += card.cost; p.hand.push(card); S.discard.pop(); return redrawCb(); }
+      redrawCb();
+    } catch (e) {
+      console.error("playCardBeforeQuestion failed:", e, "card:", card);
+      UI.toast("カードエラー。もういちど！", 1800);
+      try { redrawCb(); } catch (e2) { console.error("redraw also failed:", e2); }
+    }
   }
 
   // Cards usable in the action phase
   function playCardInAction(p, card, idx) {
-    if (p.energy < card.cost) return;
-    const ef = card.effect;
-    // Cards that need a target
-    if (card.needsTarget && card.targetType === "player") {
-      // pick a player (alive)
-      pickPlayer(p, (target) => {
-        p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
-        applyCardEffect(p, card, target);
-        SND.sfxCard();
-        goAction();
-      }, () => goAction());
-      return;
+    try {
+      if (p.energy < card.cost) return;
+      const ef = card.effect;
+      // Cards that need a target
+      if (card.needsTarget && card.targetType === "player") {
+        pickPlayer(p, (target) => {
+          try {
+            p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
+            applyCardEffect(p, card, target);
+            SND.sfxCard();
+            goAction();
+          } catch (e) {
+            console.error("targeted card play failed:", e, "card:", card, "target:", target);
+            UI.toast("カードエラー！", 1800);
+            goAction();
+          }
+        }, () => goAction());
+        return;
+      }
+      p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
+      applyCardEffect(p, card, null);
+      SND.sfxCard();
+      const core = S.boss.parts.find(x => x.effect === "win");
+      if (core && core.hp <= 0) { setTimeout(doVictory, 600); return; }
+      goAction();
+    } catch (e) {
+      console.error("playCardInAction failed:", e, "card:", card);
+      UI.toast("カードエラー！", 1800);
+      goAction();
     }
-    p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
-    applyCardEffect(p, card, null);
-    SND.sfxCard();
-    const core = S.boss.parts.find(x => x.effect === "win");
-    if (core && core.hp <= 0) { setTimeout(doVictory, 600); return; }
-    goAction();
   }
 
   function pickPlayer(asker, onPick, onCancel) {
