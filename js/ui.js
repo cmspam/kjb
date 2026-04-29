@@ -747,13 +747,9 @@ window.UI = (() => {
     // Loop the boss's theme song while the kid reads the backstory. The render
     // is reached as a result of a user tap, so iOS audio gesture is satisfied.
     SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 600 });
-    // Boss says their catchphrase on entrance, then reads their backstory aloud
-    // (~6-8s). Both fall back silently if the audio file isn't present.
+    // Boss says their catchphrase on entrance. The backstory itself is read
+    // silently — only the theme song plays under it (kid reads at their own pace).
     if (boss.catchphrase) SND.playBossLine(boss.id, boss.catchphrase);
-    if (boss.backstory) {
-      const oneLine = boss.backstory.replace(/\n+/g, ' ');
-      setTimeout(() => SND.playBossLine(boss.id, oneLine), 1800);
-    }
     tap($("intro-go"), () => { SND.stopBossVoice(); SND.stopTheme(400); onContinue(); });
     if (onCycle) {
       tap($("intro-cycle"), () => { SND.stopBossVoice(); SND.stopTheme(200); onCycle(); });
@@ -2504,12 +2500,8 @@ window.UI = (() => {
         <button class="btn huge cool" id="cmp-back2" style="margin-top:18px;">${JP.back}</button>
       </div>`));
     SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 600 });
-    // Voice the catchphrase + backstory so the compendium entry feels alive.
+    // Voice the catchphrase only — backstory text is read silently under the theme.
     if (boss.catchphrase) SND.playBossLine(boss.id, boss.catchphrase);
-    if (boss.backstory) {
-      const oneLine = boss.backstory.replace(/\n+/g, ' ');
-      setTimeout(() => SND.playBossLine(boss.id, oneLine), 1800);
-    }
     tap($("cmp-back2"), () => { SND.stopBossVoice(); SND.stopTheme(400); onBack(); });
   }
 
