@@ -344,6 +344,26 @@ h3 { font-size: 28px; margin: 4px 0; }
 #exit-btn.hidden { display:none; }
 #exit-btn:active { transform: scale(0.9); }
 
+/* Custom confirm modal (replaces native confirm() which is unreliable on iOS Safari) */
+.confirm-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fade-in .15s ease;
+}
+.confirm-card {
+  background: var(--card); color:#fff;
+  border: 3px solid var(--accent); border-radius: 18px;
+  padding: 24px; box-shadow: var(--shadow);
+  max-width: 420px; width: 100%;
+  text-align: center;
+}
+.confirm-msg { font-size: 22px; font-weight: 800; margin-bottom: 18px; line-height: 1.5; }
+.confirm-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
 /* Rare event hype intro overlay */
 .rare-event-overlay {
   position: fixed; inset: 0;

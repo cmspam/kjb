@@ -17,11 +17,12 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
   }, { passive: true });
-  // Exit button — confirm then reload to title.
+  // Exit button — confirm then reload to title. Uses UI.confirmModal because
+  // native confirm() is unreliable from iOS Safari touch handlers.
   const exitBtn = document.getElementById("exit-btn");
   if (exitBtn) {
     UI.tap(exitBtn, () => {
-      if (confirm("バトルを やめて タイトルに もどる？")) location.reload();
+      UI.confirmModal("バトルを やめて タイトルに もどる？", () => location.reload());
     });
   }
   Game.start();

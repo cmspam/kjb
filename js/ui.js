@@ -3,26 +3,40 @@ window.UI = (() => {
   const SCREENS = ["title","setup","pass","role","wager","question","result","action","boss","victory","defeat","vote"];
   function $(id) { return document.getElementById(id); }
 
-  // iOS-resilient tap handler: handles both touch and mouse, force-blurs any
-  // focused input on tap so the soft keyboard doesn't eat the first tap.
+  // iOS-resilient tap handler.
+  //
+  // Why this is so finicky: when an <input> is focused on iPhone Safari and the
+  // user taps a button, iOS interprets the first tap as a "dismiss keyboard"
+  // gesture. Depending on layout/position-fixed/timing it can:
+  //   - skip touchend on the button entirely,
+  //   - fire touchend but suppress the synthetic click,
+  //   - consume the user-activation if you call e.preventDefault() in touchend
+  //     (which then makes any later confirm()/alert() silently fail).
+  //
+  // The robust fix: use Pointer Events as the primary signal (they fire even
+  // through the keyboard-dismiss path), keep `click` as a fallback for cases
+  // where pointerup doesn't reach us, blur the focused input as early as
+  // possible (pointerdown/touchstart) so the keyboard-dismiss animation can
+  // start before we try to activate, and DON'T call preventDefault — that's
+  // what was consuming user-activation and breaking confirm() on the exit btn.
+  // A short debounce stops pointerup+click from double-firing on the same gesture.
   function tap(el, handler) {
     if (!el) return;
-    let lastTouch = 0;
-    function blurActive() {
+    let lastFire = 0;
+    function safeBlur() {
       const a = document.activeElement;
       if (a && a !== el && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && a.blur) a.blur();
     }
-    el.addEventListener("touchend", (e) => {
-      if (e.cancelable) e.preventDefault();
-      lastTouch = Date.now();
-      blurActive();
+    function fire(e) {
+      const now = Date.now();
+      if (now - lastFire < 450) return; // prevent pointerup+click double-fire
+      lastFire = now;
       handler(e);
-    }, { passive: false });
-    el.addEventListener("click", (e) => {
-      if (Date.now() - lastTouch < 800) return;
-      blurActive();
-      handler(e);
-    });
+    }
+    el.addEventListener("pointerdown", safeBlur, { passive: true });
+    el.addEventListener("touchstart", safeBlur, { passive: true });
+    el.addEventListener("pointerup", fire);
+    el.addEventListener("click", fire);
   }
   // Screens where boss-theme music is allowed to keep playing across a render
   // (the screens that explicitly start a theme manage their own stop). For all
@@ -72,6 +86,25 @@ window.UI = (() => {
     t.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove("show"), ms);
+  }
+
+  // Custom confirm modal — used in place of native confirm() because iOS Safari
+  // sometimes silently suppresses confirm() called from inside touch handlers.
+  function confirmModal(msg, onYes, onNo) {
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-overlay";
+    overlay.innerHTML = `
+      <div class="confirm-card">
+        <div class="confirm-msg">${escapeHTML(msg)}</div>
+        <div class="confirm-row">
+          <button class="btn good" id="cf-yes">はい</button>
+          <button class="btn ghost" id="cf-no">いいえ</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const close = () => overlay.remove();
+    tap(overlay.querySelector("#cf-yes"), () => { close(); if (onYes) onYes(); });
+    tap(overlay.querySelector("#cf-no"),  () => { close(); if (onNo)  onNo(); });
   }
 
   // -------- TITLE --------
@@ -478,7 +511,7 @@ window.UI = (() => {
   // -------- BOSS INTRO (shown once at game start) --------
   // Backstories use 「漢字[よみ]」 syntax that gets converted to ruby tags so kanji
   // shows the hiragana reading above it. Inserted via innerHTML so the ruby renders.
-  function renderBossIntro(boss, onContinue) {
+  function renderBossIntro(boss, onContinue, onCycle) {
     show("title");
     const s = $("screen-title"); s.innerHTML = "";
     const story = furigana(boss.backstory || "なぞの カイジュウ。");
@@ -492,12 +525,18 @@ window.UI = (() => {
           <div style="font-size:14px; color:var(--accent); font-weight:900; margin-bottom:6px;">▶ ストーリー</div>
           <div style="font-size:16px; white-space: pre-line;">${story}</div>
         </div>
-        <button class="btn huge hot" id="intro-go" style="margin-top:18px;">バトル スタート！⚔️</button>
+        <div class="row" style="margin-top:18px; gap:10px; justify-content:center;">
+          <button class="btn huge hot" id="intro-go">バトル スタート！⚔️</button>
+          ${onCycle ? `<button class="btn ghost" id="intro-cycle" style="font-size:16px; min-height:44px; min-width:0; padding: 8px 14px;">🔄 ちがう カイジュウ</button>` : ``}
+        </div>
       </div>`));
     // Loop the boss's theme song while the kid reads the backstory. The render
     // is reached as a result of a user tap, so iOS audio gesture is satisfied.
     SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 600 });
     tap($("intro-go"), () => { SND.stopTheme(400); onContinue(); });
+    if (onCycle) {
+      tap($("intro-cycle"), () => { SND.stopTheme(200); onCycle(); });
+    }
   }
 
   // -------- SLINGSHOT (interactive attack animation) --------
@@ -1776,6 +1815,7 @@ window.UI = (() => {
   return { renderTitle, renderSetup, renderPass, renderRole, renderWager, renderQuestion,
            renderResult, renderAction, renderTargetPicker, renderBoss, renderVictory,
            renderDefeat, renderVote, renderDefenseQ, toast, show, showRules, tap,
+           confirmModal,
            renderFairyEvent, renderBombEvent, renderThiefEvent,
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
            renderBossIntro, showSlingshot, showBossAttackAnim,
