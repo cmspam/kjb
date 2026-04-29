@@ -521,29 +521,50 @@ window.SND = (() => {
       let consecAbove = 0;
       let consecBelow = 0;
       let srRestarts = 0;
-      let lastTranscript = "";       // best-known full transcript across results
-      let bestAlts = [];             // top-N alternatives from any final result
+      // Chrome desktop's webkitSpeechRecognition tends to end its session after
+      // it finalizes a single phrase, even with continuous=true. Each new SR
+      // session restarts e.results from scratch, so we keep our own accumulator
+      // across sessions: `accumulatedFinal` holds finalized text from prior
+      // sessions, `currentInterim` holds the current session's in-progress
+      // text. Together they form the full transcript.
+      let accumulatedFinal = "";
+      let currentInterim = "";
+      let bestAlts = [];             // most recent finalized alternatives
       let stoppedByVad = false;
-      const MAX_SR_RESTARTS  = 3;
-      const TOTAL_CAP_MS     = opts.totalTimeoutMs || 14000;
+      // Plenty of restarts for Chrome desktop's premature-end quirk. The wall-
+      // clock cap and VAD silence gate are the real terminating conditions.
+      const MAX_SR_RESTARTS  = 12;
+      const TOTAL_CAP_MS     = opts.totalTimeoutMs || 15000;
       const VOICE_FRAMES_REQUIRED = 3;     // ~90ms of sustained voice to trigger
       const SILENCE_END_FRAMES   = 40;     // ~1.2s of silence after voice = end-of-speech
-                                           // (long enough that mid-sentence pauses don't trigger)
-      const MIN_VOICE_DURATION_MS = 300;   // keep listening for at least this long after voice starts
+      const MIN_VOICE_DURATION_MS = 300;
       let r = null;
 
       const target  = (targetWord || "").toLowerCase().trim();
       const tWords  = target.split(/\s+/);
-      function matchAgainst(text, altsList) {
-        const candidates = altsList && altsList.length
-          ? altsList
-          : [{ transcript: text.toLowerCase().trim() }];
-        return candidates.find(a => {
+      function fullTranscript() {
+        return (accumulatedFinal + " " + currentInterim).trim();
+      }
+      function evaluateAndFinish(reason) {
+        const t = fullTranscript();
+        if (!t) {
+          finish({
+            ok: false,
+            reason: reason || (voiceDetected ? "no-result-after-voice" : "no-speech"),
+          });
+          return;
+        }
+        const candidates = bestAlts.length ? bestAlts : [{ transcript: t.toLowerCase() }];
+        const matched = candidates.find(a => {
           if (a.transcript === target) return true;
-          // word-bag match — allows the kid to say a slightly longer phrase
-          // ("it's next week please") and still match if the target words are present
+          // word-bag match — kid says "it's next week please" → matches "it's next week"
           const ws = a.transcript.split(/\s+/);
           return tWords.every(t => ws.includes(t));
+        });
+        finish({
+          ok: !!matched,
+          alts: candidates,
+          matched,
         });
       }
 
@@ -557,27 +578,14 @@ window.SND = (() => {
         resolve(result);
       };
 
-      // Hard wall-clock cap. If we have a transcript, evaluate it; otherwise
-      // surface no-speech / no-result.
-      const overallTimer = setTimeout(() => {
-        if (lastTranscript) {
-          const matched = matchAgainst(lastTranscript, bestAlts);
-          finish({
-            ok: !!matched,
-            alts: bestAlts.length ? bestAlts : [{ transcript: lastTranscript.toLowerCase().trim() }],
-            matched,
-          });
-        } else {
-          finish({
-            ok: false,
-            reason: voiceDetected ? "no-result-after-voice" : "no-speech",
-          });
-        }
-      }, TOTAL_CAP_MS);
+      // Wall-clock cap — if the kid hasn't spoken or hasn't finished in time,
+      // evaluate whatever we have. Generous (15s) so a kid taking time to
+      // organize a longer phrase isn't cut off.
+      const overallTimer = setTimeout(() => evaluateAndFinish(), TOTAL_CAP_MS);
 
       // VAD loop. Two roles:
-      //   (a) before voice — confirm voice has actually started (gates against noise hallucinations)
-      //   (b) after voice  — detect when speech ends, then stop SR explicitly so we evaluate
+      //   (a) before voice → confirm voice has actually started (noise gate)
+      //   (b) after voice  → detect speech end (~1.2s silence), trigger evaluation
       const vadTimer = setInterval(() => {
         if (done) return;
         const v = rms();
@@ -595,8 +603,7 @@ window.SND = (() => {
           if (voiceDetected && !stoppedByVad &&
               (now - voiceStartTime) >= MIN_VOICE_DURATION_MS &&
               consecBelow >= SILENCE_END_FRAMES) {
-            // Voice has clearly ended — stop the recognizer so its onend fires
-            // and we evaluate the accumulated transcript.
+            // Voice clearly ended — stop SR. onend will trigger evaluateAndFinish.
             stoppedByVad = true;
             try { if (r) r.stop(); } catch(_){}
           }
@@ -613,29 +620,25 @@ window.SND = (() => {
         r.interimResults = true;
 
         r.onresult = (e) => {
-          // Accumulate the full transcript across all SpeechRecognitionResult
-          // entries. Capture top alternatives only from finalized results
-          // (interim ones don't carry alternatives).
-          let combined = "";
-          const finalAlts = [];
+          let interimNow = "";
           for (let i = 0; i < e.results.length; i++) {
             const res = e.results[i];
-            combined += " " + (res[0] && res[0].transcript ? res[0].transcript : "");
+            const top = res[0] && res[0].transcript ? res[0].transcript : "";
             if (res.isFinal) {
+              if (top) accumulatedFinal = (accumulatedFinal + " " + top).trim();
+              const alts = [];
               for (let j = 0; j < res.length && j < 5; j++) {
-                finalAlts.push({
+                alts.push({
                   transcript: (res[j].transcript || "").toLowerCase().trim(),
                   conf: res[j].confidence,
                 });
               }
+              if (alts.length) bestAlts = alts;
+            } else {
+              interimNow += " " + top;
             }
           }
-          combined = combined.trim();
-          if (combined) lastTranscript = combined;
-          if (finalAlts.length) bestAlts = finalAlts;
-          // No early termination here — we wait for the VAD's silence detection
-          // to call r.stop(). That's how we capture the FULL utterance instead
-          // of the recognizer's first guess.
+          currentInterim = interimNow.trim();
         };
 
         r.onerror = (e) => {
@@ -649,37 +652,26 @@ window.SND = (() => {
 
         r.onend = () => {
           if (done) return;
-          // If VAD stopped us because speech ended → evaluate now.
+          // Move any unfinalized interim into accumulated so we don't lose it
+          // when the session restarts.
+          if (currentInterim) {
+            accumulatedFinal = (accumulatedFinal + " " + currentInterim).trim();
+            currentInterim = "";
+          }
+          // VAD told us speech ended → evaluate now.
           if (stoppedByVad) {
-            const matched = matchAgainst(lastTranscript, bestAlts);
-            finish({
-              ok: !!matched,
-              alts: bestAlts.length ? bestAlts : [{ transcript: lastTranscript.toLowerCase().trim() }],
-              matched,
-            });
+            evaluateAndFinish();
             return;
           }
-          // Recognizer ended on its own (no-speech timeout, network glitch, etc.)
-          //   → if we already have a usable transcript, evaluate it
-          //   → if we heard voice but no transcript, that's no-result-after-voice
-          //   → otherwise restart and keep listening
-          if (lastTranscript) {
-            const matched = matchAgainst(lastTranscript, bestAlts);
-            finish({
-              ok: !!matched,
-              alts: bestAlts.length ? bestAlts : [{ transcript: lastTranscript.toLowerCase().trim() }],
-              matched,
-            });
-            return;
-          }
+          // Otherwise SR ended on its own (Chrome's premature-finalize quirk
+          // or network glitch). Keep listening — the kid might still be
+          // speaking. Restart up to MAX_SR_RESTARTS times. The wall-clock cap
+          // and VAD silence gate are what actually terminate us.
           if (srRestarts < MAX_SR_RESTARTS) {
             srRestarts++;
-            setTimeout(startSR, 80);
+            setTimeout(startSR, 50);
           } else {
-            finish({
-              ok: false,
-              reason: voiceDetected ? "no-result-after-voice" : "no-speech",
-            });
+            evaluateAndFinish();
           }
         };
 
