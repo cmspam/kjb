@@ -882,48 +882,63 @@ window.Game = (() => {
   }
 
   // -------- BOSS TURN --------
+  // INVARIANT: every boss turn produces at least one full attack animation
+  // (WARNING flash + boss charge + theme snippet + dramatic resolution),
+  // even when the boss is too broken to actually hit anyone. The "fizzle"
+  // reason covers can't-attack outcomes so kids never see a flat log line.
   function bossTurn() {
     const mods = Monsters.bossModifiers(S.boss);
     const lines = [];
     lines.push(`${S.boss.name_jp}: 「${S.boss.catchphrase}」`);
-    if (mods.atks <= 0) {
-      lines.push("こうげき できない！ 😆");
-      lines.push(pickRand(JP.boss_taunt_low_hp));
-      return finishBossTurn(lines);
-    }
+    const aliveHeroes = S.players.filter(p => !p.dead);
+    if (aliveHeroes.length === 0) return finishBossTurn(lines);
+
     // Each boss has its own signature attacks; fall back to the shared pool only
     // if a boss is missing them.
     const bossAttacks = (S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words;
-    // Pre-determine the targeted attacks (without yet applying damage)
+
     const queue = [];
-    for (let i = 0; i < mods.atks; i++) {
-      const aliveHeroes = S.players.filter(p => !p.dead);
-      if (aliveHeroes.length === 0) break;
-      const target = aliveHeroes[(Math.random()*aliveHeroes.length)|0];
-      // All "didn't damage" outcomes go through the animation pipeline so the
-      // kid still gets the WARNING + boss charge + theme music + dramatic
-      // resolution. Only the final reveal text differs.
-      if (target.skipBossAtk) {
-        queue.push({ target, dmg: 0, missed: true, missReason: "escape" });
-        target.skipBossAtk = false;
-        continue;
+    if (mods.atks <= 0) {
+      // Boss is too damaged to attack — but still play the full dramatic
+      // buildup, then fizzle on the resolution. Pick a random hero as the
+      // would-be target so the WARNING text has someone to call out.
+      const t = aliveHeroes[(Math.random()*aliveHeroes.length)|0];
+      queue.push({ target: t, dmg: 0, missed: true, missReason: "fizzle" });
+    } else {
+      // Pre-determine the targeted attacks (without yet applying damage). All
+      // "didn't damage" outcomes (escape / miss / shield) still queue so they
+      // get the full animation; only the final reveal text differs.
+      for (let i = 0; i < mods.atks; i++) {
+        const stillAlive = S.players.filter(p => !p.dead);
+        if (stillAlive.length === 0) break;
+        const target = stillAlive[(Math.random()*stillAlive.length)|0];
+        if (target.skipBossAtk) {
+          queue.push({ target, dmg: 0, missed: true, missReason: "escape" });
+          target.skipBossAtk = false;
+          continue;
+        }
+        if (Math.random() < mods.missChance) {
+          queue.push({ target, dmg: 0, missed: true, missReason: "miss" });
+          continue;
+        }
+        if (target.shield) {
+          queue.push({ target, dmg: 0, missed: true, missReason: "shield" });
+          target.shield = false;
+          continue;
+        }
+        let dmg = 4 + Math.floor(S.round/2);
+        const mouthAlive = S.boss.parts.find(p=>p.type==="mouth" && p.hp>0);
+        if (mouthAlive && mods.hasSpecial && Math.random() < 0.35) dmg += 2;
+        queue.push({ target, dmg });
       }
-      if (Math.random() < mods.missChance) {
-        queue.push({ target, dmg: 0, missed: true, missReason: "miss" });
-        continue;
+      // If for some reason the loop produced no items (heroes all died mid-turn,
+      // edge case), still give the kid one fizzle for the warning beat.
+      if (queue.length === 0) {
+        const t = aliveHeroes[(Math.random()*aliveHeroes.length)|0];
+        queue.push({ target: t, dmg: 0, missed: true, missReason: "fizzle" });
       }
-      if (target.shield) {
-        queue.push({ target, dmg: 0, missed: true, missReason: "shield" });
-        target.shield = false;
-        continue;
-      }
-      let dmg = 4 + Math.floor(S.round/2);
-      const mouthAlive = S.boss.parts.find(p=>p.type==="mouth" && p.hp>0);
-      if (mouthAlive && mods.hasSpecial && Math.random() < 0.35) dmg += 2;
-      queue.push({ target, dmg });
     }
-    if (queue.length) processBossAttack(queue, 0, lines);
-    else finishBossTurn(lines);
+    processBossAttack(queue, 0, lines);
   }
 
   // Process attacks one at a time. Three modes:
@@ -964,6 +979,7 @@ window.Game = (() => {
         switch (missReason) {
           case "escape": line = `${target.name} は ${atk.name} を かわした！ 🏃`; break;
           case "shield": line = `${target.name} は シールドで ${atk.name} を ふせいだ！ 🛡️`; break;
+          case "fizzle": line = `${atk.name} … よわくなりすぎて しっぱい！ 💤`; break;
           default:       line = `${target.name} に ${atk.name} … はずれ〜！ 💨`; break;
         }
         lines.push(line);

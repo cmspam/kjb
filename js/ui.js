@@ -871,11 +871,13 @@ window.UI = (() => {
     const missVisual = (
       missReason === "shield" ? { sweep: "🛡️", label: "ふせいだ！" } :
       missReason === "escape" ? { sweep: "🏃", label: "にげた！" } :
+      missReason === "fizzle" ? { sweep: "💤", label: "しっぱい…" } :
                                 { sweep: "💨", label: "はずれ！" }
     );
     const missRevealHTML = (
       missReason === "shield" ? `→ ${escapeHTML(targetName)} は シールドで ふせいだ！ 🛡️` :
       missReason === "escape" ? `→ ${escapeHTML(targetName)} は うまく にげた！ 🏃` :
+      missReason === "fizzle" ? `→ よわくなりすぎて こうげき しっぱい！ 💤` :
                                 `→ ${escapeHTML(targetName)} は かわした！ ✨`
     );
 
