@@ -7,29 +7,32 @@ window.Game = (() => {
   let S = null; // current game state
 
   function newGame(opts) {
+    const isPvP = opts.mode === "pvp" && opts.names.length >= 2;
     const players = opts.names.map((name, i) => ({
       id: "p"+i, name, hp: STARTING_HP, maxHp: STARTING_HP,
       level: (opts.levels && opts.levels[i]) || opts.level,
       energy: 2, hand: [], role: "hero",
       shield: false, skipBossAtk: false,
       attackPower: 0, dead: false, scanned: false,
-      misses: {},   // {ptype: count} - tracks struggle areas for adaptive picking
-      seenIds: [],  // recent question ids — avoid repeats
+      misses: {},
+      seenIds: [],
+      monster: null,  // set in PvP mode by pickMonstersSequentially
     }));
-    if (opts.jinro && players.length >= 4) {
+    if (!isPvP && opts.jinro && players.length >= 4) {
       const spyIdx = Math.floor(Math.random()*players.length);
       players[spyIdx].role = "spy";
     }
     S = {
       players,
-      boss: Monsters.randomBoss(),
+      boss: isPvP ? null : Monsters.randomBoss(),
       level: opts.level,
-      jinro: opts.jinro && players.length >= 4,
-      solo: players.length === 1,
+      mode: isPvP ? "pvp" : "hero",
+      jinro: !isPvP && opts.jinro && players.length >= 4,
+      solo: !isPvP && players.length === 1,
       timerSec: opts.timerSec || 0,
-      hardMode: !!opts.hardMode,
-      eventProb: 0,    // ramps up each turn until an event fires; resets to 0.05 on fire
-      turnsTaken: 0,   // total player turns; first turn never spawns an event
+      hardMode: !isPvP && !!opts.hardMode,
+      eventProb: 0,
+      turnsTaken: 0,
       currentIdx: 0,
       round: 1,
       voteUsedThisRound: false,
@@ -62,12 +65,23 @@ window.Game = (() => {
       return        { attacks: 4, hp: 25, energy: 2, extraCards: 0, armorDiv: 1 };  // 6+
     })(N);
     S.scaling = scaling;
-    S.boss.attacksPerRound = scaling.attacks;
-    S.players.forEach(p => {
-      p.hp = scaling.hp; p.maxHp = scaling.hp;
-      p.energy = scaling.energy;
-      for (let i = 0; i < scaling.extraCards; i++) drawCard(p);
-    });
+    if (S.mode === "pvp") {
+      // PvP: each player has their OWN monster (assigned later by pickMonsters).
+      // Standard energy/cards; player HP isn't really tracked — death = own
+      // monster's core destroyed.
+      S.players.forEach(p => {
+        p.hp = 100; p.maxHp = 100;  // generous so heal cards still feel useful
+        p.energy = 3;
+        drawCard(p); // 4-card opening hand
+      });
+    } else {
+      S.boss.attacksPerRound = scaling.attacks;
+      S.players.forEach(p => {
+        p.hp = scaling.hp; p.maxHp = scaling.hp;
+        p.energy = scaling.energy;
+        for (let i = 0; i < scaling.extraCards; i++) drawCard(p);
+      });
+    }
   }
 
   function drawCard(player) {
@@ -90,19 +104,37 @@ window.Game = (() => {
   }
 
   function start() {
-    UI.renderTitle({ onStart: ({ count }) => showSetup(count) });
+    UI.renderTitle({ onStart: ({ count, mode }) => showSetup(count, mode) });
   }
 
-  function showSetup(count) {
+  function showSetup(count, mode) {
     UI.renderSetup({ count, onConfirm: (opts) => {
+      opts.mode = mode;  // Pipe through from title
       newGame(opts);
-      // Boss intro screen first, then jinro role reveals (if any), then start.
-      const begin = () => {
-        if (S.jinro) revealRolesSequentially(0, () => startRound());
-        else startRound();
+      const beginMatch = () => {
+        if (S.mode === "pvp") {
+          // PvP: each kid picks their monster, then go straight to first turn.
+          pickMonstersSequentially(0, () => startRound());
+        } else if (S.jinro) {
+          UI.renderBossIntro(S.boss, () => revealRolesSequentially(0, () => startRound()));
+        } else {
+          UI.renderBossIntro(S.boss, () => startRound());
+        }
       };
-      UI.renderBossIntro(S.boss, begin);
+      beginMatch();
     }});
+  }
+
+  function pickMonstersSequentially(idx, done) {
+    if (idx >= S.players.length) { done(); return; }
+    const p = S.players[idx];
+    const usedIds = S.players.slice(0, idx).map(x => x.monster && x.monster.id).filter(Boolean);
+    UI.renderPass(p.name, () => {
+      UI.renderMonsterPick(p.name, usedIds, (chosenFactory) => {
+        p.monster = chosenFactory();
+        pickMonstersSequentially(idx+1, done);
+      });
+    });
   }
 
   function revealRolesSequentially(idx, done) {
@@ -126,8 +158,17 @@ window.Game = (() => {
     // Skip dead players
     while (S.currentIdx < S.players.length && S.players[S.currentIdx].dead) S.currentIdx++;
     if (S.currentIdx >= S.players.length) {
-      bossTurn();
-      return;
+      if (S.mode === "pvp") {
+        // No central boss — just advance the round and continue with the next alive player.
+        S.round++;
+        S.currentIdx = 0;
+        while (S.currentIdx < S.players.length && S.players[S.currentIdx].dead) S.currentIdx++;
+        if (S.currentIdx >= S.players.length) return doDefeat(); // shouldn't happen
+        // fall through to start the next player's turn
+      } else {
+        bossTurn();
+        return;
+      }
     }
     const p = S.players[S.currentIdx];
     p.attackPower = 0;
@@ -136,9 +177,16 @@ window.Game = (() => {
     S.rerolledThisQ = false;
     S.currentQuestion = null;
     S.currentWager = null;
-    // Solo mode: skip the pass screen — there's no one to hand off to.
     if (S.solo) maybeRandomEvent(p, () => goWager());
     else UI.renderPass(p.name, () => maybeRandomEvent(p, () => goWager()));
+  }
+
+  // True when only one player has an alive monster (PvP win condition).
+  function checkPvpWinner() {
+    if (S.mode !== "pvp") return null;
+    const alive = S.players.filter(p => !p.dead);
+    if (alive.length <= 1) return alive[0] || null;
+    return null;
   }
 
   // Random pop-in events with ramping probability:
@@ -147,6 +195,8 @@ window.Game = (() => {
   //   • When it fires: drops back to 5%
   // Then randomly picks one of 7 events: fairy, bomb, thief, rush, gambler, janken, ninja.
   function maybeRandomEvent(p, onContinue) {
+    // Random events reference S.boss, which doesn't exist in PvP — skip in PvP for now.
+    if (S.mode === "pvp") return onContinue();
     S.turnsTaken = (S.turnsTaken || 0) + 1;
     if (S.turnsTaken <= 1) {
       // Skip events on the very first turn — the player needs to learn the basics first.
@@ -343,10 +393,32 @@ window.Game = (() => {
   // -------- ACTION (combined: attack + cards on one screen) --------
   function goAction() {
     const p = currentPlayer();
+    if (S.mode === "pvp") {
+      UI.renderPvpAction(p, S.players,
+        (opp) => goPvpPickPart(p, opp),
+        (card, idx) => playCardInAction(p, card, idx),
+        () => endTurn()
+      );
+      return;
+    }
     UI.renderAction(p, S.boss, S.players,
       (target) => doAttack(p, target),
       (card, idx) => playCardInAction(p, card, idx),
       () => endTurn()
+    );
+  }
+
+  function goPvpPickPart(p, opponent) {
+    UI.renderTargetPicker(p, opponent.monster, S.players,
+      (target) => {
+        if (target.kind === "boss-part") {
+          doAttack(p, { kind: "pvp-part", targetPlayer: opponent, part: target.part });
+        } else {
+          // No spy options in PvP
+          goAction();
+        }
+      },
+      () => goAction()
     );
   }
 
@@ -356,6 +428,67 @@ window.Game = (() => {
     const mult = Monsters.damageMultiplier(S.boss);
     dmg = Math.round(dmg * mult);
     if (S.doubleNextAttack) { dmg *= 2; S.doubleNextAttack = false; }
+
+    // PvP: target an opponent's monster part
+    if (target.kind === "pvp-part") {
+      const opponent = target.targetPlayer;
+      const part = target.part;
+      // Apply armor to core hits, scaled per-monster (no party-size division in PvP)
+      if (part.effect === "win") {
+        const armor = Monsters.coreArmor(opponent.monster);
+        const reduced = Math.max(1, dmg - armor);
+        if (armor > 0 && reduced < dmg) {
+          UI.toast(`コアの シールドが ${dmg - reduced} ダメージを ふせいだ！`, 1500);
+        }
+        dmg = reduced;
+      }
+      const fire = () => {
+        part.hp = Math.max(0, part.hp - dmg);
+        SND.sfxHit();
+        const stage = document.querySelector(".stage");
+        if (stage) {
+          stage.classList.remove("shake"); void stage.offsetWidth; stage.classList.add("shake");
+          const num = document.createElement("div");
+          num.className = "dmg-num"; num.textContent = "-" + dmg;
+          stage.appendChild(num);
+          setTimeout(() => num.remove(), 1200);
+          const hits = opponent.monster.hits || [];
+          if (hits.length) {
+            const bubble = document.createElement("div");
+            bubble.className = "hit-bubble pop";
+            bubble.textContent = hits[(Math.random()*hits.length)|0];
+            stage.appendChild(bubble);
+            setTimeout(() => bubble.remove(), 1400);
+          }
+        }
+        UI.toast(`${p.name} → ${opponent.name} の ${part.name_jp} に ${dmg} ダメージ！`, 1400);
+        S.log.push(`${p.name} → ${opponent.name}.${part.name_jp}: ${dmg}`);
+        if (part.hp === 0) {
+          S.log.push(`${opponent.name} の ${part.name_jp} を こわした！`);
+          SND.sfxPop();
+        }
+        p.attackPower = 0;
+        S.pendingDamageBonus = 0;
+        // If opponent's core is destroyed, they're eliminated
+        const oppCore = opponent.monster.parts.find(x => x.effect === "win");
+        if (oppCore && oppCore.hp <= 0) {
+          opponent.dead = true;
+          UI.toast(JP.pvp_eliminated(opponent.name), 1800);
+        }
+        const winner = checkPvpWinner();
+        if (winner) {
+          setTimeout(() => doVictory({ winner }), 1500);
+          return;
+        }
+        setTimeout(() => endTurn(), 1400);
+      };
+      if (SND.getSlingshot && SND.getSlingshot()) {
+        UI.showSlingshot(opponent.monster, `${opponent.name} ${part.name_jp}`, fire);
+      } else {
+        fire();
+      }
+      return;
+    }
 
     // Spy sabotage paths
     if (target.kind === "teammate") {
@@ -495,8 +628,19 @@ window.Game = (() => {
       p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
       applyCardEffect(p, card, null);
       SND.sfxCard();
-      const core = S.boss.parts.find(x => x.effect === "win");
-      if (core && core.hp <= 0) { setTimeout(doVictory, 600); return; }
+      if (S.mode === "pvp") {
+        // Did any card-play kill an opponent? (HIT_RANDOM_2 in PvP can hit core)
+        S.players.forEach(pp => {
+          if (pp.dead || !pp.monster) return;
+          const c = pp.monster.parts.find(x => x.effect === "win");
+          if (c && c.hp <= 0) pp.dead = true;
+        });
+        const winner = checkPvpWinner();
+        if (winner) { setTimeout(() => doVictory({ winner }), 600); return; }
+      } else {
+        const core = S.boss.parts.find(x => x.effect === "win");
+        if (core && core.hp <= 0) { setTimeout(doVictory, 600); return; }
+      }
       goAction();
     } catch (e) {
       console.error("playCardInAction failed:", e, "card:", card);
@@ -556,7 +700,17 @@ window.Game = (() => {
       S.doubleNextAttack = true;
       UI.toast(`つぎの こうげき ×2！`);
     } else if (ef.type === C.HIT_RANDOM_2) {
-      const aliveParts = S.boss.parts.filter(pp=>pp.hp>0);
+      // PvP: hit a random opponent's parts. Hero: hit boss parts.
+      let aliveParts; let oppName = "";
+      if (S.mode === "pvp") {
+        const opps = S.players.filter(pp => !pp.dead && pp.id !== p.id && pp.monster);
+        if (!opps.length) return;
+        const opp = opps[(Math.random()*opps.length)|0];
+        oppName = opp.name;
+        aliveParts = opp.monster.parts.filter(pp => pp.hp > 0);
+      } else {
+        aliveParts = S.boss.parts.filter(pp => pp.hp > 0);
+      }
       const n = Math.min(2, aliveParts.length);
       const used = [];
       for (let i = 0; i < n; i++) {
@@ -566,7 +720,7 @@ window.Game = (() => {
         pick.hp = Math.max(0, pick.hp - ef.v);
         SND.sfxHit();
       }
-      UI.toast(`ベロ ビーム！ ${ef.v}ダメ ×${n}`);
+      UI.toast(`ベロ ビーム！${oppName?` ${oppName} に`:''} ${ef.v}ダメ ×${n}`);
     } else if (ef.type === C.REVEAL_ROLE) {
       const isSpy = target.role === "spy";
       UI.toast(isSpy ? `${target.name} は スパイ！` : `${target.name} は シロ！`, 2400);
@@ -701,11 +855,13 @@ window.Game = (() => {
 
   // -------- WIN / LOSE --------
   function doVictory(opts={}) {
-    let spyWins = false;
-    if (S.jinro) {
-      // Hero wins normally; spy never had explicit win path here unless team falls
-      spyWins = false;
+    if (S.mode === "pvp" && opts.winner) {
+      UI.renderVictory({ players: S.players, mode: "pvp", winner: opts.winner },
+        () => location.reload(), () => location.reload());
+      return;
     }
+    let spyWins = false;
+    if (S.jinro) spyWins = false;
     UI.renderVictory({ players: S.players, jinro: S.jinro, spyWins },
       () => location.reload(),
       () => location.reload());

@@ -65,31 +65,42 @@ window.UI = (() => {
     show("title");
     const s = $("screen-title"); s.innerHTML = "";
     let count = 1;
+    let mode = "hero"; // or "pvp"
     function paint() {
       s.innerHTML = "";
+      const pvpDisabled = count < 2; // PvP needs ≥2 players
+      if (pvpDisabled && mode === "pvp") mode = "hero";
       s.appendChild(el(`
-        <div class="center" style="margin-top: 4vh;">
+        <div class="center" style="margin-top: 3vh;">
           <h1 class="pop">${JP.title}</h1>
           <div class="title-en bob">${JP.titleEn}</div>
-          <div style="font-size: 64px; margin: 12px 0;" class="bob">🐙💩👾🦑</div>
-          <div class="subtle" style="margin-top: 8px;">なんにん で あそぶ？</div>
-          <div class="row" id="t-count-row" style="margin: 6px 0 14px;"></div>
+          <div style="font-size: 56px; margin: 8px 0;" class="bob">🐙💩👾🦑</div>
+          <div class="subtle" style="margin-top: 4px;">なんにん で あそぶ？</div>
+          <div class="row" id="t-count-row" style="margin: 6px 0 10px;"></div>
+          <div class="subtle">${JP.mode_label}</div>
+          <div class="row" style="margin: 6px 0 14px; gap: 6px;">
+            <button class="toggle ${mode==='hero'?'on':''}" id="m-hero" style="font-size:14px;padding:8px 12px;">⚔️ ${JP.mode_hero}</button>
+            <button class="toggle ${mode==='pvp'?'on':''} ${pvpDisabled?'':''}" id="m-pvp" ${pvpDisabled?'disabled style="opacity:.45;font-size:14px;padding:8px 12px;"':'style="font-size:14px;padding:8px 12px;"'}>${JP.mode_pvp}</button>
+          </div>
           <button class="btn huge hot" id="btn-start">${JP.start} ⚔️</button>
           <div class="row" style="margin-top:8px;">
             <button class="btn ghost" id="btn-rules">あそびかた ❓</button>
             <button class="btn ghost" id="btn-settings">せってい ⚙️</button>
           </div>
-          <div class="subtle" style="margin-top: 14px;">タップで おとが でます 🔊</div>
+          <div class="subtle" style="margin-top: 10px;">タップで おとが でます 🔊</div>
         </div>`));
       const cr = $("t-count-row");
       [1,2,3,4,5,6].forEach(n => {
-        const b = el(`<button class="toggle ${count===n?'on':''}" style="font-size:22px;padding:10px 16px;min-width:50px;">${n}</button>`);
+        const b = el(`<button class="toggle ${count===n?'on':''}" style="font-size:22px;padding:8px 14px;min-width:46px;">${n}</button>`);
         tap(b, () => { count = n; paint(); });
         cr.appendChild(b);
       });
+      tap($("m-hero"), () => { mode = "hero"; paint(); });
+      const pvpBtn = $("m-pvp");
+      if (pvpBtn && !pvpDisabled) tap(pvpBtn, () => { mode = "pvp"; paint(); });
       tap($("btn-start"), () => {
         try { SND.unlock(); SND.sfxPop(); } catch(e) {}
-        onStart({ count });
+        onStart({ count, mode });
       });
       tap($("btn-rules"), () => {
         try { SND.unlock(); } catch(e) {}
@@ -418,6 +429,32 @@ window.UI = (() => {
     }
   }
 
+  // -------- MONSTER PICK (PvP) --------
+  function renderMonsterPick(playerName, usedIds, onPick) {
+    show("title");
+    const s = $("screen-title"); s.innerHTML = "";
+    const factories = Monsters.listFactories();
+    s.appendChild(el(`
+      <div class="center" style="max-width: 720px; margin: 12px auto; padding: 0 12px;">
+        <h2>${escapeHTML(playerName)}、モンスターを えらんでね！</h2>
+        <div class="subtle" style="margin-bottom:8px;">タップで けってい</div>
+        <div id="mp-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;"></div>
+      </div>`));
+    const grid = $("mp-grid");
+    factories.forEach((factory) => {
+      const sample = factory();
+      const taken = usedIds.includes(sample.id);
+      const card = el(`
+        <button class="part-btn" style="padding:8px;${taken?'opacity:.35;':''}">
+          <div style="height:140px;">${Monsters.renderBossSVG(sample)}</div>
+          <div class="pn" style="font-size:14px;color:var(--accent);">${escapeHTML(sample.name_jp)}</div>
+          ${taken ? `<div class="pe" style="color:#aaa;">えらばれた</div>` : ``}
+        </button>`);
+      if (!taken) tap(card, () => { SND.sfxPop(); onPick(factory); });
+      grid.appendChild(card);
+    });
+  }
+
   // -------- BOSS INTRO (shown once at game start) --------
   // Backstories use 「漢字[よみ]」 syntax that gets converted to ruby tags so kanji
   // shows the hiragana reading above it. Inserted via innerHTML so the ruby renders.
@@ -485,6 +522,9 @@ window.UI = (() => {
     function onDown(e) {
       dragging = true;
       e.preventDefault();
+      // Hide the hint as soon as the player starts touching the slingshot.
+      const hint = modal.querySelector(".sling-text");
+      if (hint) hint.style.display = "none";
     }
     function onMove(e) {
       if (!dragging) return;
@@ -1310,6 +1350,48 @@ window.UI = (() => {
     renderHandInto($("hand-area"), player, false, onCard);
   }
 
+  // -------- PVP ACTION SCREEN --------
+  // Shows the field of monsters (everyone's). Active player's monster is highlighted.
+  // Tapping an opponent monster triggers onPickOpponent(opp); the game then drills
+  // into that opponent's parts for the actual target choice.
+  function renderPvpAction(player, players, onPickOpponent, onCard, onEnd) {
+    show("action");
+    const s = $("screen-action"); s.innerHTML = "";
+    const hasAtk = player.attackPower > 0;
+    s.appendChild(el(`
+      <div class="center" style="width:100%;">
+        <h3 style="margin:6px 0;">${hasAtk?`⚔️ こうげきパワー ${player.attackPower}`:'こうげき できない'} ／ ⚡ ${player.energy}</h3>
+        <div class="subtle">${hasAtk?'こうげきする モンスターを タップ！':'カードを つかうか ターンを おわってね'}</div>
+        <div id="pvp-field" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 10px 0; max-width: 760px; width:100%;"></div>
+        <h3 style="margin-top:14px; font-size:18px;">カード</h3>
+        <div id="hand-area"></div>
+        <button class="btn ${hasAtk?'ghost':'huge cool'}" id="end" style="margin-top:14px;${hasAtk?'font-size:14px;':''}">${JP.action_end} →</button>
+      </div>`));
+    const field = $("pvp-field");
+    players.forEach(pp => {
+      const isSelf = pp.id === player.id;
+      const isDead = pp.dead;
+      const monster = pp.monster;
+      const totalHp = monster ? monster.parts.reduce((s,part) => s + Math.max(0, part.hp), 0) : 0;
+      const maxHp = monster ? monster.parts.reduce((s,part) => s + part.maxHP, 0) : 1;
+      const core = monster ? monster.parts.find(x => x.effect === "win") : null;
+      const coreHp = core ? `${Math.max(0, core.hp)}/${core.maxHP}` : "?";
+      const tile = el(`
+        <button class="part-btn ${isDead?'dead':''}" style="${isSelf?'border-color: var(--accent); background: linear-gradient(160deg, #5a3a00, #2a1500);':''}padding:8px;">
+          <div class="pn" style="font-size:14px;color:${isSelf?'var(--accent)':'#fff'};">${escapeHTML(pp.name)}${isSelf?' (じぶん)':''}${isDead?' 💀':''}</div>
+          <div style="height:90px;">${monster ? Monsters.renderBossSVG(monster) : ''}</div>
+          <div class="ph" style="font-size:11px;">${monster ? escapeHTML(monster.name_jp) : ''}</div>
+          <div class="ph" style="font-size:11px;">HP ${totalHp}/${maxHp} ／ コア ${coreHp}</div>
+        </button>`);
+      if (!isSelf && !isDead && hasAtk) {
+        tap(tile, () => { SND.sfxPop(); onPickOpponent(pp); });
+      }
+      field.appendChild(tile);
+    });
+    tap($("end"), () => { SND.sfxPop(); onEnd(); });
+    renderHandInto($("hand-area"), player, false, onCard);
+  }
+
   // -------- TARGET PICKER --------
   // If active player is a spy, also show teammate-attack and boss-heal sabotage options.
   function renderTargetPicker(player, boss, players, onPick, onCancel) {
@@ -1401,20 +1483,25 @@ window.UI = (() => {
   }
 
   // -------- VICTORY / DEFEAT --------
-  function renderVictory({ players, jinro, spyWins }, onAgain, onTitle) {
+  function renderVictory({ players, jinro, spyWins, mode, winner }, onAgain, onTitle) {
     show("victory");
     const s = $("screen-victory"); s.innerHTML = "";
     SND.sfxVictory();
     let title = JP.victory;
-    if (jinro && spyWins) title = JP.spy_wins;
-    if (jinro && !spyWins) title = JP.hero_wins;
+    if (mode === "pvp" && winner) title = JP.pvp_winner(winner.name);
+    else if (jinro && spyWins) title = JP.spy_wins;
+    else if (jinro && !spyWins) title = JP.hero_wins;
+    const winnerMonster = mode === "pvp" && winner && winner.monster
+      ? `<div style="height:200px; max-width:340px; margin: 8px auto;">${Monsters.renderBossSVG(winner.monster)}</div>
+         <div style="color:var(--accent); font-size:18px; font-weight:900;">${escapeHTML(winner.monster.name_jp)}</div>` : "";
     s.appendChild(el(`
-      <div class="center" style="margin-top:8vh;">
+      <div class="center" style="margin-top:6vh;">
         <h1 class="pop">${title} 🎉</h1>
-        <div style="font-size:120px;" class="bob">🏆</div>
-        <div style="font-size:22px;color:var(--good);">${JP.victory_sub}</div>
-        <div style="margin-top:24px;">
-          ${players.map(p => `<div>${p.name}: HP ${p.hp} ${p.role==='spy'?'🕵️':''}</div>`).join("")}
+        <div style="font-size:100px;" class="bob">🏆</div>
+        ${winnerMonster}
+        <div style="font-size:22px;color:var(--good);">${mode==='pvp'?'チャンピオン！':JP.victory_sub}</div>
+        <div style="margin-top:18px;">
+          ${players.map(p => `<div>${p.name}${p.dead?' 💀':''} ${p.role==='spy'?'🕵️':''}</div>`).join("")}
         </div>
         <div class="row" style="margin-top:24px;">
           <button class="btn huge good" id="again">${JP.play_again}</button>
@@ -1540,5 +1627,6 @@ window.UI = (() => {
            renderDefeat, renderVote, renderDefenseQ, toast, show, showRules, tap,
            renderFairyEvent, renderBombEvent, renderThiefEvent,
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
-           renderBossIntro, showSlingshot, showBossAttackAnim };
+           renderBossIntro, showSlingshot, showBossAttackAnim,
+           renderMonsterPick, renderPvpAction };
 })();

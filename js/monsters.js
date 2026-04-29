@@ -856,6 +856,8 @@ window.Monsters = (() => {
   const factories = [makeTakoTakoSahur, makeBombardiroUnkodilo, makeTralaleroPakupaku, makeBrrPampamu, makeParfaitIwashi, makeAnpanmaguro];
 
   function randomBoss() { return factories[Math.floor(Math.random()*factories.length)](); }
+  // Returns the list of factory functions so the monster-pick screen can show all options.
+  function listFactories() { return factories.slice(); }
 
   function renderBossSVG(boss) {
     const armor = coreArmor(boss);
@@ -916,5 +918,5 @@ window.Monsters = (() => {
     return m;
   }
 
-  return { randomBoss, renderBossSVG, alive, aliveTargets, partById, bossModifiers, damageMultiplier, coreArmor };
+  return { randomBoss, listFactories, renderBossSVG, alive, aliveTargets, partById, bossModifiers, damageMultiplier, coreArmor };
 })();
