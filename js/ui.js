@@ -542,12 +542,16 @@ window.UI = (() => {
     show("title");
     const s = $("screen-title"); s.innerHTML = "";
     const story = furigana(boss.backstory || "なぞの カイジュウ。");
+    const weaknessHint = boss.weakness_label
+      ? `<div style="background:#3a1a4a; border:2px solid var(--accent); color:var(--accent); border-radius:10px; padding:8px 12px; margin: 10px auto; max-width:520px; font-weight:900;">⚡ よわてん: ${boss.weakness_label} で ×1.5 ダメージ！</div>`
+      : "";
     s.appendChild(el(`
       <div class="center" style="max-width: 720px; margin: 12px auto; padding: 0 12px;">
         <div class="subtle" style="color:var(--accent); letter-spacing:4px;">★ きょうの あいて ★</div>
         <h2 style="margin: 4px 0; color: var(--accent);">${escapeHTML(boss.name_jp)}</h2>
         <div class="subtle" style="font-size: 13px; opacity: .7;">${escapeHTML(boss.name_en||"")}</div>
         <div class="stage" style="height:280px; max-width:520px; margin: 8px auto;">${Monsters.renderBossSVG(boss)}</div>
+        ${weaknessHint}
         <div style="background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow); text-align:left; max-width:520px; margin: 0 auto; line-height: 2.2;">
           <div style="font-size:14px; color:var(--accent); font-weight:900; margin-bottom:6px;">▶ ストーリー</div>
           <div style="font-size:16px; white-space: pre-line;">${story}</div>

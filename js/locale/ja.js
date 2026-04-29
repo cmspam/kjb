@@ -200,6 +200,8 @@ window.I18N.register("ja", {
       name_jp: "タコタコ サフール",
       name_en: "Tako Tako Sahur",
       catchphrase: "タコ・タコ・サフール！",
+      weakness: "listening",
+      weakness_label: "リスニング 🎧",
       attacks: [
         { name: "スミ ブシャー 🐙", phrases: ["スミ たまった…", "くろく そめる！", "視界[しかい] ゼロ〜！"] },
         { name: "8本足[ほんあし] ラッシュ 🦑", phrases: ["足ぜんぶ で！", "8回 たたく！", "オクトパンチ！"] },
@@ -236,6 +238,8 @@ window.I18N.register("ja", {
       name_jp: "ボンバルディロ ウンコディロ",
       name_en: "Bombardiro Unkodilo",
       catchphrase: "ボンバルディロ・ウンコディロ！",
+      weakness: "vocab",
+      weakness_label: "ことば 📕",
       attacks: [
         { name: "うんこ シューター 💩", phrases: ["うんこ もれる！", "ぷりりりっ！", "茶色[ちゃいろ] シャワー！"] },
         { name: "ボンバル ボム 💣", phrases: ["カウントダウン！", "3 2 1 ボン！", "ばくはつ！"] },
@@ -274,6 +278,8 @@ window.I18N.register("ja", {
       name_jp: "トラララ パクパク",
       name_en: "Tralalero Pakupaku",
       catchphrase: "トラララ・トラララ・パクパク！",
+      weakness: "listening",
+      weakness_label: "リスニング 🎧",
       attacks: [
         { name: "パクパク かみつき 🦷", phrases: ["パクッ！", "なんでも たべる！", "がぶがぶ！"] },
         { name: "トラララ ハイトーン 🎵", phrases: ["♪トラララ〜", "高音[こうおん] ボイス！", "うた こうげき！"] },
@@ -311,6 +317,8 @@ window.I18N.register("ja", {
       name_jp: "ブルブル パンパム",
       name_en: "Brr Brr Pampamu",
       catchphrase: "ブルブル・ブルブル・パンパム！",
+      weakness: "vocab",
+      weakness_label: "ことば 📕",
       attacks: [
         { name: "ふわふわ ハグ 🐑", phrases: ["ぎゅーっ！", "ふわふわ〜", "あったかい！"] },
         { name: "もこもこ クッション ☁️", phrases: ["もこもこ〜", "ふわっ！", "クッション こうげき！"] },
@@ -351,6 +359,8 @@ window.I18N.register("ja", {
       name_jp: "パフェイワシ",
       name_en: "Parfait Iwashi",
       catchphrase: "パフェ・パフェ・パフェイワシ！",
+      weakness: "grammar",
+      weakness_label: "ぶんぽう ✍️",
       attacks: [
         { name: "ホイップ ブラスト 🍦", phrases: ["ホイップ パワー！", "ふわふわ〜", "あまい こうげき！"] },
         { name: "いちご ばくだん 🍓", phrases: ["いちご とんでけ！", "ぷちぷち！", "あかい ばくだん！"] },
@@ -388,6 +398,8 @@ window.I18N.register("ja", {
       name_jp: "アンパンマグロ",
       name_en: "Anpan Maguro",
       catchphrase: "アンパン・アンパン・アンパンマグロ！",
+      weakness: "grammar",
+      weakness_label: "ぶんぽう ✍️",
       attacks: [
         { name: "アンパンチ 👊", phrases: ["新[あたら]しい 顔[かお]よー！", "アンパンチ！", "正義[せいぎ]の パンチ！"] },
         { name: "マグロ タックル 🐟", phrases: ["全身[ぜんしん] マグロ！", "ぐいぐい！", "海[うみ]の ちから！"] },

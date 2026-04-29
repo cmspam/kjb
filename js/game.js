@@ -476,6 +476,17 @@ window.Game = (() => {
     );
   }
 
+  // Classify a question's ptype into broad categories so a single boss
+  // weakness can match many specific question variants.
+  function questionCategory(q) {
+    if (!q || !q.ptype) return "other";
+    const p = q.ptype;
+    if (/listen/i.test(p)) return "listening";
+    if (/^(vocab|ppl|adj|subj|sight|alpha_(?:upper|lower)|color|body|verb|num|greet|food|family|class|animal)/i.test(p))
+      return "vocab";
+    return "grammar";
+  }
+
   function doAttack(p, target) {
     if (p.attackPower <= 0) { UI.toast("こうげきパワーが ないよ！"); return goAction(); }
     let dmg = p.attackPower + S.pendingDamageBonus;
@@ -484,6 +495,16 @@ window.Game = (() => {
     const mult = damageMonster ? Monsters.damageMultiplier(damageMonster) : 1;
     dmg = Math.round(dmg * mult);
     if (S.doubleNextAttack) { dmg *= 2; S.doubleNextAttack = false; }
+    // Boss weakness: ×1.5 damage when the question category matches the boss's
+    // declared weakness. Only applies in hero mode (PvP monsters don't carry
+    // their own weakness in this iteration).
+    if (S.boss && S.boss.weakness && S.currentQuestion) {
+      const cat = questionCategory(S.currentQuestion);
+      if (cat === S.boss.weakness && target.kind !== "pvp-part") {
+        dmg = Math.round(dmg * 1.5);
+        UI.toast(`⚡ よわてん ヒット！ ×1.5 (${S.boss.weakness_label||cat})`, 1400);
+      }
+    }
 
     // PvP: target an opponent's monster part
     if (target.kind === "pvp-part") {

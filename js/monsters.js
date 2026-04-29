@@ -307,6 +307,8 @@ window.Monsters = (() => {
       catchphrase: f.catchphrase,
       attacks: f.attacks,
       backstory: f.backstory,
+      weakness: f.weakness,
+      weakness_label: f.weakness_label,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -351,6 +353,8 @@ window.Monsters = (() => {
       catchphrase: f.catchphrase,
       attacks: f.attacks,
       backstory: f.backstory,
+      weakness: f.weakness,
+      weakness_label: f.weakness_label,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -403,6 +407,8 @@ window.Monsters = (() => {
       catchphrase: f.catchphrase,
       attacks: f.attacks,
       backstory: f.backstory,
+      weakness: f.weakness,
+      weakness_label: f.weakness_label,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -457,6 +463,8 @@ window.Monsters = (() => {
       catchphrase: f.catchphrase,
       attacks: f.attacks,
       backstory: f.backstory,
+      weakness: f.weakness,
+      weakness_label: f.weakness_label,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -511,6 +519,8 @@ window.Monsters = (() => {
       catchphrase: f.catchphrase,
       attacks: f.attacks,
       backstory: f.backstory,
+      weakness: f.weakness,
+      weakness_label: f.weakness_label,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -608,6 +618,8 @@ window.Monsters = (() => {
       catchphrase: f.catchphrase,
       attacks: f.attacks,
       backstory: f.backstory,
+      weakness: f.weakness,
+      weakness_label: f.weakness_label,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
