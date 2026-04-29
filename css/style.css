@@ -419,88 +419,74 @@ h3 { font-size: 28px; margin: 4px 0; }
 /* Boss attack animation overlay */
 .boss-anim-overlay {
   position: fixed; inset: 0;
-  background: radial-gradient(ellipse at center, rgba(80,0,40,.95), rgba(20,0,20,.98));
+  background: radial-gradient(ellipse at center, rgba(80,0,40,.96), rgba(15,0,15,.98));
   z-index: 1500;
-  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.boss-warn-flash {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+.boss-warn-text {
+  position: absolute; left: 50%; top: 40%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 90%;
 }
 .boss-anim-stage {
-  position: relative;
-  width: 100%; max-width: 720px;
-  text-align: center;
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-.boss-anim-svg {
-  width: 60vmin; max-width: 360px; height: 60vmin; max-height: 360px;
-  margin: 0 auto;
-  animation: boss-charge 1s ease-in-out;
-  filter: drop-shadow(0 0 0 transparent);
+.boss-anim-svg-wrap {
+  width: 60vmin; max-width: 380px; height: 60vmin; max-height: 380px;
+  display: flex; align-items: center; justify-content: center;
 }
-@keyframes boss-charge {
-  0%,100% { transform: scale(1); filter: brightness(1); }
-  30% { transform: scale(1.1) rotate(-3deg); filter: brightness(1.6) drop-shadow(0 0 18px #ff3b6b); }
-  70% { transform: scale(1.15) rotate(3deg); filter: brightness(2) drop-shadow(0 0 28px #ffcc00); }
-}
+.boss-anim-svg-wrap svg { width: 100%; height: 100%; }
 .boss-anim-bubble {
-  position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 10%; left: 50%; transform: translateX(-50%) scale(0);
   background: #fff; color: #2a0010;
   padding: 12px 22px; border-radius: 22px;
   font-weight: 900; font-size: 22px;
   border: 4px solid #000;
   box-shadow: 0 6px 0 rgba(0,0,0,.4);
-  animation: sling-bubble-pop .35s cubic-bezier(.18,.89,.32,1.28);
-  max-width: 80%;
+  max-width: 80%; text-align: center;
+}
+.boss-anim-bubble:after {
+  content: ""; position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
+  border: 10px solid transparent; border-top-color: #000;
 }
 .boss-anim-emoji {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%) scale(0);
-  font-size: 200px;
-  z-index: 2;
-}
-.anim-burst {
-  animation: anim-burst .55s cubic-bezier(.18,.89,.32,1.28) forwards;
-}
-@keyframes anim-burst {
-  0% { transform: translate(-50%,-50%) scale(0); }
-  100% { transform: translate(-50%,-50%) scale(1.6); }
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%) scale(0);
+  font-size: 220px; z-index: 2;
+  pointer-events: none;
 }
 .boss-anim-bang {
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%,-50%) scale(0);
-  font-size: 240px;
-  z-index: 3;
-}
-.anim-bang {
-  animation: anim-bang .5s ease forwards;
-}
-@keyframes anim-bang {
-  0% { transform: translate(-50%,-50%) scale(0) rotate(-15deg); opacity: 1; }
-  60% { transform: translate(-50%,-50%) scale(1.6) rotate(15deg); opacity: 1; }
-  100% { transform: translate(-50%,-50%) scale(1.4) rotate(0); opacity: 0; }
+  font-size: 260px; z-index: 3;
+  pointer-events: none;
 }
 .boss-anim-name {
-  position: absolute; bottom: 12%; left: 50%; transform: translateX(-50%);
-  text-align: center;
-  z-index: 4;
+  position: absolute; bottom: 14%; left: 50%; transform: translateX(-50%) scale(0);
+  text-align: center; z-index: 4;
+  width: 90%;
 }
 .boss-anim-name .atk-name {
-  font-size: 32px; font-weight: 900; color: var(--accent);
-  text-shadow: 0 4px 0 #000, 0 0 16px var(--hot);
+  font-size: 36px; font-weight: 900; color: var(--accent);
+  text-shadow: 0 4px 0 #000, 0 0 18px var(--hot);
 }
 .boss-anim-name .atk-target {
-  font-size: 20px; font-weight: 700; color: #fff;
+  font-size: 22px; font-weight: 700; color: #fff;
   text-shadow: 0 2px 0 #000;
   margin-top: 6px;
 }
-.anim-reveal {
-  animation: anim-reveal .45s cubic-bezier(.18,.89,.32,1.28) forwards;
-}
-@keyframes anim-reveal {
-  0% { opacity: 0; transform: translateX(-50%) scale(0); }
-  60% { opacity: 1; transform: translateX(-50%) scale(1.2); }
-  100% { opacity: 1; transform: translateX(-50%) scale(1); }
-}
 @media (max-width: 700px) {
-  .boss-anim-emoji { font-size: 140px; }
-  .boss-anim-bang { font-size: 180px; }
-  .boss-anim-name .atk-name { font-size: 24px; }
+  .boss-warn-text > div:nth-child(2) { font-size: 40px !important; }
+  .boss-anim-emoji { font-size: 150px; }
+  .boss-anim-bang { font-size: 190px; }
+  .boss-anim-name .atk-name { font-size: 26px; }
+  .boss-anim-name .atk-target { font-size: 18px; }
   .boss-anim-bubble { font-size: 18px; padding: 10px 16px; }
 }
 

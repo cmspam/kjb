@@ -523,45 +523,132 @@ window.UI = (() => {
     }
   }
 
-  // -------- BOSS ATTACK ANIMATION (powerup + emoji burst + reveal) --------
+  // -------- BOSS ATTACK ANIMATION --------
+  // Flow:
+  //   Stage 0 (1200ms) — "ENEMY ATTACK!" warning banner with red flash
+  //   Stage 1 (1100ms) — boss zoom/charge with one of the attack's phrases
+  //   Stage 2 (700ms)  — attack emoji bursts out at huge size
+  //   Stage 3 (500ms)  — 💥 bang
+  //   Stage 4 (1200ms) — attack name + damage reveal
+  // Each stage uses Web Animations API on FRESH elements so animations always
+  // replay (CSS class-based animations sometimes get cached across overlays).
   function showBossAttackAnim(boss, attack, targetName, dmg, missed, onDone) {
     SND.unlock();
     const phrase = pickRand(attack.phrases || [attack.name]);
-    // Extract trailing emoji from attack.name
     const m = (attack.name || "").match(/(\p{Extended_Pictographic}️?)\s*$/u);
     const emoji = m ? m[1] : "💥";
+
     const overlay = document.createElement("div");
     overlay.className = "boss-anim-overlay";
-    overlay.innerHTML = `
-      <div class="boss-anim-stage">
-        <div class="boss-anim-svg">${Monsters.renderBossSVG(boss)}</div>
-        <div class="boss-anim-bubble">${escapeHTML(phrase)}</div>
-        <div class="boss-anim-emoji" style="visibility:hidden;">${emoji}</div>
-        <div class="boss-anim-bang" style="visibility:hidden;">💥</div>
-        <div class="boss-anim-name" style="visibility:hidden;">
-          <div class="atk-name">${escapeHTML(attack.name)}</div>
-          <div class="atk-target">${missed ? `${escapeHTML(targetName)}に はずれた！` : `→ ${escapeHTML(targetName)} に <b>${dmg}</b> ダメージ！`}</div>
-        </div>
-      </div>`;
     document.body.appendChild(overlay);
+
+    // ----- Stage 0: ENEMY ATTACK! warning -----
+    overlay.innerHTML = `
+      <div class="boss-warn-flash"></div>
+      <div class="boss-warn-text">
+        <div style="font-size: 18px; color: #ff8888; letter-spacing: 6px;">⚠ WARNING ⚠</div>
+        <div style="font-size: 56px; font-weight: 900; color: var(--bad); text-shadow: 0 6px 0 #000, 0 0 30px var(--bad); margin-top: 4px;">てきの こうげき！</div>
+        <div style="font-size: 22px; color: #fff; margin-top: 6px;">${escapeHTML(targetName)} ねらわれた！</div>
+      </div>`;
     SND.sfxBoss();
+    overlay.querySelector(".boss-warn-text").animate(
+      [
+        { transform: "scale(0) rotate(-15deg)", opacity: 0 },
+        { transform: "scale(1.15) rotate(3deg)", opacity: 1, offset: 0.6 },
+        { transform: "scale(1) rotate(0)", opacity: 1 }
+      ],
+      { duration: 500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".boss-warn-flash").animate(
+      [
+        { background: "rgba(255, 59, 107, 0)" },
+        { background: "rgba(255, 59, 107, 0.4)", offset: 0.5 },
+        { background: "rgba(255, 59, 107, 0)" }
+      ],
+      { duration: 400, iterations: 2 }
+    );
+
+    // ----- Stage 1: boss charges with phrase -----
     setTimeout(() => {
-      const e = overlay.querySelector(".boss-anim-emoji");
-      e.style.visibility = "visible";
-      e.classList.add("anim-burst");
-    }, 900);
+      overlay.innerHTML = `
+        <div class="boss-anim-stage">
+          <div class="boss-anim-svg-wrap"></div>
+          <div class="boss-anim-bubble">${escapeHTML(phrase)}</div>
+        </div>`;
+      const svgWrap = overlay.querySelector(".boss-anim-svg-wrap");
+      svgWrap.innerHTML = Monsters.renderBossSVG(boss);
+      // Charge: scale up + glow shake
+      svgWrap.animate(
+        [
+          { transform: "scale(1) rotate(0)", filter: "brightness(1)" },
+          { transform: "scale(1.12) rotate(-4deg)", filter: "brightness(1.6) drop-shadow(0 0 18px #ff3b6b)", offset: 0.35 },
+          { transform: "scale(1.18) rotate(4deg)", filter: "brightness(2) drop-shadow(0 0 32px #ffcc00)", offset: 0.7 },
+          { transform: "scale(1) rotate(0)", filter: "brightness(1)" }
+        ],
+        { duration: 1000, easing: "ease-in-out", fill: "forwards" }
+      );
+      const bubble = overlay.querySelector(".boss-anim-bubble");
+      bubble.animate(
+        [
+          { transform: "translateX(-50%) scale(0)" },
+          { transform: "translateX(-50%) scale(1)" }
+        ],
+        { duration: 350, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+      );
+    }, 1200);
+
+    // ----- Stage 2: emoji burst -----
     setTimeout(() => {
-      const b = overlay.querySelector(".boss-anim-bang");
-      b.style.visibility = "visible";
-      b.classList.add("anim-bang");
+      const burst = document.createElement("div");
+      burst.className = "boss-anim-emoji";
+      burst.textContent = emoji;
+      overlay.appendChild(burst);
+      burst.animate(
+        [
+          { transform: "translate(-50%,-50%) scale(0) rotate(-30deg)", opacity: 1 },
+          { transform: "translate(-50%,-50%) scale(1.8) rotate(15deg)", opacity: 1 }
+        ],
+        { duration: 500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+      );
+    }, 2300);
+
+    // ----- Stage 3: bang -----
+    setTimeout(() => {
+      const bang = document.createElement("div");
+      bang.className = "boss-anim-bang";
+      bang.textContent = "💥";
+      overlay.appendChild(bang);
+      bang.animate(
+        [
+          { transform: "translate(-50%,-50%) scale(0) rotate(-15deg)", opacity: 1 },
+          { transform: "translate(-50%,-50%) scale(2.2) rotate(15deg)", opacity: 1, offset: 0.6 },
+          { transform: "translate(-50%,-50%) scale(1.6) rotate(0)", opacity: 0 }
+        ],
+        { duration: 500, easing: "ease-out", fill: "forwards" }
+      );
       SND.sfxHit();
-    }, 1300);
+    }, 3000);
+
+    // ----- Stage 4: attack name + damage reveal -----
     setTimeout(() => {
-      const n = overlay.querySelector(".boss-anim-name");
-      n.style.visibility = "visible";
-      n.classList.add("anim-reveal");
-    }, 1600);
-    setTimeout(() => { overlay.remove(); onDone(); }, 2600);
+      const name = document.createElement("div");
+      name.className = "boss-anim-name";
+      name.innerHTML = `
+        <div class="atk-name">${escapeHTML(attack.name)}</div>
+        <div class="atk-target">${missed ? `${escapeHTML(targetName)} に はずれた！` : `→ ${escapeHTML(targetName)} に <b>${dmg}</b> ダメージ！`}</div>`;
+      overlay.appendChild(name);
+      name.animate(
+        [
+          { transform: "translateX(-50%) scale(0)", opacity: 0 },
+          { transform: "translateX(-50%) scale(1.15)", opacity: 1, offset: 0.6 },
+          { transform: "translateX(-50%) scale(1)", opacity: 1 }
+        ],
+        { duration: 450, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+      );
+    }, 3400);
+
+    // ----- End: clean up + callback -----
+    setTimeout(() => { overlay.remove(); onDone(); }, 4600);
   }
 
   // -------- RANDOM POP-IN EVENTS (fairy / bomb / thief) --------
