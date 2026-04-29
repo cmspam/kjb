@@ -5,6 +5,7 @@ window.Questions = (() => {
   const RECENT_MAX = 80;
 
   function pool(level) {
+    if (level === 0) return window.QUESTIONS_LEVEL0 || [];
     if (level === 1) return window.QUESTIONS_LEVEL1 || [];
     if (level === 2) return window.QUESTIONS_LEVEL2 || [];
     if (level === 3) return window.QUESTIONS_LEVEL3 || [];
@@ -39,7 +40,7 @@ window.Questions = (() => {
   }
 
   function counts() {
-    return [1,2,3,4].map(lvl => ({
+    return [0,1,2,3,4].map(lvl => ({
       level: lvl,
       total: pool(lvl).length,
       s1: pool(lvl).filter(q=>q.stars===1).length,

@@ -183,7 +183,7 @@ window.UI = (() => {
           <div class="row" id="lvl-row" style="gap:6px;justify-content:center;"></div>
           <div id="lvl-desc" style="margin-top:4px; line-height:2.2;">
             <div style="font-size:22px; font-weight:900; color:var(--accent);">${furigana(JP["level"+level])}</div>
-            ${level === 1 ? `<div class="subtle" style="font-size:13px;">${furigana(JP.level1_desc||"")}</div>` : ``}
+            ${(level === 0 || level === 1) ? `<div class="subtle" style="font-size:13px;">${furigana(JP["level"+level+"_desc"]||"")}</div>` : ``}
           </div>
           <div class="subtle" style="margin-top:18px;">なまえ</div>
           <div class="row" id="names-row"></div>
@@ -216,8 +216,9 @@ window.UI = (() => {
         </div>
       `));
       const lr = $("lvl-row");
-      [1,2,3,4].forEach(n => {
-        const b = el(`<button class="toggle ${level===n?'on':''}" style="font-size:22px;padding:10px 18px;min-width:54px;font-weight:900;">${n}</button>`);
+      [0,1,2,3,4].forEach(n => {
+        const lbl = n === 0 ? "🍼" : String(n);
+        const b = el(`<button class="toggle ${level===n?'on':''}" style="font-size:22px;padding:10px 14px;min-width:50px;font-weight:900;">${lbl}</button>`);
         tap(b, () => { level = n; redraw(); });
         lr.appendChild(b);
       });
@@ -231,9 +232,10 @@ window.UI = (() => {
         inp.oninput = (e) => { names[i] = e.target.value; };
         wrap.appendChild(inp);
         if (advanced) {
-          [1,2,3,4].forEach(n => {
+          [0,1,2,3,4].forEach(n => {
             const cur = playerLevels[i] ?? level;
-            const b = el(`<button class="toggle ${cur===n?'on':''}" style="font-size:13px;padding:6px 8px;">L${n}</button>`);
+            const lbl = n === 0 ? "🍼" : "L"+n;
+            const b = el(`<button class="toggle ${cur===n?'on':''}" style="font-size:13px;padding:6px 8px;">${lbl}</button>`);
             tap(b, () => { playerLevels[i] = n; redraw(); });
             wrap.appendChild(b);
           });
@@ -1385,7 +1387,7 @@ window.UI = (() => {
     s.appendChild(el(`
       <div class="center" style="width:100%;">
         <h2>${JP.boss_turn(boss.name_jp)} 👹</h2>
-        <div class="boss-bubble" style="position:static;display:inline-block;margin:12px;">${pickRand([boss.catchphrase, ...JP.boss_atk_words.map(a=>a.name)])}</div>
+        <div class="boss-bubble" style="position:static;display:inline-block;margin:12px;">${pickRand([boss.catchphrase, ...((boss.attacks && boss.attacks.length) ? boss.attacks : JP.boss_atk_words).map(a=>a.name)])}</div>
         <div id="log" style="font-size:18px; margin: 12px auto; line-height:1.6; max-width:600px; max-height: 30vh; overflow-y: auto;"></div>
         <button class="btn huge cool" id="cont">${JP.next}</button>
       </div>`));

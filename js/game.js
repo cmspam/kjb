@@ -588,6 +588,9 @@ window.Game = (() => {
       lines.push(pickRand(JP.boss_taunt_low_hp));
       return finishBossTurn(lines);
     }
+    // Each boss has its own signature attacks; fall back to the shared pool only
+    // if a boss is missing them.
+    const bossAttacks = (S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words;
     // Pre-determine the targeted attacks (without yet applying damage)
     const queue = [];
     for (let i = 0; i < mods.atks; i++) {
@@ -599,7 +602,7 @@ window.Game = (() => {
         target.skipBossAtk = false; continue;
       }
       if (Math.random() < mods.missChance) {
-        lines.push(`${target.name} に ${pickRand(JP.boss_atk_words).name} … はずれ〜！`);
+        lines.push(`${target.name} に ${pickRand(bossAttacks).name} … はずれ〜！`);
         continue;
       }
       if (target.shield) {
@@ -629,7 +632,7 @@ window.Game = (() => {
       if (q) {
         target.seenIds.push(q.id);
         UI.renderDefenseQ(target, q, dmg, S.boss, S.players, (correct) => {
-          const atk = pickRand(JP.boss_atk_words);
+          const atk = pickRand((S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words);
           if (correct) {
             lines.push(`${target.name} は こたえて かわした！ ✨`);
           } else {
@@ -644,7 +647,7 @@ window.Game = (() => {
       }
     }
 
-    const atk = pickRand(JP.boss_atk_words);
+    const atk = pickRand((S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words);
     const apply = () => {
       target.hp = Math.max(0, target.hp - dmg);
       lines.push(`${target.name} に ${atk.name} → ${dmg} ダメージ！`);
