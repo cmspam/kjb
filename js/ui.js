@@ -554,11 +554,13 @@ window.UI = (() => {
         <div style="font-size: 22px; color: #fff; margin-top: 6px;">${escapeHTML(targetName)} ねらわれた！</div>
       </div>`;
     SND.sfxBoss();
+    // Keep translate(-50%, -50%) in every keyframe so the centering transform
+    // isn't clobbered by the scale/rotate keyframes (the bug where it slid right).
     overlay.querySelector(".boss-warn-text").animate(
       [
-        { transform: "scale(0) rotate(-15deg)", opacity: 0 },
-        { transform: "scale(1.15) rotate(3deg)", opacity: 1, offset: 0.6 },
-        { transform: "scale(1) rotate(0)", opacity: 1 }
+        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.15) rotate(3deg)", opacity: 1, offset: 0.6 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1 }
       ],
       { duration: 500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
     );
