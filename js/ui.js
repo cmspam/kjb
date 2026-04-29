@@ -181,9 +181,9 @@ window.UI = (() => {
           <div class="subtle">${count}にん プレイ</div>
           <div class="subtle" style="margin-top:14px;">${JP.level}</div>
           <div class="row" id="lvl-row" style="gap:6px;justify-content:center;"></div>
-          <div id="lvl-desc" style="margin-top:4px;">
-            <div style="font-size:22px; font-weight:900; color:var(--accent);">${JP["level"+level]}</div>
-            ${level === 1 ? `<div class="subtle" style="font-size:13px;">${JP.level1_desc||""}</div>` : ``}
+          <div id="lvl-desc" style="margin-top:4px; line-height:2.2;">
+            <div style="font-size:22px; font-weight:900; color:var(--accent);">${furigana(JP["level"+level])}</div>
+            ${level === 1 ? `<div class="subtle" style="font-size:13px;">${furigana(JP.level1_desc||"")}</div>` : ``}
           </div>
           <div class="subtle" style="margin-top:18px;">なまえ</div>
           <div class="row" id="names-row"></div>
@@ -417,18 +417,21 @@ window.UI = (() => {
   }
 
   // -------- BOSS INTRO (shown once at game start) --------
+  // Backstories use 「漢字[よみ]」 syntax that gets converted to ruby tags so kanji
+  // shows the hiragana reading above it. Inserted via innerHTML so the ruby renders.
   function renderBossIntro(boss, onContinue) {
     show("title");
     const s = $("screen-title"); s.innerHTML = "";
+    const story = furigana(boss.backstory || "なぞの カイジュウ。");
     s.appendChild(el(`
       <div class="center" style="max-width: 720px; margin: 12px auto; padding: 0 12px;">
         <div class="subtle" style="color:var(--accent); letter-spacing:4px;">★ きょうの あいて ★</div>
         <h2 style="margin: 4px 0; color: var(--accent);">${escapeHTML(boss.name_jp)}</h2>
         <div class="subtle" style="font-size: 13px; opacity: .7;">${escapeHTML(boss.name_en||"")}</div>
         <div class="stage" style="height:280px; max-width:520px; margin: 8px auto;">${Monsters.renderBossSVG(boss)}</div>
-        <div style="background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow); text-align:left; max-width:520px; margin: 0 auto; line-height: 1.7;">
+        <div style="background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow); text-align:left; max-width:520px; margin: 0 auto; line-height: 2.2;">
           <div style="font-size:14px; color:var(--accent); font-weight:900; margin-bottom:6px;">▶ ストーリー</div>
-          <div style="font-size:16px; white-space: pre-line;">${escapeHTML(boss.backstory||"なぞの カイジュウ。")}</div>
+          <div style="font-size:16px; white-space: pre-line;">${story}</div>
         </div>
         <button class="btn huge hot" id="intro-go" style="margin-top:18px;">バトル スタート！⚔️</button>
       </div>`));

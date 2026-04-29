@@ -13,14 +13,14 @@ window.JP = {
   setup_title: "プレイヤーをえらんでね",
   player_count: "なんにん であそぶ？",
   level: "レベル",
-  level1: "初心者",
-  level2: "英検5級",
-  level3: "英検4級",
-  level4: "英検3級",
+  level1: "初心者[しょしんしゃ]",
+  level2: "英検[えいけん]5級[きゅう]",
+  level3: "英検[えいけん]4級[きゅう]",
+  level4: "英検[えいけん]3級[きゅう]",
   level1_desc: "アルファベット・フォニックスから",
-  level2_desc: "英検5級",
-  level3_desc: "英検4級",
-  level4_desc: "英検3級",
+  level2_desc: "英検[えいけん]5級[きゅう]",
+  level3_desc: "英検[えいけん]4級[きゅう]",
+  level4_desc: "英検[えいけん]3級[きゅう]",
   jinro_on: "うらぎりモード ON",
   jinro_off: "うらぎりモード OFF",
   jinro_hint: "４にん いじょうで あそべるよ。ひとりだけ カイジュウのスパイ！",
@@ -172,6 +172,13 @@ window.JP = {
 };
 
 window.pickRand = (arr) => arr[Math.floor(Math.random()*arr.length)];
+
+// Furigana helper. Authors write 「漢字[よみ]」 and this turns it into proper
+// HTML <ruby> tags so kanji shows the hiragana reading above it (like kids' books).
+window.furigana = function(s) {
+  if (!s) return "";
+  return String(s).replace(/([一-鿿々ヶ]+)\[([^\]]+)\]/g, '<ruby>$1<rt>$2</rt></ruby>');
+};
 
 // Funny default player names — assigned randomly when a kid leaves their name blank.
 window.FUNNY_NAMES = [

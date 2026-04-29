@@ -344,6 +344,16 @@ h3 { font-size: 28px; margin: 4px 0; }
 #exit-btn.hidden { display:none; }
 #exit-btn:active { transform: scale(0.9); }
 
+/* Furigana (ruby) styling so kanji reads like a kids' book */
+ruby { ruby-align: center; }
+rt {
+  font-size: 0.55em;
+  color: var(--accent);
+  font-weight: 400;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* Slingshot attack overlay */
 .sling-modal {
   position: fixed; inset: 0;
