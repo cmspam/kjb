@@ -98,12 +98,11 @@ window.UI = (() => {
   //   "じゅんびちゅう…" while waiting for the mic permission
   //   "🎤 きいてるよ！" once recognizeOnce.onListening() fires (mic actually capturing)
   //   final result message after recognition resolves.
+  // Speech-challenge modal. The recognition core in audio.js gates on a
+  // Web-Audio voice-activity detector, so background noise no longer triggers
+  // false fails. This UI just orchestrates retries and shows what the
+  // recognizer heard for educational/diagnostic value.
   const MAX_SPEECH_ATTEMPTS = 4;
-  // Premature-failure window: if a recognition resolves with no match within
-  // this many ms of the mic actually going live, it's almost certainly the
-  // recognizer giving up on the first ambient-noise sample before the kid
-  // had time to speak. We silently retry once in that case.
-  const PREMATURE_FAILURE_MS = 1500;
 
   function runSpeechChallenge(word, onDone) {
     const overlay = document.createElement("div");
@@ -135,7 +134,6 @@ window.UI = (() => {
 
     let attempts   = 0;
     let lastResult = null;
-    let usedAutoRetry = false; // silent auto-retry only fires once per modal
 
     const close = (result) => {
       overlay.remove();
@@ -152,13 +150,9 @@ window.UI = (() => {
       heardEl.textContent = "";
       attemptsEl.textContent = `(${attempts} / ${MAX_SPEECH_ATTEMPTS} かいめ)`;
 
-      let listeningStartTime = 0;
-
       SND.recognizeOnce(word, {
-        startupTimeoutMs: 15000,
-        timeoutMs: 6000,
+        totalTimeoutMs: 12000,
         onListening: () => {
-          listeningStartTime = Date.now();
           status.textContent = "🎤 はなしてね！";
           status.style.color = "#7ff0a0";
         },
@@ -174,43 +168,28 @@ window.UI = (() => {
           return;
         }
 
-        // Auto-retry once if the recognizer fired before the kid could speak.
-        // This is the "immediate fail right after granting mic" case — the
-        // recognizer gave up on the first ambient-noise sample.
-        const tooQuick = listeningStartTime && (Date.now() - listeningStartTime) < PREMATURE_FAILURE_MS;
-        const retryableReason = (result.reason === "no-speech" || result.reason === "timeout" || result.reason == null);
-        if (!usedAutoRetry && tooQuick && retryableReason && attempts < MAX_SPEECH_ATTEMPTS) {
-          usedAutoRetry = true;
-          status.textContent = "もういちど…";
-          status.style.color = "#fde0c0";
-          attempts--; // don't burn the kid's manual try on the recognizer's hiccup
-          setTimeout(() => attempt(), 250);
-          return;
-        }
-
-        // Failure UI
+        // Failure UI — codes from the new VAD-gated core
         let msg;
         switch (result.reason) {
-          case "timeout":
-          case "no-speech":         msg = "🤔 きこえなかった…"; break;
-          case "startup_timeout":   msg = "🎤 マイクが はじまらない"; break;
+          case "no-speech":              msg = "🤔 こえが きこえなかった"; break;
+          case "no-result-after-voice":  msg = "🤔 きこえたけど わからなかった"; break;
           case "not-allowed":
-          case "service-not-allowed": msg = "🎤 マイクの ゆるしを ON に してね"; break;
+          case "service-not-allowed":    msg = "🎤 マイクの ゆるしを ON に してね"; break;
+          case "no-mic-api":
+          case "mic-failed":
+          case "audio-ctx-failed":       msg = "🎤 マイクが つかえない"; break;
           case "unsupported":
-          case "init_failed":       msg = "🤷 この ブラウザは つかえない"; break;
-          default:                  msg = "😅 ちがう ことばに きこえた"; break;
+          case "init_failed":            msg = "🤷 この ブラウザは つかえない"; break;
+          default:                       msg = "😅 ちがう ことばに きこえた"; break;
         }
         status.textContent = msg;
         status.style.color = "#fde0c0";
-        // Educational + debugging: show the top alternative the recognizer heard
         const heard = result.alts && result.alts[0] && result.alts[0].transcript;
         heardEl.textContent = heard ? `わたしには「${heard}」と きこえた` : "";
 
-        const canRetry = attempts < MAX_SPEECH_ATTEMPTS &&
-                         result.reason !== "not-allowed" &&
-                         result.reason !== "service-not-allowed" &&
-                         result.reason !== "unsupported" &&
-                         result.reason !== "init_failed";
+        const terminalReasons = ["not-allowed","service-not-allowed","no-mic-api",
+                                 "mic-failed","audio-ctx-failed","unsupported","init_failed"];
+        const canRetry = attempts < MAX_SPEECH_ATTEMPTS && !terminalReasons.includes(result.reason);
         if (canRetry) {
           showRetry();
         } else {

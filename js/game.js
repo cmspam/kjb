@@ -457,7 +457,6 @@ window.Game = (() => {
       S.pronounceTarget = null;
       if (q && q.options && q.answer != null && SND.isSpeechSupported && SND.isSpeechSupported()) {
         const w = String(q.options[q.answer] || "").trim();
-        // Only offer for short English-looking phrases (no Japanese chars, ≤20 chars).
         if (w && w.length <= 20 && /^[ -~]+$/.test(w)) {
           S.pronounceTarget = w;
         }
@@ -493,8 +492,6 @@ window.Game = (() => {
   // -------- ACTION (combined: attack + cards on one screen) --------
   function goAction() {
     const p = currentPlayer();
-    // The pronunciation-challenge handler runs the speech modal, applies a +2
-    // attackPower bonus on success, and clears the target either way (one shot).
     const onSpeak = (result) => {
       if (result && result.ok) {
         p.attackPower = (p.attackPower || 0) + 2;

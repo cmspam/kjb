@@ -406,82 +406,218 @@ window.SND = (() => {
   const SR_CTOR = window.SpeechRecognition || window.webkitSpeechRecognition;
   function isSpeechSupported() { return !!SR_CTOR; }
 
-  // Listen for one utterance and return whether the kid said `targetWord`.
-  // Resolves with { ok, reason?, alts?, matched? }. Never rejects.
+  // Listen for one utterance, gated by a Web Audio voice-activity detector
+  // (VAD) so background noise (fans, A/C, distant talking) doesn't trigger
+  // false matches. Resolves with { ok, reason?, alts?, matched? }.
   //
-  // Two timers:
-  //   • startupTimer: covers the permission prompt + mic startup. Long
-  //     (default 15s) so a kid who's slow to grant mic access still gets to
-  //     speak. Cleared on onaudiostart.
-  //   • speechTimer: only starts AFTER the mic is actually capturing
-  //     (onaudiostart event). Default 6s. This is the bug fix — the previous
-  //     version started a 5s timer at r.start() time, so the permission
-  //     prompt ate most of the window before any audio was captured.
+  // Strategy:
+  //   1. Open mic via getUserMedia. We hold this stream the whole call.
+  //   2. Calibrate the ambient noise floor for ~400ms via an AnalyserNode
+  //      reading time-domain RMS. Set threshold = max(3.5×ambient, 0.025).
+  //   3. In parallel, start a SpeechRecognition. If SR fires onresult BEFORE
+  //      VAD has detected sustained voice, it's almost certainly a noise
+  //      hallucination — discard, restart SR, keep listening.
+  //   4. Once VAD detects voice (RMS above threshold for 3 consecutive frames,
+  //      ~90ms of real signal), mark voiceDetected. Any SR result after this
+  //      moment is treated as legitimate.
+  //   5. Up to MAX_SR_RESTARTS restarts. Total wall-clock cap of ~12s.
   //
-  // opts.onListening(): callback fired when the mic is actually live, so the
-  // UI can flip from "じゅんびちゅう" → "🎤 きいてるよ" at the right moment.
+  // The kid sees:
+  //   "じゅんびちゅう…" while we calibrate
+  //   "🎤 はなしてね！" once we're actively listening for their voice
+  //   final result message after recognition resolves.
   function recognizeOnce(targetWord, opts={}) {
-    return new Promise(resolve => {
-      if (!SR_CTOR) return resolve({ ok: false, reason: "unsupported" });
-      let r;
-      try { r = new SR_CTOR(); } catch(_) { return resolve({ ok: false, reason: "init_failed" }); }
-      r.lang = opts.lang || "en-US";
-      r.maxAlternatives = 5;
-      r.interimResults = false;
-      r.continuous = false;
+    return _recognizeWithVAD(targetWord, opts);
+  }
 
+  async function _recognizeWithVAD(targetWord, opts={}) {
+    if (!SR_CTOR) return { ok: false, reason: "unsupported" };
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return { ok: false, reason: "no-mic-api" };
+    }
+
+    // ---- 1. Open mic ----
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      });
+    } catch (e) {
+      const name = (e && e.name) || "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        return { ok: false, reason: "not-allowed" };
+      }
+      return { ok: false, reason: "mic-failed" };
+    }
+
+    // ---- 2. Set up VAD ----
+    let ac;
+    try {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (_) {
+      stream.getTracks().forEach(t => { try { t.stop(); } catch(_) {} });
+      return { ok: false, reason: "audio-ctx-failed" };
+    }
+    const source = ac.createMediaStreamSource(stream);
+    const analyser = ac.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.3;
+    source.connect(analyser);
+    const buf = new Uint8Array(analyser.fftSize);
+
+    function rms() {
+      analyser.getByteTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) {
+        const v = (buf[i] - 128) / 128;
+        sum += v * v;
+      }
+      return Math.sqrt(sum / buf.length);
+    }
+
+    let cleaned = false;
+    function cleanup() {
+      if (cleaned) return;
+      cleaned = true;
+      try { source.disconnect(); } catch(_) {}
+      try { ac.close(); } catch(_) {}
+      try { stream.getTracks().forEach(t => t.stop()); } catch(_) {}
+    }
+
+    // ---- 3. Calibrate ambient ----
+    const ambSamples = [];
+    for (let i = 0; i < 14; i++) {
+      ambSamples.push(rms());
+      await new Promise(r => setTimeout(r, 30));
+    }
+    ambSamples.sort();
+    // Use ~75th percentile as ambient — robust against an occasional spike
+    const ambient = ambSamples[Math.floor(ambSamples.length * 0.75)] || 0.005;
+    const threshold = Math.max(ambient * 3.5, 0.025);
+
+    // Notify caller that we're now listening (post-calibration)
+    if (typeof opts.onListening === "function") {
+      try { opts.onListening(); } catch(_){}
+    }
+
+    // ---- 4. Run SR in parallel with VAD monitoring ----
+    return new Promise((resolve) => {
       let done = false;
-      let speechTimer = null;
-      let startupTimer = null;
+      let voiceDetected = false;
+      let consecAbove = 0;
+      let srRestarts = 0;
+      const MAX_SR_RESTARTS = 4;
+      const TOTAL_CAP_MS = opts.totalTimeoutMs || 12000;
+      const VOICE_FRAMES_REQUIRED = 3; // ~90ms of sustained voice
+      let r = null;
 
-      const cleanup = () => { try { r.onresult = r.onerror = r.onend = r.onstart = r.onaudiostart = r.onspeechend = null; } catch(_){} };
       const finish = (result) => {
         if (done) return;
         done = true;
-        if (speechTimer)  { clearTimeout(speechTimer);  speechTimer = null; }
-        if (startupTimer) { clearTimeout(startupTimer); startupTimer = null; }
+        clearInterval(vadTimer);
+        clearTimeout(overallTimer);
+        try { if (r) { r.onresult = r.onerror = r.onend = null; r.stop(); } } catch(_){}
         cleanup();
-        try { r.stop(); } catch(_){}
         resolve(result);
       };
 
-      startupTimer = setTimeout(
-        () => finish({ ok: false, reason: "startup_timeout" }),
-        opts.startupTimeoutMs || 15000
-      );
-
-      r.onaudiostart = () => {
-        // Mic is now capturing — the user has granted permission and the
-        // speech window genuinely begins now.
-        if (startupTimer) { clearTimeout(startupTimer); startupTimer = null; }
-        if (typeof opts.onListening === "function") {
-          try { opts.onListening(); } catch(_){}
-        }
-        speechTimer = setTimeout(
-          () => finish({ ok: false, reason: "timeout" }),
-          opts.timeoutMs || 6000
-        );
-      };
-
-      r.onresult = (e) => {
-        const target = (targetWord||"").toLowerCase().trim();
-        const tWords = target.split(/\s+/);
-        const alts = [];
-        const list = e.results && e.results[0];
-        if (list) for (let i = 0; i < list.length; i++) {
-          alts.push({ transcript: (list[i].transcript||"").toLowerCase().trim(), conf: list[i].confidence });
-        }
-        const matched = alts.find(a => {
-          if (a.transcript === target) return true;
-          const ws = a.transcript.split(/\s+/);
-          return tWords.every(t => ws.includes(t));
+      // Overall wall-clock cap so we never get stuck
+      const overallTimer = setTimeout(() => {
+        finish({
+          ok: false,
+          reason: voiceDetected ? "no-result-after-voice" : "no-speech",
         });
-        finish({ ok: !!matched, alts, matched });
-      };
-      r.onerror = (e) => finish({ ok: false, reason: (e && e.error) || "error" });
-      r.onend = () => { /* finish() handles termination */ };
+      }, TOTAL_CAP_MS);
 
-      try { r.start(); } catch(e) { finish({ ok: false, reason: "start_failed" }); }
+      // VAD loop
+      const vadTimer = setInterval(() => {
+        if (done) return;
+        const v = rms();
+        if (v > threshold) {
+          consecAbove++;
+          if (consecAbove >= VOICE_FRAMES_REQUIRED && !voiceDetected) {
+            voiceDetected = true;
+          }
+        } else {
+          consecAbove = Math.max(0, consecAbove - 1);
+        }
+      }, 30);
+
+      // Start / restart SR
+      function startSR() {
+        if (done) return;
+        try { r = new SR_CTOR(); }
+        catch (_) { finish({ ok: false, reason: "init_failed" }); return; }
+        r.lang = opts.lang || "en-US";
+        r.maxAlternatives = 5;
+        r.interimResults = false;
+        r.continuous = false;
+
+        r.onresult = (e) => {
+          const list = e.results && e.results[0];
+          const alts = [];
+          if (list) for (let i = 0; i < list.length; i++) {
+            alts.push({
+              transcript: (list[i].transcript || "").toLowerCase().trim(),
+              conf: list[i].confidence,
+            });
+          }
+
+          // VAD gate: if we never heard sustained voice, this result is
+          // almost certainly background-noise hallucination. Restart SR.
+          if (!voiceDetected) {
+            try { r.stop(); } catch(_) {}
+            // onend will trigger restart
+            return;
+          }
+
+          const target = (targetWord || "").toLowerCase().trim();
+          const tWords = target.split(/\s+/);
+          const matched = alts.find(a => {
+            if (a.transcript === target) return true;
+            const ws = a.transcript.split(/\s+/);
+            return tWords.every(t => ws.includes(t));
+          });
+          finish({ ok: !!matched, alts, matched });
+        };
+
+        r.onerror = (e) => {
+          const err = e && e.error;
+          // Permission errors are terminal — don't loop
+          if (err === "not-allowed" || err === "service-not-allowed") {
+            finish({ ok: false, reason: err });
+            return;
+          }
+          // Otherwise let onend decide whether to restart
+        };
+
+        r.onend = () => {
+          if (done) return;
+          // Only restart if we haven't yet captured real voice OR if we
+          // saw voice but recognition ended without a result.
+          if (srRestarts < MAX_SR_RESTARTS) {
+            srRestarts++;
+            // Tiny delay so the engine settles before re-start
+            setTimeout(startSR, 80);
+          } else {
+            finish({
+              ok: false,
+              reason: voiceDetected ? "no-result-after-voice" : "no-speech",
+            });
+          }
+        };
+
+        try { r.start(); }
+        catch (_) {
+          // Already-started or rate-limited — let onend handle
+        }
+      }
+
+      startSR();
     });
   }
 
