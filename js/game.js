@@ -168,7 +168,11 @@ window.Game = (() => {
     S.currentIdx = 0;
     S.pendingDamageBonus = 0;
     S.doubleNextAttack = false;
-    nextTurn();
+    // Boxing-card "ROUND N" splash from round 2 onward (round 1 just had the
+    // boss intro). PvP gets no boss intro so we still show round 1 there.
+    const showIntro = (S.mode === "pvp") || S.round >= 2;
+    if (showIntro) UI.showRoundIntro(S.round, () => nextTurn());
+    else nextTurn();
   }
 
   function nextTurn() {
@@ -495,11 +499,25 @@ window.Game = (() => {
         }
         p.attackPower = 0;
         S.pendingDamageBonus = 0;
-        // If opponent's core is destroyed, they're eliminated
+        // If opponent's core is destroyed, they're eliminated — show K.O. cinematic.
         const oppCore = opponent.monster.parts.find(x => x.effect === "win");
         if (oppCore && oppCore.hp <= 0) {
           opponent.dead = true;
           UI.toast(JP.pvp_eliminated(opponent.name), 2000);
+          UI.showKO(opponent.monster, () => {
+            const winner = checkPvpWinner();
+            if (winner) doVictory({ winner });
+            else endTurn();
+          });
+          return;
+        }
+        // Rage activation on the opponent's monster — independent per monster in PvP.
+        const opMon = opponent.monster;
+        if (!opMon.raged && oppCore && oppCore.hp > 0 && oppCore.hp <= oppCore.maxHP * 0.25) {
+          opMon.raged = true;
+          UI.toast(`😡 ${opMon.name_jp} は ぶちぎれた！`, 2000);
+          setTimeout(() => UI.showRageIntro(opMon, () => endTurn()), 1500);
+          return;
         }
         const winner = checkPvpWinner();
         if (winner) {
@@ -599,9 +617,19 @@ window.Game = (() => {
       S.log.push(`${part.name_jp} を こわした！`);
       SND.sfxPop();
     }
-    // Check win
+    // Check win — doVictory wraps the K.O. cinematic so all kill paths
+    // (this one, card effects, etc.) get the same reveal.
     const core = S.boss.parts.find(x => x.effect === "win");
     if (core && core.hp <= 0) { return doVictory(); }
+    // Rage activation: core just dropped to ≤25% maxHP. Bumps the boss's
+    // attacks-per-round and shows a dramatic splash. Only fires once per fight.
+    if (!S.boss.raged && core && core.hp > 0 && core.hp <= core.maxHP * 0.25) {
+      S.boss.raged = true;
+      S.boss.attacksPerRound = (S.boss.attacksPerRound || 1) + 1;
+      S.log.push(`${S.boss.name_jp} は ぶちぎれた！ 😡`);
+      setTimeout(() => UI.showRageIntro(S.boss, () => endTurn()), 1500);
+      return;
+    }
     // Bubble appears at +1100ms with 2000ms life — hold endTurn so kids read the boss line.
     setTimeout(() => endTurn(), 3200);
   }
@@ -905,8 +933,17 @@ window.Game = (() => {
   // -------- WIN / LOSE --------
   function doVictory(opts={}) {
     if (S.mode === "pvp" && opts.winner) {
+      // PvP K.O. is shown per-opponent at the kill moment by the attack flow.
       UI.renderVictory({ players: S.players, mode: "pvp", winner: opts.winner },
         () => location.reload(), () => location.reload());
+      return;
+    }
+    // Hero mode: play the K.O. cinematic once before the victory screen.
+    // _koShown flag guards against re-entry from any of the many paths that
+    // can detect a core kill (card effects, normal attack, etc.).
+    if (S.boss && !S.boss._koShown) {
+      S.boss._koShown = true;
+      UI.showKO(S.boss, () => doVictory(opts));
       return;
     }
     let spyWins = false;

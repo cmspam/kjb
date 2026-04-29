@@ -848,6 +848,156 @@ window.UI = (() => {
     setTimeout(() => { overlay.remove(); onDone(); }, 1500);
   }
 
+  // -------- ROUND ANNOUNCEMENT --------
+  // Boxing-card style "ROUND N" splash. Round 5+ gets extra flair so long
+  // battles feel like the stakes are climbing.
+  function showRoundIntro(round, onDone) {
+    SND.unlock();
+    const big = round >= 5;
+    const overlay = document.createElement("div");
+    overlay.className = "round-intro-overlay";
+    overlay.innerHTML = `
+      <div class="round-flash"></div>
+      <div class="round-content">
+        <div class="round-label">${big ? "🔥 ROUND" : "ROUND"}</div>
+        <div class="round-num">${round}</div>
+        ${big ? `<div class="round-sub">きょくげん！</div>` : ``}
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxBoss();
+    overlay.querySelector(".round-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.2) rotate(5deg)", opacity: 1, offset: 0.55 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1 }
+      ],
+      { duration: 500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".round-flash").animate(
+      [
+        { background: "rgba(255, 255, 255, 0)" },
+        { background: "rgba(255, 255, 255, 0.4)", offset: 0.5 },
+        { background: "rgba(255, 255, 255, 0)" }
+      ],
+      { duration: 400, iterations: 1 }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 1300);
+  }
+
+  // -------- RAGE ACTIVATION (boss core ≤ 25%) --------
+  // Big red splash, boss SVG with red glow, rage phrase. Caller still owns
+  // the game state changes (attacksPerRound++, raged flag); this is just the
+  // show-and-tell.
+  const RAGE_PHRASES = [
+    "ぐぉぉぉぉ！", "もう ゆるさん！", "これからが ほんき！",
+    "ぼくの ほんとうの すがた！", "ぐおおお〜！", "なめるなよ！",
+    "本気[ほんき] モード！", "もう おこったぞ！"
+  ];
+  function showRageIntro(boss, onDone) {
+    SND.unlock();
+    const phrase = RAGE_PHRASES[(Math.random()*RAGE_PHRASES.length)|0];
+    const overlay = document.createElement("div");
+    overlay.className = "rage-overlay";
+    overlay.innerHTML = `
+      <div class="rage-flash"></div>
+      <div class="rage-content">
+        <div class="rage-label">⚠ RAGE ⚠</div>
+        <div class="rage-name">${escapeHTML(boss.name_jp)}</div>
+        <div class="rage-svg">${Monsters.renderBossSVG(boss)}</div>
+        <div class="rage-phrase">${furigana(phrase)}</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxBoss();
+    // Restart theme at a random offset to ramp up the energy.
+    if (boss && boss.id) SND.playThemeSnippet(boss.id, 2400, 0.55);
+    overlay.querySelector(".rage-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.15) rotate(3deg)", opacity: 1, offset: 0.6 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1 }
+      ],
+      { duration: 600, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".rage-flash").animate(
+      [
+        { background: "rgba(255, 59, 0, 0)" },
+        { background: "rgba(255, 59, 0, 0.55)", offset: 0.5 },
+        { background: "rgba(255, 59, 0, 0)" }
+      ],
+      { duration: 400, iterations: 3 }
+    );
+    overlay.querySelector(".rage-svg").animate(
+      [
+        { transform: "scale(1) rotate(0)" },
+        { transform: "scale(1.08) rotate(-2deg)" },
+        { transform: "scale(1) rotate(2deg)" },
+        { transform: "scale(1.08) rotate(0)" }
+      ],
+      { duration: 800, iterations: 3 }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 2400);
+  }
+
+  // -------- K.O. CINEMATIC (boss core destroyed) --------
+  // Slow desaturating zoom on the boss SVG, big "K.O. !" reveal, confetti
+  // burst, then the victory screen takes over.
+  function showKO(boss, onDone) {
+    SND.unlock();
+    const overlay = document.createElement("div");
+    overlay.className = "ko-overlay";
+    overlay.innerHTML = `
+      <div class="ko-flash"></div>
+      <div class="ko-content">
+        <div class="ko-svg">${Monsters.renderBossSVG(boss)}</div>
+      </div>
+      <div class="ko-label">K.O. !</div>
+      <div class="confetti-layer"></div>`;
+    document.body.appendChild(overlay);
+    spawnConfetti(overlay.querySelector(".confetti-layer"), 50);
+    SND.sfxVictory();
+    overlay.querySelector(".ko-svg").animate(
+      [
+        { transform: "scale(1) rotate(0)",            filter: "saturate(1) brightness(1)",      opacity: 1 },
+        { transform: "scale(1.5) rotate(6deg)",       filter: "saturate(0.5) brightness(1.4)",  opacity: 1, offset: 0.55 },
+        { transform: "scale(0.55) rotate(-25deg)",    filter: "saturate(0) brightness(0.4)",    opacity: 0.4 }
+      ],
+      { duration: 1800, easing: "ease-in", fill: "forwards" }
+    );
+    overlay.querySelector(".ko-flash").animate(
+      [
+        { background: "rgba(255,255,255,0)" },
+        { background: "rgba(255,255,255,0.7)", offset: 0.5 },
+        { background: "rgba(255,255,255,0)" }
+      ],
+      { duration: 350, iterations: 1, delay: 1100 }
+    );
+    overlay.querySelector(".ko-label").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0) rotate(-25deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(2.4) rotate(8deg)", opacity: 1, offset: 0.5 },
+        { transform: "translate(-50%, -50%) scale(1.8) rotate(0deg)", opacity: 1 }
+      ],
+      { duration: 700, delay: 1100, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 2400);
+  }
+
+  // Confetti spawner — used by K.O. cinematic and victory screen.
+  function spawnConfetti(layer, count) {
+    if (!layer) return;
+    const emojis = ["🎉","🎊","⭐","🌟","✨","💫","🎈","🌈"];
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement("div");
+      piece.className = "confetti-piece";
+      piece.textContent = emojis[(Math.random()*emojis.length)|0];
+      piece.style.left = (Math.random()*100) + "%";
+      piece.style.fontSize = (18 + Math.random()*22) + "px";
+      piece.style.animationDuration = (2 + Math.random()*2) + "s";
+      piece.style.animationDelay = (Math.random()*0.6) + "s";
+      layer.appendChild(piece);
+    }
+  }
+
   // -------- RANDOM POP-IN EVENTS (fairy / bomb / thief) --------
   // Each shows in a modal overlay. Caller passes `onResolve(effect)` where
   // effect is whatever the event decided to do.
@@ -1691,7 +1841,8 @@ window.UI = (() => {
       ? `<div style="height:200px; max-width:340px; margin: 8px auto;">${Monsters.renderBossSVG(winner.monster)}</div>
          <div style="color:var(--accent); font-size:18px; font-weight:900;">${escapeHTML(winner.monster.name_jp)}</div>` : "";
     s.appendChild(el(`
-      <div class="center" style="margin-top:6vh;">
+      <div class="center" style="margin-top:6vh; position:relative;">
+        <div class="confetti-layer" id="vc-confetti" style="position:absolute; inset:0;"></div>
         <h1 class="pop">${title} 🎉</h1>
         <div style="font-size:100px;" class="bob">🏆</div>
         ${winnerMonster}
@@ -1704,6 +1855,7 @@ window.UI = (() => {
           <button class="btn ghost" id="title">${JP.back_to_title}</button>
         </div>
       </div>`));
+    spawnConfetti(s.querySelector("#vc-confetti"), 30);
     // Theme picks: PvP → champion's monster theme; hero → defeated boss's theme.
     const themeId = (mode === "pvp" && winner && winner.monster) ? winner.monster.id
                   : (boss && boss.id) ? boss.id : null;
@@ -1760,6 +1912,7 @@ window.UI = (() => {
   // -------- HEADER (boss + players) --------
   function buildHeader(boss, players, currentPlayer) {
     const svg = boss ? Monsters.renderBossSVG(boss) : "";
+    const ragedClass = boss && boss.raged ? " raged" : "";
     const playerTiles = (players||[]).map(p => `
       <div class="player ${currentPlayer && p.id===currentPlayer.id?'active':''} ${p.dead?'dead':''}">
         <div class="name">${escapeHTML(p.name)}</div>
@@ -1768,8 +1921,8 @@ window.UI = (() => {
       </div>`).join("");
     return `
       <div class="header-wrap">
-        <div class="round-banner">${boss ? `${boss.name_jp}` : ""}</div>
-        <div class="stage">${svg}</div>
+        <div class="round-banner">${boss ? `${boss.name_jp}${boss.raged?' 😡':''}` : ""}</div>
+        <div class="stage${ragedClass}">${svg}</div>
         <div class="boss-name">${boss ? boss.name_jp : ""}</div>
         <div class="players">${playerTiles}</div>
       </div>
@@ -1831,5 +1984,6 @@ window.UI = (() => {
            renderFairyEvent, renderBombEvent, renderThiefEvent,
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
            renderBossIntro, showSlingshot, showBossAttackAnim,
-           renderMonsterPick, renderPvpAction, showRareEventIntro };
+           renderMonsterPick, renderPvpAction, showRareEventIntro,
+           showRoundIntro, showRageIntro, showKO, spawnConfetti };
 })();
