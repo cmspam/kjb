@@ -90,9 +90,15 @@ window.UI = (() => {
 
   // -------- SPEECH CHALLENGE (pronunciation) --------
   // Shows a modal asking the kid to pronounce `word`, calls SND.recognizeOnce,
-  // displays the result for a beat, then calls onDone(result). On unsupported
-  // browsers, immediately calls onDone with ok:false and no UI flash so the
-  // caller can suppress the bonus button before this runs.
+  // displays the result. Up to MAX_ATTEMPTS tries — on miss/timeout/no-speech
+  // the kid sees a "もういちど" retry button. On success or when they hit the
+  // attempt cap (or skip), calls onDone(result).
+  //
+  // Status flips in three stages so the kid knows what's happening:
+  //   "じゅんびちゅう…" while waiting for the mic permission
+  //   "🎤 きいてるよ！" once recognizeOnce.onListening() fires (mic actually capturing)
+  //   final result message after recognition resolves.
+  const MAX_SPEECH_ATTEMPTS = 3;
   function runSpeechChallenge(word, onDone) {
     const overlay = document.createElement("div");
     overlay.className = "speech-overlay";
@@ -100,10 +106,17 @@ window.UI = (() => {
       <div class="speech-card">
         <div class="speech-prompt">🎤 マイクで…</div>
         <div class="speech-word">「${escapeHTML(word)}」</div>
-        <div class="speech-status" id="sp-status">きいてるよ…</div>
+        <div class="speech-status" id="sp-status">じゅんびちゅう…</div>
+        <div class="speech-attempts" id="sp-attempts" style="font-size:13px;color:#aaa;margin-top:4px;"></div>
+        <div id="sp-buttons" style="display:none; gap:10px; justify-content:center; margin-top:14px; flex-wrap:wrap;">
+          <button class="btn good" id="sp-retry">🔄 もういちど</button>
+          <button class="btn ghost" id="sp-skip">スキップ</button>
+        </div>
       </div>`;
     document.body.appendChild(overlay);
-    const status = overlay.querySelector("#sp-status");
+    const status   = overlay.querySelector("#sp-status");
+    const attemptsEl = overlay.querySelector("#sp-attempts");
+    const buttons  = overlay.querySelector("#sp-buttons");
     overlay.querySelector(".speech-card").animate(
       [
         { transform: "scale(0.6) translateY(20px)", opacity: 0 },
@@ -111,22 +124,72 @@ window.UI = (() => {
       ],
       { duration: 250, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
     );
-    SND.recognizeOnce(word, { timeoutMs: 5000 }).then(result => {
-      if (result.ok) {
-        status.textContent = "✨ ナイス はつおん！ +2 ダメ";
-        status.style.color = "#4ade80";
-      } else if (result.reason === "timeout" || result.reason === "no-speech") {
-        status.textContent = "🤔 きこえなかった…";
+
+    let attempts  = 0;
+    let lastResult = null;
+
+    const close = (result) => {
+      overlay.remove();
+      if (onDone) onDone(result || { ok: false, reason: "skipped" });
+    };
+    const showRetry = () => { buttons.style.display = "flex"; };
+    const hideRetry = () => { buttons.style.display = "none"; };
+
+    function attempt() {
+      attempts++;
+      hideRetry();
+      status.textContent = "じゅんびちゅう…";
+      status.style.color = "#fff";
+      attemptsEl.textContent = `(${attempts} / ${MAX_SPEECH_ATTEMPTS} かいめ)`;
+
+      SND.recognizeOnce(word, {
+        startupTimeoutMs: 15000,
+        timeoutMs: 6000,
+        onListening: () => {
+          status.textContent = "🎤 きいてるよ！";
+          status.style.color = "#7ff0a0";
+        },
+      }).then((result) => {
+        lastResult = result;
+        if (result.ok) {
+          status.textContent = "✨ ナイス はつおん！ +2 ダメ";
+          status.style.color = "#4ade80";
+          attemptsEl.textContent = "";
+          setTimeout(() => close(result), 1300);
+          return;
+        }
+        // failure — message + maybe retry
+        let msg;
+        switch (result.reason) {
+          case "timeout":
+          case "no-speech":         msg = "🤔 きこえなかった…"; break;
+          case "startup_timeout":   msg = "🎤 マイクが はじまらない"; break;
+          case "not-allowed":
+          case "service-not-allowed": msg = "🎤 マイクの ゆるしを ON に してね"; break;
+          case "unsupported":
+          case "init_failed":       msg = "🤷 この ブラウザは つかえない"; break;
+          default:                  msg = "😅 ちがう…"; break;
+        }
+        status.textContent = msg;
         status.style.color = "#fde0c0";
-      } else if (result.reason === "not-allowed" || result.reason === "service-not-allowed") {
-        status.textContent = "🎤 マイクの ゆるしを ON に してね";
-        status.style.color = "#fde0c0";
-      } else {
-        status.textContent = "😅 もういちど！";
-        status.style.color = "#fde0c0";
-      }
-      setTimeout(() => { overlay.remove(); if (onDone) onDone(result); }, 1300);
-    });
+        // No retry on permission-denied / unsupported — pointless
+        const canRetry = attempts < MAX_SPEECH_ATTEMPTS &&
+                         result.reason !== "not-allowed" &&
+                         result.reason !== "service-not-allowed" &&
+                         result.reason !== "unsupported" &&
+                         result.reason !== "init_failed";
+        if (canRetry) {
+          showRetry();
+        } else {
+          attemptsEl.textContent = "";
+          setTimeout(() => close(result), 1500);
+        }
+      });
+    }
+
+    overlay.querySelector("#sp-retry").addEventListener("click", () => attempt());
+    overlay.querySelector("#sp-skip").addEventListener("click",  () => close(lastResult));
+    attempt();
   }
 
   // Generic menu modal — N options stacked vertically. Used for the pause menu

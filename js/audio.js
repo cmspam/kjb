@@ -408,6 +408,18 @@ window.SND = (() => {
 
   // Listen for one utterance and return whether the kid said `targetWord`.
   // Resolves with { ok, reason?, alts?, matched? }. Never rejects.
+  //
+  // Two timers:
+  //   • startupTimer: covers the permission prompt + mic startup. Long
+  //     (default 15s) so a kid who's slow to grant mic access still gets to
+  //     speak. Cleared on onaudiostart.
+  //   • speechTimer: only starts AFTER the mic is actually capturing
+  //     (onaudiostart event). Default 6s. This is the bug fix — the previous
+  //     version started a 5s timer at r.start() time, so the permission
+  //     prompt ate most of the window before any audio was captured.
+  //
+  // opts.onListening(): callback fired when the mic is actually live, so the
+  // UI can flip from "じゅんびちゅう" → "🎤 きいてるよ" at the right moment.
   function recognizeOnce(targetWord, opts={}) {
     return new Promise(resolve => {
       if (!SR_CTOR) return resolve({ ok: false, reason: "unsupported" });
@@ -417,17 +429,40 @@ window.SND = (() => {
       r.maxAlternatives = 5;
       r.interimResults = false;
       r.continuous = false;
+
       let done = false;
-      const cleanup = () => { try { r.onresult = r.onerror = r.onend = null; } catch(_){} };
+      let speechTimer = null;
+      let startupTimer = null;
+
+      const cleanup = () => { try { r.onresult = r.onerror = r.onend = r.onstart = r.onaudiostart = r.onspeechend = null; } catch(_){} };
       const finish = (result) => {
         if (done) return;
         done = true;
-        clearTimeout(timer);
+        if (speechTimer)  { clearTimeout(speechTimer);  speechTimer = null; }
+        if (startupTimer) { clearTimeout(startupTimer); startupTimer = null; }
         cleanup();
         try { r.stop(); } catch(_){}
         resolve(result);
       };
-      const timer = setTimeout(() => finish({ ok: false, reason: "timeout" }), opts.timeoutMs || 5000);
+
+      startupTimer = setTimeout(
+        () => finish({ ok: false, reason: "startup_timeout" }),
+        opts.startupTimeoutMs || 15000
+      );
+
+      r.onaudiostart = () => {
+        // Mic is now capturing — the user has granted permission and the
+        // speech window genuinely begins now.
+        if (startupTimer) { clearTimeout(startupTimer); startupTimer = null; }
+        if (typeof opts.onListening === "function") {
+          try { opts.onListening(); } catch(_){}
+        }
+        speechTimer = setTimeout(
+          () => finish({ ok: false, reason: "timeout" }),
+          opts.timeoutMs || 6000
+        );
+      };
+
       r.onresult = (e) => {
         const target = (targetWord||"").toLowerCase().trim();
         const tWords = target.split(/\s+/);
@@ -445,6 +480,7 @@ window.SND = (() => {
       };
       r.onerror = (e) => finish({ ok: false, reason: (e && e.error) || "error" });
       r.onend = () => { /* finish() handles termination */ };
+
       try { r.start(); } catch(e) { finish({ ok: false, reason: "start_failed" }); }
     });
   }
