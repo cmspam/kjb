@@ -43,12 +43,17 @@
   function vocabBundle(list, ptype) {
     const ens = list.map(x=>x[0]); const jps = list.map(x=>x[1]);
     list.forEach(([en, jp, emoji]) => {
+      // Advanced L3 vocab (jobs/nature/transport/etc.) is genuinely harder than
+      // L2's basic words but used to share the same ★1 slot, making L3 feel
+      // identical to L2 at low difficulty. Promoted to ★2 — kids who pick ★1
+      // in L3 now get the L3-flavored grammar below instead of more flashcards.
       let m = mc(en, ens);
-      Q({ stars:1, ptype:ptype+"_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+      Q({ stars:2, ptype:ptype+"_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
       m = mc(jp, jps);
-      Q({ stars:1, ptype:ptype+"_en2jp", prompt_jp:`「${en}」の いみは？`, prompt: en, options: m.opts, answer: m.pos, audio:en });
+      Q({ stars:2, ptype:ptype+"_en2jp", prompt_jp:`「${en}」の いみは？`, prompt: en, options: m.opts, answer: m.pos, audio:en });
+      // Picture → EN with audio scaffold (kid hears word while seeing emoji)
       m = mc(en, ens);
-      Q({ stars:2, ptype:ptype+"_pic", prompt_jp:`これは えいごで？`, promptImage: emoji, options: m.opts, answer: m.pos });
+      Q({ stars:2, ptype:ptype+"_pic", prompt_jp:`これは えいごで？ 🔊`, promptImage: emoji, audio: en, options: m.opts, answer: m.pos });
     });
   }
   vocabBundle(jobs, "job");
@@ -56,6 +61,73 @@
   vocabBundle(nature, "nature");
   vocabBundle(houseStuff, "house");
   vocabBundle(transport, "trans");
+
+  // ========= ★1 L3-FLAVORED GRAMMAR (lightweight Eiken 4 patterns) =========
+  // These exist so ★1 in L3 isn't pure vocab translation. They're real L3
+  // grammar (past/future/modals/time) but kept short and high-frequency so
+  // they sit as the ★1 entry point into Eiken 4.
+
+  // ★1 simple past — most common irregular verbs (recognition, not production)
+  const easyPast = [
+    ["I ___ pizza for dinner.","ate",["eat","ate","eaten","eats"]],
+    ["She ___ to school.","went",["go","went","goes","gone"]],
+    ["He ___ his homework.","did",["do","did","does","done"]],
+    ["We ___ a movie.","saw",["see","saw","seen","sees"]],
+    ["I ___ tired yesterday.","was",["am","is","was","were"]],
+    ["They ___ at home.","were",["was","were","is","are"]],
+    ["I ___ a new book.","read",["read","reads","reading","readed"]],
+    ["She ___ a cake.","made",["make","made","makes","maked"]],
+    ["The dog ___ fast.","ran",["run","ran","runs","running"]],
+    ["I ___ to bed late.","went",["go","went","goes","going"]],
+  ];
+  easyPast.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"past_easy", prompt_jp:"きのうの こと (かこけい)", prompt:s, options: m.opts, answer: m.pos,
+        explain: "yesterday や last night は かこけい。go→went, eat→ate, do→did, see→saw, am/is→was, are→were" });
+  });
+
+  // ★1 basic future "will"
+  const easyFuture = [
+    ["I ___ go tomorrow.","will",["will","do","is","am"]],
+    ["She ___ visit Kyoto next week.","will",["will","does","is","do"]],
+    ["We ___ play soccer tomorrow.","will",["will","do","are","were"]],
+    ["I ___ be a doctor someday.","will",["will","do","is","be"]],
+    ["What ___ you do tomorrow?","will",["will","is","do","does"]],
+    ["It ___ rain tomorrow.","will",["will","is","does","do"]],
+  ];
+  easyFuture.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"future_easy", prompt_jp:"あした の こと (みらい)", prompt:s, options: m.opts, answer: m.pos,
+        explain: "tomorrow / next … みらいの ことは will + どうし" });
+  });
+
+  // ★1 basic should / shouldn't (with strong context cues)
+  const easyShould = [
+    ["You ___ eat vegetables. (したほうが いい)","should",["should","shouldn't","can","can't"]],
+    ["You ___ run inside. (してはダメ)","shouldn't",["should","shouldn't","can","can't"]],
+    ["You ___ help your mom.","should",["should","shouldn't","can","can't"]],
+    ["We ___ be late.","shouldn't",["should","shouldn't","can","can't"]],
+    ["You ___ wash your hands.","should",["should","shouldn't","can","can't"]],
+    ["You ___ talk in the library.","shouldn't",["should","shouldn't","can","can't"]],
+  ];
+  easyShould.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"should_easy", prompt_jp:"should / shouldn't?", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★1 yesterday / today / tomorrow recognition
+  const easyTime = [
+    ["I'm eating ___. (いま)","today",["today","tomorrow","yesterday","tonight"]],
+    ["I went home ___. (きのう)","yesterday",["today","tomorrow","yesterday","tonight"]],
+    ["I will go ___. (あした)","tomorrow",["today","tomorrow","yesterday","tonight"]],
+    ["I'll see you ___ night.","tonight",["today","tomorrow","yesterday","tonight"]],
+    ["I had pizza ___ night. (ゆうべ)","last",["last","next","this","every"]],
+    ["See you ___ week. (らいしゅう)","next",["last","next","this","every"]],
+  ];
+  easyTime.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"time_easy", prompt_jp:"じかんの ことば", prompt:s, options: m.opts, answer: m.pos });
+  });
 
   // ========= PAST TENSE =========
   const pastReg = [

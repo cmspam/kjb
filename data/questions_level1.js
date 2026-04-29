@@ -24,17 +24,10 @@
     return { opts, pos };
   }
 
-  // ---- 1★ Uppercase recognition (visual): see "B", tap among 4 letters ----
-  L.forEach((letter) => {
-    const m = withInsert(letter, pickDistract(letter, L));
-    Q({ stars:1, ptype:"alpha_upper", prompt_jp:`おなじ もじを タップ！`, prompt:letter, options: m.opts, answer: m.pos });
-  });
-
-  // ---- 1★ Lowercase recognition ----
-  l.forEach((letter) => {
-    const m = withInsert(letter, pickDistract(letter, l));
-    Q({ stars:1, ptype:"alpha_lower", prompt_jp:`おなじ もじを タップ！`, prompt:letter, options: m.opts, answer: m.pos });
-  });
+  // (Removed: same-letter pattern-match generators "alpha_upper" / "alpha_lower".
+  // Showing "G" and asking the kid to tap "G" tests visual matching, not English.
+  // Letter recognition at this level is driven entirely by audio — see
+  // alpha_listen / alpha_listen_lo below.)
 
   // ---- 1★ Listen → letter (TTS) — heavy listening practice ----
   L.forEach((letter) => {
@@ -69,9 +62,12 @@
   });
 
   // ---- 2★ Show picture, pick English word ----
+  // audio:en is critical — at L1 a kid choosing among 4 unfamiliar English
+  // strings would be guessing. Hearing the word while seeing the emoji turns
+  // this into reading-with-scaffolding rather than pure spelling recognition.
   pics.forEach(([emoji, en]) => {
     const m = withInsert(en, pickDistract(en, allEN));
-    Q({ stars:2, ptype:"vocab_pic2en", prompt_jp:`これは えいごで なに？`, promptImage: emoji, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"vocab_pic2en", prompt_jp:`これは えいごで なに？ 🔊`, promptImage: emoji, audio: en, options: m.opts, answer: m.pos });
   });
 
   // ---- 2★ See English word, tap picture ----
@@ -158,13 +154,13 @@
     Q({ stars:2, ptype:"num_jp2en", prompt_jp:`「${n}」は えいごで？`, prompt: n, options: m.opts, answer: m.pos });
   });
 
-  // ---- 2★ Colors picture → English ----
+  // ---- 2★ Colors picture → English (with audio scaffold) ----
   const colors = [["🔴","red","あか"],["🔵","blue","あお"],["🟡","yellow","きいろ"],["🟢","green","みどり"],
                   ["🟣","purple","むらさき"],["🟠","orange","オレンジ"],["⚫","black","くろ"],["⚪","white","しろ"],
                   ["🟤","brown","ちゃいろ"],["🩷","pink","ピンク"]];
   colors.forEach(([emoji, en, jp]) => {
     const m = withInsert(en, pickDistract(en, colors.map(c=>c[1])));
-    Q({ stars:2, ptype:"color_pic2en", prompt_jp:`この いろは えいごで？`, promptImage: emoji, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"color_pic2en", prompt_jp:`この いろは えいごで？ 🔊`, promptImage: emoji, audio: en, options: m.opts, answer: m.pos });
   });
   // 1★ Color listen
   colors.forEach(([emoji, en, jp]) => {
@@ -181,7 +177,7 @@
   ];
   body.forEach(([en, jp, emoji]) => {
     const m = withInsert(en, pickDistract(en, body.map(b=>b[0])));
-    Q({ stars:2, ptype:"body_pic2en", prompt_jp:`これは えいごで？`, promptImage: emoji, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"body_pic2en", prompt_jp:`これは えいごで？ 🔊`, promptImage: emoji, audio: en, options: m.opts, answer: m.pos });
   });
   body.forEach(([en, jp, emoji]) => {
     const m = withInsert(emoji, pickDistract(emoji, body.map(b=>b[2])));
@@ -200,7 +196,7 @@
   });
   verbs.forEach(([en, jp, emoji]) => {
     const m = withInsert(en, pickDistract(en, verbs.map(v=>v[0])));
-    Q({ stars:2, ptype:"verb_pic2en", prompt_jp:`この どうさは えいごで？`, promptImage: emoji, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"verb_pic2en", prompt_jp:`この どうさは えいごで？ 🔊`, promptImage: emoji, audio: en, options: m.opts, answer: m.pos });
   });
 
   // ---- 1★ Greetings listen ----

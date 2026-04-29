@@ -73,9 +73,10 @@
       // EN → JP
       m = mc(jp, jps);
       Q({ stars: 1, ptype: ptype+"_en2jp", prompt_jp:`「${en}」の にほんごは？`, prompt: en, options: m.opts, answer: m.pos, audio: en });
-      // Picture → EN
+      // Picture → EN (audio scaffold so the kid hears the target word; otherwise
+      // it's pure spelling-recognition among 4 unfamiliar strings)
       m = mc(en, ens);
-      Q({ stars: 2, ptype: ptype+"_pic2en", prompt_jp:`これは えいごで？`, promptImage: emoji, options: m.opts, answer: m.pos });
+      Q({ stars: 2, ptype: ptype+"_pic2en", prompt_jp:`これは えいごで？ 🔊`, promptImage: emoji, audio: en, options: m.opts, answer: m.pos });
     });
   }
   vocabBundle(animals, "animal");
@@ -631,7 +632,7 @@
     m = mc(jp, subjects.map(s=>s[1]));
     Q({ stars:1, ptype:"subj_en2jp", prompt_jp:`「${en}」の いみ は？`, prompt:en, audio:en, options: m.opts, answer: m.pos });
     m = mc(en, subjects.map(s=>s[0]));
-    Q({ stars:2, ptype:"subj_pic", prompt_jp:`これは えいごで？`, promptImage: emoji, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"subj_pic", prompt_jp:`これは えいごで？ 🔊`, promptImage: emoji, audio: en, options: m.opts, answer: m.pos });
   });
 
   // Daily routine words

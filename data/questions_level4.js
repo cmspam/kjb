@@ -61,13 +61,80 @@
     ["forever","ずっと"],["actually","じっさい"],["finally","ついに"],["recently","さいきん"],
     ["probably","たぶん"],["certainly","たしかに"],["already","すでに"],["instead","かわりに"],
   ];
+  // Eiken 3 vocab is genuinely advanced; ★1 used to be 100% these flashcards,
+  // making L4's low-difficulty experience indistinguishable from L3's. Promoted
+  // to ★2 so ★1 can be the L4-flavored grammar/idioms below.
   vocab.forEach(([en, jp]) => {
     let m = mc(en, vocab.map(v=>v[0]));
-    Q({ stars:1, ptype:"vocab_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"vocab_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
     m = mc(jp, vocab.map(v=>v[1]));
-    Q({ stars:1, ptype:"vocab_en2jp", prompt_jp:`「${en}」の いみは？`, prompt: en, audio: en, options: m.opts, answer: m.pos });
+    Q({ stars:2, ptype:"vocab_en2jp", prompt_jp:`「${en}」の いみは？`, prompt: en, audio: en, options: m.opts, answer: m.pos });
     m = mc(en, vocab.map(v=>v[0]));
     Q({ stars:2, ptype:"vocab_listen", prompt_jp:"きこえた えいたんは？ 🔊", audio: en, options: m.opts, answer: m.pos });
+  });
+
+  // ========= ★1 L4-FLAVORED GRAMMAR (entry-level Eiken 3 patterns) =========
+  // High-frequency Eiken-3-grade structures that are stable enough to live
+  // at ★1 — present perfect basics, infinitive vs gerund recognition, basic
+  // modals, common phrasal patterns. These give ★1 in L4 a real Eiken 3
+  // texture instead of pure vocab translation.
+
+  // ★1 Present perfect basics (have/has + past participle, simple form)
+  const easyPerfect = [
+    ["I ___ been to Hokkaido.","have",["have","has","had","having"]],
+    ["She ___ already finished her homework.","has",["have","has","had","is"]],
+    ["We ___ lived here for ten years.","have",["have","has","had","were"]],
+    ["He ___ never seen snow.","has",["have","has","had","is"]],
+    ["___ you ever eaten sushi?","Have",["Have","Has","Did","Were"]],
+    ["I ___ just arrived.","have",["have","has","had","am"]],
+  ];
+  easyPerfect.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"perfect_easy", prompt_jp:"げんざい かんりょう (have/has)", prompt:s, options: m.opts, answer: m.pos,
+        explain: "I/you/we/they → have / he/she/it → has。けいけん や じょうたい を あらわす" });
+  });
+
+  // ★1 Infinitive vs gerund — only the most common patterns
+  const easyInfGer = [
+    ["I want ___ a doctor.","to be",["being","to be","be","is"]],
+    ["She enjoys ___ books.","reading",["read","reading","to read","reads"]],
+    ["I decided ___ harder.","to study",["study","studying","to study","studied"]],
+    ["He likes ___ video games.","playing",["play","playing","to play","plays"]],
+    ["I'd like ___ some water.","to have",["having","to have","have","had"]],
+    ["She is good at ___ piano.","playing",["play","playing","to play","plays"]],
+  ];
+  easyInfGer.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"infger_easy", prompt_jp:"to + どうし か どうし-ing", prompt:s, options: m.opts, answer: m.pos,
+        explain: "want/decide/like/'d like/hope は to+どうし。enjoy/finish/be good at は どうし-ing" });
+  });
+
+  // ★1 Common modals (must / should / could)
+  const easyModal = [
+    ["You ___ wear a helmet.","should",["should","would","could","might"]],
+    ["___ you pass me the salt?","Could",["Could","Should","Did","Was"]],
+    ["He ___ be at home — the lights are on.","must",["must","should","may","could"]],
+    ["You ___ try this cake!","should",["should","would","could","might"]],
+    ["I ___ help you tomorrow.","could",["could","would","should","must"]],
+    ["You ___ not run inside.","must",["must","could","should","would"]],
+  ];
+  easyModal.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"modal_easy", prompt_jp:"モーダル どうし", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★1 Common idioms (look forward to / be good at / etc.)
+  const easyIdiom = [
+    ["I'm looking ___ to seeing you.","forward",["forward","backward","up","down"]],
+    ["She is afraid ___ dogs.","of",["of","at","in","on"]],
+    ["He is good ___ English.","at",["at","in","on","with"]],
+    ["I'm interested ___ Japanese culture.","in",["in","on","at","with"]],
+    ["Take ___ of yourself!","care",["care","look","time","place"]],
+    ["I'm tired ___ studying.","of",["of","at","in","with"]],
+  ];
+  easyIdiom.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"idiom_easy", prompt_jp:"イディオム / じゅくご", prompt:s, options: m.opts, answer: m.pos });
   });
 
   // ===== SENTENCE COMPLETION (Section 1 style) =====
