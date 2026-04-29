@@ -454,14 +454,20 @@ window.Game = (() => {
           const num = document.createElement("div");
           num.className = "dmg-num"; num.textContent = "-" + dmg;
           stage.appendChild(num);
-          setTimeout(() => num.remove(), 1800);
+          setTimeout(() => num.remove(), 1100);
+          // Hold the monster's reaction until the damage number has floated up and out
+          // (otherwise the dmg-num overlays the speech bubble at the same y-band).
           const hits = opponent.monster.hits || [];
           if (hits.length) {
-            const bubble = document.createElement("div");
-            bubble.className = "hit-bubble pop";
-            bubble.textContent = hits[(Math.random()*hits.length)|0];
-            stage.appendChild(bubble);
-            setTimeout(() => bubble.remove(), 2400);
+            setTimeout(() => {
+              const stageNow = document.querySelector(".stage");
+              if (!stageNow) return;
+              const bubble = document.createElement("div");
+              bubble.className = "hit-bubble pop";
+              bubble.textContent = hits[(Math.random()*hits.length)|0];
+              stageNow.appendChild(bubble);
+              setTimeout(() => bubble.remove(), 2000);
+            }, 1100);
           }
         }
         UI.toast(`${p.name} → ${opponent.name} の ${part.name_jp} に ${dmg} ダメージ！`, 1800);
@@ -480,10 +486,11 @@ window.Game = (() => {
         }
         const winner = checkPvpWinner();
         if (winner) {
-          setTimeout(() => doVictory({ winner }), 2000);
+          setTimeout(() => doVictory({ winner }), 3200);
           return;
         }
-        setTimeout(() => endTurn(), 2200);
+        // Bubble appears at +1100ms with ~2000ms life; hold endTurn so kids can read it.
+        setTimeout(() => endTurn(), 3200);
       };
       if (SND.getSlingshot && SND.getSlingshot()) {
         UI.showSlingshot(opponent.monster, `${opponent.name} ${part.name_jp}`, fire);
@@ -550,15 +557,20 @@ window.Game = (() => {
       const num = document.createElement("div");
       num.className = "dmg-num"; num.textContent = "-" + dmg;
       stage.appendChild(num);
-      setTimeout(() => num.remove(), 1800);
-      // Boss reaction speech bubble
+      setTimeout(() => num.remove(), 1100);
+      // Boss reaction speech bubble — sequenced AFTER the damage number floats away
+      // (both sit near the top of the stage and would otherwise overlap).
       const hits = S.boss.hits || [];
       if (hits.length) {
-        const bubble = document.createElement("div");
-        bubble.className = "hit-bubble pop";
-        bubble.textContent = hits[(Math.random()*hits.length)|0];
-        stage.appendChild(bubble);
-        setTimeout(() => bubble.remove(), 2400);
+        setTimeout(() => {
+          const stageNow = document.querySelector(".stage");
+          if (!stageNow) return;
+          const bubble = document.createElement("div");
+          bubble.className = "hit-bubble pop";
+          bubble.textContent = hits[(Math.random()*hits.length)|0];
+          stageNow.appendChild(bubble);
+          setTimeout(() => bubble.remove(), 2000);
+        }, 1100);
       }
     }
     UI.toast(JP.hit_part(p.name, part.name_jp, dmg), 1800);
@@ -573,8 +585,8 @@ window.Game = (() => {
     // Check win
     const core = S.boss.parts.find(x => x.effect === "win");
     if (core && core.hp <= 0) { return doVictory(); }
-    // Hold the boss's reaction bubble long enough for kids to actually read it before the next screen.
-    setTimeout(() => endTurn(), 2200);
+    // Bubble appears at +1100ms with 2000ms life — hold endTurn so kids read the boss line.
+    setTimeout(() => endTurn(), 3200);
   }
 
   function endTurn() {
