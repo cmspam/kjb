@@ -629,11 +629,14 @@ window.UI = (() => {
       { duration: 400, iterations: 2 }
     );
 
-    // ----- Stage 1: boss charges with phrase + boss theme snippet -----
+    // Boss theme snippet runs the FULL attack — from the WARNING flash all the
+    // way through the attack-name reveal — fading out as the overlay closes.
+    // Total animation is 7200ms; snippet length is 7100ms which includes a 350ms
+    // built-in tail fade, so the music ends right as we tear down the overlay.
+    if (boss && boss.id) SND.playThemeSnippet(boss.id, 7100, 0.4);
+
+    // ----- Stage 1: boss charges with phrase -----
     // Bumped from 1200 → 1700 so the WARNING text gets a real beat to read.
-    // The theme snippet covers the charge → emoji burst → bang window
-    // (~3s, fades out before the final attack-name reveal so dialogue reads cleanly).
-    if (boss && boss.id) SND.playThemeSnippet(boss.id, 3000, 0.45);
     setTimeout(() => {
       overlay.innerHTML = `
         <div class="boss-anim-stage">
