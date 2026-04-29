@@ -296,20 +296,17 @@ window.Monsters = (() => {
   // -------- Boss factories --------
 
   function makeTakoTakoSahur() {
+    const id = "tako";
     const color = "#ff8ec7";
+    const f = window.I18N.boss(id);
+    const pn = f.parts || {};
     return {
-      id: "tako",
-      name_jp: "タコタコ サフール",
-      name_en: "Tako Tako Sahur",
-      catchphrase: "タコ・タコ・サフール！",
-      attacks: [
-        { name: "スミ ブシャー 🐙", phrases: ["スミ たまった…", "くろく そめる！", "視界[しかい] ゼロ〜！"] },
-        { name: "8本足[ほんあし] ラッシュ 🦑", phrases: ["足ぜんぶ で！", "8回 たたく！", "オクトパンチ！"] },
-        { name: "きゅうばん ぺったん 🟣", phrases: ["くっつく！", "はなれない！", "きゅうばん こうげき！"] },
-        { name: "にゅるにゅる ぐるぐる 🌀", phrases: ["にゅるにゅる…", "つかまえる！", "ぐるぐる まきとる！"] },
-        { name: "たこやき ボンバー 🍢", phrases: ["焼[や]きたて！", "あつあつ！", "ぼくの しんせき！"] },
-      ],
-      backstory: "もとは ふつうの たこ焼[や]きの たこだった。\nある日[ひ] だれかが 鉄板[てっぱん]に トレーニング ジュースを こぼし、たこは ぐんぐん 巨大化[きょだいか]！\n8本足[ほんあし]で ぱくぱく 食[た]べると とまらない…\n\n👹 野望[やぼう]：\n世界中[せかいじゅう]の たこ焼[や]き店[てん]を のっとり、すべての 食[た]べ物[もの]を たこ焼[や]きに 変[か]える！\n「ハンバーガーも アイスも たこ焼[や]きじゃ〜！」",
+      id,
+      name_jp: f.name_jp,
+      name_en: f.name_en,
+      catchphrase: f.catchphrase,
+      attacks: f.attacks,
+      backstory: f.backstory,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -327,60 +324,33 @@ window.Monsters = (() => {
         ${blushPair(400, 230, 80)}
       `,
       parts: [
-        { id:"t1", type:"limb", name_jp:"あし1", maxHP:6, hp:6, geom:{x:280,y:300,dir:165,len:130}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
-        { id:"t2", type:"limb", name_jp:"あし2", maxHP:6, hp:6, geom:{x:310,y:330,dir:185,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
-        { id:"t3", type:"limb", name_jp:"あし3", maxHP:6, hp:6, geom:{x:355,y:340,dir:200,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
-        { id:"t4", type:"limb", name_jp:"あし4", maxHP:6, hp:6, geom:{x:445,y:340,dir:340,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
-        { id:"t5", type:"limb", name_jp:"あし5", maxHP:6, hp:6, geom:{x:490,y:330,dir:355,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
-        { id:"t6", type:"limb", name_jp:"あし6", maxHP:6, hp:6, geom:{x:520,y:300,dir:15,len:130}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
-        { id:"eL", type:"eye",  name_jp:"ひだりめ", maxHP:8, hp:8, geom:{x:355,y:175,r:30,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
-        { id:"eR", type:"eye",  name_jp:"みぎめ",  maxHP:8, hp:8, geom:{x:445,y:175,r:30,delay:.4}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
-        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:10, hp:10, geom:{x:400,y:250,w:38,h:18}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
-        { id:"core", type:"core", name_jp:"ハート", maxHP:30, hp:30, geom:{x:400,y:90,r:24}, draw:(p)=>drawCore(p,color), effect:"win" },
+        { id:"t1", type:"limb", name_jp:pn.t1, maxHP:6, hp:6, geom:{x:280,y:300,dir:165,len:130}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"t2", type:"limb", name_jp:pn.t2, maxHP:6, hp:6, geom:{x:310,y:330,dir:185,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"t3", type:"limb", name_jp:pn.t3, maxHP:6, hp:6, geom:{x:355,y:340,dir:200,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"t4", type:"limb", name_jp:pn.t4, maxHP:6, hp:6, geom:{x:445,y:340,dir:340,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"t5", type:"limb", name_jp:pn.t5, maxHP:6, hp:6, geom:{x:490,y:330,dir:355,len:120}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"t6", type:"limb", name_jp:pn.t6, maxHP:6, hp:6, geom:{x:520,y:300,dir:15,len:130}, draw:(p)=>drawTentacle(p,color), effect:"atk-1" },
+        { id:"eL", type:"eye",  name_jp:pn.eL, maxHP:8, hp:8, geom:{x:355,y:175,r:30,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
+        { id:"eR", type:"eye",  name_jp:pn.eR, maxHP:8, hp:8, geom:{x:445,y:175,r:30,delay:.4}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+        { id:"mouth", type:"mouth", name_jp:pn.mouth, maxHP:10, hp:10, geom:{x:400,y:250,w:38,h:18}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"core", type:"core", name_jp:pn.core, maxHP:30, hp:30, geom:{x:400,y:90,r:24}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: [
-        "イタタタ！", "タコパ〜！", "タコ・タコ・タコ〜！", "8本足が ピンチ！",
-        "たこ焼きに しないで〜", "イカと ちがうんだよ！", "スミ かけるよ〜！", "にゅるにゅる〜",
-        "寿司ネタ いやだ！", "お風呂で 赤くなるよ", "ぐにゃぐにゃ〜", "海の おどりて だぞ！",
-        "8本で じゃんけん！", "ピース ピース ピース ✌️", "色 かわるよ〜", "もう 7本足や！",
-        // Brainrot
-        "Tralalero Tralala！", "Bombardiro Tako！", "Tako Tako Sahur！", "Brr Brr タコ！",
-        // Chiikawa-style
-        "ハチワレ〜たすけて〜！", "うさぎ センパイ！", "ちいかわ より つよい？",
-        // Pokemon
-        "ピカチュウ！10まんボルト！", "げっとだぜ！", "タコ ポケモン あるよ", "タコ進化！",
-        // Doraemon
-        "どこでもドア ある？", "タケコプター ほしい〜", "ドラえも〜ん！", "もしもボックス〜！",
-        // Shinchan
-        "オラは タコ〜！", "おもしれ〜！", "ぞうさん！ぞうさん！", "ふんがふんが！",
-        // Anpanman
-        "アンパンマン たすけて！", "ばいきんまん きらい！",
-        // Memes
-        "それな〜", "ぴえん〜", "ぴえん超え ぱおん〜", "やばたん！", "むずすぎ！", "きまずい…",
-        "草 草 草", "うえ〜い！", "もう だめぽ", "8本足 草",
-        // Sounds
-        "ぽよーん！", "ぷにぷに〜", "ぴえぴえ", "ズッコケ〜", "シャキーン！",
-        // Self-deprecating cute
-        "ママ〜！", "兄弟 100ぴき！", "やわらかい から たべないで〜", "おいしそう…？"
-      ]
+      hits: f.hits || []
     };
   }
 
   function makeBombardiroUnkodilo() {
+    const id = "unko";
     const color = "#a87245";
+    const f = window.I18N.boss(id);
+    const pn = f.parts || {};
     return {
-      id: "unko",
-      name_jp: "ボンバルディロ ウンコディロ",
-      name_en: "Bombardiro Unkodilo",
-      catchphrase: "ボンバルディロ・ウンコディロ！",
-      attacks: [
-        { name: "うんこ シューター 💩", phrases: ["うんこ もれる！", "ぷりりりっ！", "茶色[ちゃいろ] シャワー！"] },
-        { name: "ボンバル ボム 💣", phrases: ["カウントダウン！", "3 2 1 ボン！", "ばくはつ！"] },
-        { name: "ワニ がぶり 🐊", phrases: ["がぶっ！", "歯[は]が するどい！", "がぶがぶ！"] },
-        { name: "ロボ アーム ぐわし 🦾", phrases: ["メカ パワー！", "ぐわし！", "つかむぞ！"] },
-        { name: "しっぽ ローリング 🔄", phrases: ["しっぽ ぶんぶん！", "ローリング！", "回転[かいてん] こうげき！"] },
-      ],
-      backstory: "ある プログラマーが ふざけて 作[つく]った ロボワニ。\n中身[なかみ]は ぜんぶ うんち！\n爆発[ばくはつ]と においが ぶき。\nファブリーズが 大[だい]の 苦手[にがて]。\n\n👹 野望[やぼう]：\n世界中[せかいじゅう]の 川[かわ]を ぜんぶ うんちに 変[か]える！\nトイレを「うんち博物館[はくぶつかん]」に 改造[かいぞう]！\n「みんな 茶色[ちゃいろ]が テーマカラーじゃ〜！」",
+      id,
+      name_jp: f.name_jp,
+      name_en: f.name_en,
+      catchphrase: f.catchphrase,
+      attacks: f.attacks,
+      backstory: f.backstory,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -406,59 +376,33 @@ window.Monsters = (() => {
         ${blushPair(400, 270, 80)}
       `,
       parts: [
-        { id:"L1", type:"limb", name_jp:"うで R", maxHP:7, hp:7, geom:{x:560,y:230,dir:0,len:80}, draw:(p)=>drawLeg(p,color,{claw:true}), effect:"atk-1" },
-        { id:"L2", type:"limb", name_jp:"うで L", maxHP:7, hp:7, geom:{x:240,y:230,dir:180,len:80}, draw:(p)=>drawLeg(p,color,{claw:true}), effect:"atk-1" },
-        { id:"L3", type:"limb", name_jp:"あし R", maxHP:7, hp:7, geom:{x:480,y:380,dir:30,len:60}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
-        { id:"L4", type:"limb", name_jp:"あし L", maxHP:7, hp:7, geom:{x:320,y:380,dir:150,len:60}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
-        { id:"ant", type:"special", name_jp:"アンテナ", maxHP:5, hp:5, geom:{x:400,y:100,h:50}, draw:(p)=>drawAntenna(p,color), effect:"no-special" },
-        { id:"eR", type:"eye",  name_jp:"みぎめ",  maxHP:8, hp:8, geom:{x:445,y:170,r:24,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
-        { id:"eL", type:"eye",  name_jp:"ひだりめ", maxHP:8, hp:8, geom:{x:355,y:170,r:24,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
-        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:10, hp:10, geom:{x:400,y:215,w:48,h:20}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
-        { id:"belly", type:"special", name_jp:"おなか", maxHP:9, hp:9, geom:{x:400,y:300,w:55,h:38}, draw:(p)=>drawBelly(p,color), effect:"weak-spot" },
-        { id:"core", type:"core", name_jp:"コア", maxHP:30, hp:30, geom:{x:400,y:380,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
+        { id:"L1", type:"limb", name_jp:pn.L1, maxHP:7, hp:7, geom:{x:560,y:230,dir:0,len:80}, draw:(p)=>drawLeg(p,color,{claw:true}), effect:"atk-1" },
+        { id:"L2", type:"limb", name_jp:pn.L2, maxHP:7, hp:7, geom:{x:240,y:230,dir:180,len:80}, draw:(p)=>drawLeg(p,color,{claw:true}), effect:"atk-1" },
+        { id:"L3", type:"limb", name_jp:pn.L3, maxHP:7, hp:7, geom:{x:480,y:380,dir:30,len:60}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"L4", type:"limb", name_jp:pn.L4, maxHP:7, hp:7, geom:{x:320,y:380,dir:150,len:60}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"ant", type:"special", name_jp:pn.ant, maxHP:5, hp:5, geom:{x:400,y:100,h:50}, draw:(p)=>drawAntenna(p,color), effect:"no-special" },
+        { id:"eR", type:"eye",  name_jp:pn.eR, maxHP:8, hp:8, geom:{x:445,y:170,r:24,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
+        { id:"eL", type:"eye",  name_jp:pn.eL, maxHP:8, hp:8, geom:{x:355,y:170,r:24,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+        { id:"mouth", type:"mouth", name_jp:pn.mouth, maxHP:10, hp:10, geom:{x:400,y:215,w:48,h:20}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"belly", type:"special", name_jp:pn.belly, maxHP:9, hp:9, geom:{x:400,y:300,w:55,h:38}, draw:(p)=>drawBelly(p,color), effect:"weak-spot" },
+        { id:"core", type:"core", name_jp:pn.core, maxHP:30, hp:30, geom:{x:400,y:380,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: [
-        "ボンバル・ボンバル！", "Bombardiro Crocodilo！", "Bombardiro Unkodilo！", "爆発する〜！",
-        "ロボット なのに〜", "中身 うんこ！", "うんちパワー 100％",
-        "機関車 ぽっぽー！", "走ると ぷりぷり〜", "止まると ぶー", "ぷりぷり マシン",
-        // Pop culture
-        "ガンダムじゃない…", "ドラえも〜ん", "助けてアンパンマン！", "Pikachuu〜！",
-        "うんこドリル No.1！", "ロボット ガッチャマン！", "メカ ゴジラ より つよい！",
-        "ベイマックス〜！", "ロックマン より つよい",
-        // Brainrot
-        "Tralalero Bomba！", "Tung Tung Tung Sahur！", "Brr Brr Bomba！",
-        // Chiikawa
-        "ハチワレ ヘルプ！", "ちいかわ こわい？",
-        // Shinchan
-        "オラの ロボット〜！", "おもしれ〜！", "ぞうさん 攻撃！",
-        // Memes
-        "それな〜", "ぴえん…", "やばたん！", "むずすぎ！", "草 草", "ぴえん超え ぱおん〜",
-        "もう だめぽ", "うえ〜い！", "きまずい…",
-        // Sounds
-        "ガシャーン！", "シャキーン！", "ピコピコ", "ぶり ぶり", "ボッ！",
-        // Robot character
-        "電池 切れる…", "オイル ください", "リサイクル しない？", "アップデート まだ？",
-        // Light toilet humor (some is fine)
-        "ブッ！", "ウンコ もれる〜！", "おなかが いたい！", "ファブリーズ きらい！"
-      ]
+      hits: f.hits || []
     };
   }
 
   function makeTralaleroPakupaku() {
+    const id = "tral";
     const color = "#7cd1ff";
+    const f = window.I18N.boss(id);
+    const pn = f.parts || {};
     return {
-      id: "tral",
-      name_jp: "トラララ パクパク",
-      name_en: "Tralalero Pakupaku",
-      catchphrase: "トラララ・トラララ・パクパク！",
-      attacks: [
-        { name: "パクパク かみつき 🦷", phrases: ["パクッ！", "なんでも たべる！", "がぶがぶ！"] },
-        { name: "トラララ ハイトーン 🎵", phrases: ["♪トラララ〜", "高音[こうおん] ボイス！", "うた こうげき！"] },
-        { name: "ベロ びゅーん 👅", phrases: ["ベロ のばす！", "びゅーん！", "ねばねば〜"] },
-        { name: "オペラ シャウト 🎤", phrases: ["Oh sole mio〜", "ベルカント！", "オペラ パワー！"] },
-        { name: "海[うみ]うずまき 🌊", phrases: ["海[うみ]の力[ちから]！", "うずまき！", "ぐるぐる〜"] },
-      ],
-      backstory: "イタリアから きた さかな・かえる ハイブリッド。\n海中[かいちゅう] コンサートの 最中[さいちゅう] つよい 海流[かいりゅう]に 流[なが]された。\n気[き]づいたら 日本[にほん]に 着[つ]いていた！\nオペラが 得意[とくい]。\n\n👹 野望[やぼう]：\nみんなを むりやり イタリア語[ご]で 歌[うた]わせる！\n日本語[にほんご] きんし！「Tralalero しか みとめん！」\n海[うみ]ぜんぶ パクパク 食[た]べる！",
+      id,
+      name_jp: f.name_jp,
+      name_en: f.name_en,
+      catchphrase: f.catchphrase,
+      attacks: f.attacks,
+      backstory: f.backstory,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -486,57 +430,33 @@ window.Monsters = (() => {
         ${blushPair(440, 260, 70)}
       `,
       parts: [
-        { id:"finT", type:"limb", name_jp:"せびれ", maxHP:6, hp:6, geom:{x:420,y:120,dir:270,len:60}, draw:(p)=>drawLeg(p,color), effect:"slow" },
-        { id:"finL", type:"limb", name_jp:"ひれ L", maxHP:6, hp:6, geom:{x:330,y:280,dir:200,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
-        { id:"finR", type:"limb", name_jp:"ひれ R", maxHP:6, hp:6, geom:{x:510,y:280,dir:340,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
-        { id:"legL", type:"limb", name_jp:"あし L", maxHP:7, hp:7, geom:{x:380,y:355,dir:130,len:70}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
-        { id:"legR", type:"limb", name_jp:"あし R", maxHP:7, hp:7, geom:{x:460,y:355,dir:50,len:70}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
-        { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:380,y:200,r:28,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
-        { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:470,y:200,r:28,delay:.4}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
-        { id:"mouth", type:"mouth", name_jp:"おおきなくち", maxHP:11, hp:11, geom:{x:420,y:280,w:56,h:24}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
-        { id:"tongue", type:"special", name_jp:"べろ", maxHP:6, hp:6, geom:{x:420,y:298,len:70}, draw:(p)=>drawTongue(p,color), effect:"weak-spot" },
-        { id:"core", type:"core", name_jp:"ハート", maxHP:30, hp:30, geom:{x:420,y:235,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
+        { id:"finT", type:"limb", name_jp:pn.finT, maxHP:6, hp:6, geom:{x:420,y:120,dir:270,len:60}, draw:(p)=>drawLeg(p,color), effect:"slow" },
+        { id:"finL", type:"limb", name_jp:pn.finL, maxHP:6, hp:6, geom:{x:330,y:280,dir:200,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"finR", type:"limb", name_jp:pn.finR, maxHP:6, hp:6, geom:{x:510,y:280,dir:340,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"legL", type:"limb", name_jp:pn.legL, maxHP:7, hp:7, geom:{x:380,y:355,dir:130,len:70}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"legR", type:"limb", name_jp:pn.legR, maxHP:7, hp:7, geom:{x:460,y:355,dir:50,len:70}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"eL", type:"eye", name_jp:pn.eL, maxHP:7, hp:7, geom:{x:380,y:200,r:28,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
+        { id:"eR", type:"eye", name_jp:pn.eR, maxHP:7, hp:7, geom:{x:470,y:200,r:28,delay:.4}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
+        { id:"mouth", type:"mouth", name_jp:pn.mouth, maxHP:11, hp:11, geom:{x:420,y:280,w:56,h:24}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"tongue", type:"special", name_jp:pn.tongue, maxHP:6, hp:6, geom:{x:420,y:298,len:70}, draw:(p)=>drawTongue(p,color), effect:"weak-spot" },
+        { id:"core", type:"core", name_jp:pn.core, maxHP:30, hp:30, geom:{x:420,y:235,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: [
-        "Tralalero Tralala！", "Tralalero Pakupaku！", "パク！パク！", "ピチピチ！",
-        "お魚 イタイ！", "寿司ネタ いやだ！", "ハイブリッド だぞ！", "パクパクパクパク！",
-        "ぼく さかな じゃない！", "かえる でもない！", "なんでも パクパク〜", "君も はいる？",
-        // Italian brainrot
-        "Tralalero Tralala！", "Bombardiro Tralala！", "Brr Brr Tralala！", "Tung Tung パクパク！",
-        // Pop culture
-        "ピカチュウ！パクッ！", "ドラえもん〜！", "アンパンマン うましそう…", "ねこ寿司！",
-        "クレヨン しんちゃん！", "オラ的 おさかな！", "ぞうさん 食べたい",
-        // Chiikawa
-        "ちいかわ より デカい！", "ハチワレ ハチワレ〜",
-        // Memes
-        "それな〜", "ぴえん〜", "やばたん！", "むずすぎ！", "草 草 草", "ぴえん超え ぱおん〜",
-        "むりむり！", "うえ〜い！",
-        // Operatic flair (matches name)
-        "Oh mamma mia！", "ベル カント！", "オペラ うた！", "海の カラオケ王",
-        // Self-aware
-        "回転寿司 NO！", "焼き魚も ダメ！", "お刺身 だめだめ！", "歌 うますぎ〜",
-        "1番 ぼく！", "2番も ぼく！", "ファン サイン して〜", "かっこいい？かわいい？",
-        // Sounds
-        "シャキーン！", "ぴょんぴょん", "ぴちぴち", "ぱくり〜"
-      ]
+      hits: f.hits || []
     };
   }
 
   function makeBrrPampamu() {
+    const id = "pamp";
     const color = "#caa6e8";
+    const f = window.I18N.boss(id);
+    const pn = f.parts || {};
     return {
-      id: "pamp",
-      name_jp: "ブルブル パンパム",
-      name_en: "Brr Brr Pampamu",
-      catchphrase: "ブルブル・ブルブル・パンパム！",
-      attacks: [
-        { name: "ふわふわ ハグ 🐑", phrases: ["ぎゅーっ！", "ふわふわ〜", "あったかい！"] },
-        { name: "もこもこ クッション ☁️", phrases: ["もこもこ〜", "ふわっ！", "クッション こうげき！"] },
-        { name: "ぬいぐるみ さくれつ 🧸", phrases: ["わたが まう！", "ふわふわ ふぶき", "さくれつ！"] },
-        { name: "ブルブル じしん 🌀", phrases: ["ぶるぶる！", "ふるえるー！", "じしん パワー！"] },
-        { name: "抱[だ]きまくら うずめ 💗", phrases: ["ぎゅう ぎゅう！", "うずめる！", "はなさない！"] },
-      ],
-      backstory: "もとは こどもの ぬいぐるみだった。\nある日[ひ] すてられて 雨[あめ]に ぬれた…\nふしぎな 力[ちから]で 命[いのち]を 持[も]ってしまった！\nふわふわ かわいいけど、 怒[おこ]ると こわい。\n\n👹 野望[やぼう]：\n世界[せかい]の こども ぜんぶ 自分[じぶん]の コレクションに！\nだっこして はなさない！\n「ふわふわ 国家[こっか]を つくるんじゃ〜！」",
+      id,
+      name_jp: f.name_jp,
+      name_en: f.name_en,
+      catchphrase: f.catchphrase,
+      attacks: f.attacks,
+      backstory: f.backstory,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -563,62 +483,34 @@ window.Monsters = (() => {
         <circle cx="540" cy="385" r="9" fill="#a8d8a0" opacity=".7" stroke="#000" stroke-width="1"/>
       `,
       parts: [
-        { id:"earL", type:"special", name_jp:"つの L", maxHP:5, hp:5, geom:{x:340,y:110,h:40}, draw:(p)=>drawAntenna(p,color), effect:"no-special" },
-        { id:"earR", type:"special", name_jp:"つの R", maxHP:5, hp:5, geom:{x:460,y:110,h:40}, draw:(p)=>drawAntenna(p,color), effect:"no-special" },
-        { id:"armL", type:"limb", name_jp:"うで L", maxHP:6, hp:6, geom:{x:260,y:240,dir:185,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
-        { id:"armR", type:"limb", name_jp:"うで R", maxHP:6, hp:6, geom:{x:540,y:240,dir:355,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
-        { id:"legL", type:"limb", name_jp:"あし L", maxHP:7, hp:7, geom:{x:370,y:380,dir:120,len:55}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
-        { id:"legR", type:"limb", name_jp:"あし R", maxHP:7, hp:7, geom:{x:430,y:380,dir:60,len:55}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
-        { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:370,y:200,r:26,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
-        { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:430,y:200,r:26,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
-        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:9, hp:9, geom:{x:400,y:255,w:32,h:14}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
-        { id:"butt", type:"special", name_jp:"おしり", maxHP:9, hp:9, geom:{x:400,y:340,w:50,h:24}, draw:(p)=>drawBelly(p,color), effect:"weak-spot" },
-        { id:"core", type:"core", name_jp:"ハート", maxHP:30, hp:30, geom:{x:400,y:240,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
+        { id:"earL", type:"special", name_jp:pn.earL, maxHP:5, hp:5, geom:{x:340,y:110,h:40}, draw:(p)=>drawAntenna(p,color), effect:"no-special" },
+        { id:"earR", type:"special", name_jp:pn.earR, maxHP:5, hp:5, geom:{x:460,y:110,h:40}, draw:(p)=>drawAntenna(p,color), effect:"no-special" },
+        { id:"armL", type:"limb", name_jp:pn.armL, maxHP:6, hp:6, geom:{x:260,y:240,dir:185,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"armR", type:"limb", name_jp:pn.armR, maxHP:6, hp:6, geom:{x:540,y:240,dir:355,len:80}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"legL", type:"limb", name_jp:pn.legL, maxHP:7, hp:7, geom:{x:370,y:380,dir:120,len:55}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"legR", type:"limb", name_jp:pn.legR, maxHP:7, hp:7, geom:{x:430,y:380,dir:60,len:55}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        { id:"eL", type:"eye", name_jp:pn.eL, maxHP:7, hp:7, geom:{x:370,y:200,r:26,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
+        { id:"eR", type:"eye", name_jp:pn.eR, maxHP:7, hp:7, geom:{x:430,y:200,r:26,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-40" },
+        { id:"mouth", type:"mouth", name_jp:pn.mouth, maxHP:9, hp:9, geom:{x:400,y:255,w:32,h:14}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"butt", type:"special", name_jp:pn.butt, maxHP:9, hp:9, geom:{x:400,y:340,w:50,h:24}, draw:(p)=>drawBelly(p,color), effect:"weak-spot" },
+        { id:"core", type:"core", name_jp:pn.core, maxHP:30, hp:30, geom:{x:400,y:240,r:22}, draw:(p)=>drawCore(p,color), effect:"win" },
       ],
-      hits: [
-        "Brr Brr Patapim！", "Brr Brr Pampamu！", "ブルブル〜！", "パンパム！",
-        "ふわふわ いたい！", "もこもこ もこもこ！", "けが 抜ける〜", "ぼく もと ぬいぐるみ",
-        "なで なで して〜", "ハグ！ハグ！", "きゅーっと だっこ", "ぶる ぶる ぶる",
-        // Brainrot
-        "Tralalero Pampamu！", "Bombardiro Pampam！", "Brr Brr Brr！", "Tung Tung Pampam！",
-        // Chiikawa (PERFECT for fluffy character)
-        "ちいかわ パンパム！", "ハチワレ〜！", "うさぎ センパイ！", "もきゅ もきゅ",
-        "ちいかわ より ふわふわ！",
-        // Pokemon
-        "ピチュー！", "ピカチュウ ふわふわ！", "ジグザグマ みたい？",
-        // Anpanman
-        "アンパンマン より つよい？", "ジャムおじさん〜！", "バタコさん〜！",
-        // Doraemon
-        "ドラえも〜ん！", "タケコプター ある！", "ねむり マスク〜",
-        // Shinchan
-        "オラは ふわふわ〜！", "ぞうさん もこもこ！", "おもしれ〜！",
-        // Memes
-        "それな〜", "ぴえん〜！", "ぴえん超え ぱおん〜！", "やばたん！", "むずすぎ！", "草 草",
-        "もきゅん", "ばぶみ〜", "うえ〜い！",
-        // Sounds & cuteness
-        "ふわっ！", "もふもふ！", "ぴくぴく", "ぷにぷに〜", "ズッコケ〜",
-        // Self
-        "綿あめ みたい？", "雲みたい？", "雪みたい？", "ママ よんで〜！", "パパ どこ？",
-        "ぼく ぬいぐるみ じゃない！", "おなら でた…", "ばれた？"
-      ]
+      hits: f.hits || []
     };
   }
 
   function makeParfaitIwashi() {
+    const id = "parfait";
     const color = "#a8d4f0";
+    const f = window.I18N.boss(id);
+    const pn = f.parts || {};
     return {
-      id: "parfait",
-      name_jp: "パフェイワシ",
-      name_en: "Parfait Iwashi",
-      catchphrase: "パフェ・パフェ・パフェイワシ！",
-      attacks: [
-        { name: "ホイップ ブラスト 🍦", phrases: ["ホイップ パワー！", "ふわふわ〜", "あまい こうげき！"] },
-        { name: "いちご ばくだん 🍓", phrases: ["いちご とんでけ！", "ぷちぷち！", "あかい ばくだん！"] },
-        { name: "アイス ビーム ❄️", phrases: ["つめたい！", "アイス パワー！", "とけるー"] },
-        { name: "イワシ スプラッシュ 🐟", phrases: ["ピチピチ！", "イワシ シャワー", "おさかな！"] },
-        { name: "カラメル しゅわー 🍮", phrases: ["シュワシュワ", "カラメル！", "あまくて にがい！"] },
-      ],
-      backstory: "ある サラダバー店[てん]。おじいさんは パフェを 食[た]べていた。\nおばあさんは イワシを 食[た]べていた。\n「これ、おいしいよ」「あらそう？」\nふたりが おさらを 取[と]りかえた しゅんかん…\nパフェと イワシが あいしあって ひとつに なった！\n\n👹 野望[やぼう]：\n世界中[せかいじゅう]の 寿司[すし]を パフェに 変[か]える！\n「魚[さかな]は あまく あるべきじゃ〜！」\nスーパーの 食[た]べ物[もの] ぜんぶ ホイップクリーム ぬる！",
+      id,
+      name_jp: f.name_jp,
+      name_en: f.name_en,
+      catchphrase: f.catchphrase,
+      attacks: f.attacks,
+      backstory: f.backstory,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -691,53 +583,31 @@ window.Monsters = (() => {
         ${blushPair(400, 305, 90)}
       `,
       parts: [
-        { id:"cherry", type:"core", name_jp:"さくらんぼ", maxHP:28, hp:28, geom:{x:400,y:120,r:18}, draw:(p)=>drawCherryCore(p,color), effect:"win" },
-        { id:"whip", type:"special", name_jp:"ホイップ", maxHP:8, hp:8, geom:{x:400,y:175,h:30}, draw:(p)=>drawAntenna(p,"#fff"), effect:"weak-spot" },
-        { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:370,y:280,r:22,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
-        { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:430,y:280,r:22,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
-        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:9, hp:9, geom:{x:495,y:300,w:24,h:12}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
-        { id:"finT", type:"limb", name_jp:"せびれ", maxHP:6, hp:6, geom:{x:400,y:240,dir:270,len:50}, draw:(p)=>drawLeg(p,color), effect:"slow" },
-        { id:"finB", type:"limb", name_jp:"はらびれ", maxHP:6, hp:6, geom:{x:380,y:340,dir:90,len:40}, draw:(p)=>drawLeg(p,color), effect:"atk-1" },
-        { id:"tail", type:"limb", name_jp:"しっぽ", maxHP:8, hp:8, geom:{x:240,y:290,dir:180,len:60}, draw:(p)=>drawTail(p,color), effect:"slow" },
+        { id:"cherry", type:"core", name_jp:pn.cherry, maxHP:28, hp:28, geom:{x:400,y:120,r:18}, draw:(p)=>drawCherryCore(p,color), effect:"win" },
+        { id:"whip", type:"special", name_jp:pn.whip, maxHP:8, hp:8, geom:{x:400,y:175,h:30}, draw:(p)=>drawAntenna(p,"#fff"), effect:"weak-spot" },
+        { id:"eL", type:"eye", name_jp:pn.eL, maxHP:7, hp:7, geom:{x:370,y:280,r:22,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
+        { id:"eR", type:"eye", name_jp:pn.eR, maxHP:7, hp:7, geom:{x:430,y:280,r:22,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+        { id:"mouth", type:"mouth", name_jp:pn.mouth, maxHP:9, hp:9, geom:{x:495,y:300,w:24,h:12}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"finT", type:"limb", name_jp:pn.finT, maxHP:6, hp:6, geom:{x:400,y:240,dir:270,len:50}, draw:(p)=>drawLeg(p,color), effect:"slow" },
+        { id:"finB", type:"limb", name_jp:pn.finB, maxHP:6, hp:6, geom:{x:380,y:340,dir:90,len:40}, draw:(p)=>drawLeg(p,color), effect:"atk-1" },
+        { id:"tail", type:"limb", name_jp:pn.tail, maxHP:8, hp:8, geom:{x:240,y:290,dir:180,len:60}, draw:(p)=>drawTail(p,color), effect:"slow" },
       ],
-      hits: [
-        "パフェ・パフェ・パフェイワシ！", "Tralalero パフェ！", "Bombardiro パフェ！", "Brr Brr パフェ！",
-        "うわ〜 ホイップが もれた！", "いちごが おちる〜", "アイス とけちゃう！", "Oh my parfait！",
-        "ぼく スイーツいわし！", "イワシ・スプラッシュ！", "パパパパフェ！", "パフェッ！",
-        // Pop culture
-        "コンビニデザート No.1！", "セブン アイス〜", "ハーゲンダッツ かんじ！", "ピカチュウ パフェ！",
-        "アンパンマンの デザート", "ドラえも〜ん！", "オラは スイーツ〜！", "おもしれ〜！",
-        "ちいかわ パフェ かわいい！", "ハチワレ デザート", "うさぎ パフェ召し上がれ",
-        // Memes
-        "それな〜", "ぴえん〜", "ぴえん超え ぱおん〜", "やばたん！", "むずすぎ！", "草 草 草",
-        "ばぶみ〜", "もきゅ", "うえ〜い！",
-        // Self-deprecating cute
-        "たべないで〜 ぼく ともだち", "イワシは からだに いいんだよ", "カルシウム あるんだよ！",
-        "せかいで 1ぴきだけ", "Hello! ぱふぇいわし です！",
-        // Food jokes
-        "ホイップ ふわふわ〜", "ジャム どばー！", "バニラ えんちょー！", "マカロン ぱりぱり",
-        "カラメル しゅわしゅわ", "かき氷 だってある", "ヨーグルト つるつる",
-        // Sounds
-        "シャキーン！", "ぴちぴち", "とけとけ〜", "つるん"
-      ]
+      hits: f.hits || []
     };
   }
 
   function makeAnpanmaguro() {
+    const id = "anpan";
     const color = "#ffb070";
+    const f = window.I18N.boss(id);
+    const pn = f.parts || {};
     return {
-      id: "anpan",
-      name_jp: "アンパンマグロ",
-      name_en: "Anpan Maguro",
-      catchphrase: "アンパン・アンパン・アンパンマグロ！",
-      attacks: [
-        { name: "アンパンチ 👊", phrases: ["新[あたら]しい 顔[かお]よー！", "アンパンチ！", "正義[せいぎ]の パンチ！"] },
-        { name: "マグロ タックル 🐟", phrases: ["全身[ぜんしん] マグロ！", "ぐいぐい！", "海[うみ]の ちから！"] },
-        { name: "とろ ぐにゃー 🍣", phrases: ["とろ とろ〜", "ぐにゃー", "中[ちゅう]トロ パワー！"] },
-        { name: "ジャム シャワー 🟣", phrases: ["ジャムおじさん〜", "ベタベタ", "あまーい！"] },
-        { name: "アンパン ロケット 🚀", phrases: ["びゅーん！", "顔[かお]から はっしゃ！", "アンパン ロケット！"] },
-      ],
-      backstory: "寿司屋[すしや]と パン屋[や]が となりあう 商店街[しょうてんがい]で…\nある夜[よる]、 店[みせ]の 中[なか]で マグロと アンパンが ぐうぜん 合体[がったい]！\nジャムおじさんも バタコさんも びっくり。\n海[うみ]と 陸[りく]の ヒーロー…の つもり。\n\n👹 野望[やぼう]：\nアンパンマンを たおして 自分[じぶん]が 主役[しゅやく]に なる！\n国旗[こっき]を 自分[じぶん]の 顔[かお]に する！\n「ぼくの 顔[かお]は たべて いいけど アンパンマンの 顔[かお]は ダメ！」",
+      id,
+      name_jp: f.name_jp,
+      name_en: f.name_en,
+      catchphrase: f.catchphrase,
+      attacks: f.attacks,
+      backstory: f.backstory,
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -786,37 +656,17 @@ window.Monsters = (() => {
         ${blushPair(400, 220, 90)}
       `,
       parts: [
-        { id:"nose", type:"core", name_jp:"おはな", maxHP:30, hp:30, geom:{x:400,y:200,r:18}, draw:(p)=>drawNoseCore(p,color), effect:"win" },
-        { id:"eL", type:"eye", name_jp:"ひだりめ", maxHP:7, hp:7, geom:{x:365,y:175,r:14,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
-        { id:"eR", type:"eye", name_jp:"みぎめ", maxHP:7, hp:7, geom:{x:435,y:175,r:14,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
-        { id:"mouth", type:"mouth", name_jp:"くち", maxHP:9, hp:9, geom:{x:400,y:235,w:30,h:14}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
-        { id:"capeL", type:"special", name_jp:"マントL", maxHP:6, hp:6, geom:{x:265,y:300,dir:200,len:60}, draw:(p)=>drawLeg(p,"#ee3344"), effect:"no-special" },
-        { id:"capeR", type:"special", name_jp:"マントR", maxHP:6, hp:6, geom:{x:535,y:300,dir:340,len:60}, draw:(p)=>drawLeg(p,"#ee3344"), effect:"no-special" },
-        { id:"finL", type:"limb", name_jp:"ひれ L", maxHP:7, hp:7, geom:{x:280,y:330,dir:185,len:70}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
-        { id:"finR", type:"limb", name_jp:"ひれ R", maxHP:7, hp:7, geom:{x:520,y:330,dir:355,len:70}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
-        { id:"tail", type:"limb", name_jp:"しっぽ", maxHP:8, hp:8, geom:{x:220,y:310,dir:180,len:60}, draw:(p)=>drawTail(p,"#3060a0"), effect:"slow" },
+        { id:"nose", type:"core", name_jp:pn.nose, maxHP:30, hp:30, geom:{x:400,y:200,r:18}, draw:(p)=>drawNoseCore(p,color), effect:"win" },
+        { id:"eL", type:"eye", name_jp:pn.eL, maxHP:7, hp:7, geom:{x:365,y:175,r:14,delay:0}, draw:(p)=>drawEye(p,color), effect:"miss-50" },
+        { id:"eR", type:"eye", name_jp:pn.eR, maxHP:7, hp:7, geom:{x:435,y:175,r:14,delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+        { id:"mouth", type:"mouth", name_jp:pn.mouth, maxHP:9, hp:9, geom:{x:400,y:235,w:30,h:14}, draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"capeL", type:"special", name_jp:pn.capeL, maxHP:6, hp:6, geom:{x:265,y:300,dir:200,len:60}, draw:(p)=>drawLeg(p,"#ee3344"), effect:"no-special" },
+        { id:"capeR", type:"special", name_jp:pn.capeR, maxHP:6, hp:6, geom:{x:535,y:300,dir:340,len:60}, draw:(p)=>drawLeg(p,"#ee3344"), effect:"no-special" },
+        { id:"finL", type:"limb", name_jp:pn.finL, maxHP:7, hp:7, geom:{x:280,y:330,dir:185,len:70}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"finR", type:"limb", name_jp:pn.finR, maxHP:7, hp:7, geom:{x:520,y:330,dir:355,len:70}, draw:(p)=>drawLeg(p,color,{hand:true}), effect:"atk-1" },
+        { id:"tail", type:"limb", name_jp:pn.tail, maxHP:8, hp:8, geom:{x:220,y:310,dir:180,len:60}, draw:(p)=>drawTail(p,"#3060a0"), effect:"slow" },
       ],
-      hits: [
-        "アンパン・アンパン・アンパンマグロ！", "Tralalero アンパン！", "Bombardiro マグロ！",
-        "ぼくの あたま たべる？", "顔が ちょっと ぬれた…", "ジャムおじさん〜！", "バタコさん〜！",
-        "バイキンマンに きをつけて！", "アンパンチ！", "新しい 顔 ちょうだい〜", "とどけ！愛と勇気！",
-        "元気 100倍！", "へんしん パワー！", "マグロパワー！", "海の英雄！",
-        // Anpanman friends
-        "カレーパンマン！", "しょくぱんマン！", "ドキンちゃん〜", "メロンパンナ〜",
-        "コキンちゃん！", "ロールパンナ！", "チーズ〜！",
-        // Pop culture beyond Anpanman
-        "ピカチュウ マグロ！", "ドラえもん〜！", "オラは アンパン〜！", "おもしれ〜！",
-        "ちいかわ アンパン！", "ハチワレ〜！", "うさぎ マグロ！",
-        // Sushi/food jokes
-        "1巻 ¥500！", "回転寿司 NO！", "とろ部分 すごい", "大トロは 心",
-        "中トロは 顔", "赤身は からだ", "ぼく 全身 マグロ！", "全身 アンパン！",
-        // Memes
-        "それな〜", "ぴえん〜", "ぴえん超え ぱおん〜", "やばたん！", "むずすぎ！", "草 草",
-        "ばぶみ〜", "うえ〜い！",
-        // Self-aware
-        "どっちが ほんと？", "ぼくも しらない！", "Hi I'm anpan maguro!",
-        "Don't eat me!", "海も 陸も ぼくの すみか", "あんこ どばー！"
-      ]
+      hits: f.hits || []
     };
   }
 

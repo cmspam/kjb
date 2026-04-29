@@ -1,5 +1,9 @@
 // Cards. Each card has a play(ctx) function. ctx provides refs to game state.
 // type:"action" cards apply immediately. type:"reaction" needs target.
+//
+// Flavor text (name_jp, text_jp) lives in the locale dictionary under
+// JP.cards[id] and is merged in at byId()/buildDeck() time. The mechanical
+// fields (cost, effect, needsTarget, etc.) stay here.
 window.Cards = (() => {
 
   // Effect type constants used by game.js when resolving plays
@@ -20,22 +24,41 @@ window.Cards = (() => {
     HINT: "hint",                // remove one wrong answer
   };
 
-  const POOL = [
-    { id:"fart_bomb",  name_jp:"おなら ばくだん",   icon:"💨", cost:1, text_jp:"こうげきに +3 ダメージ！",     effect:{type:C.DMG_BONUS, v:3},    needsTarget:false, attackMod:true },
-    { id:"mega_punch", name_jp:"メガ パンチ",       icon:"👊", cost:2, text_jp:"こうげきに +5 ダメージ！",     effect:{type:C.DMG_BONUS, v:5},    needsTarget:false, attackMod:true },
-    { id:"unko_shield",name_jp:"ウンコ シールド",   icon:"🛡️", cost:1, text_jp:"つぎの ボスこうげきを ブロック！", effect:{type:C.SHIELD_SELF},        needsTarget:false },
-    { id:"team_shield",name_jp:"チーム シールド",   icon:"✨", cost:2, text_jp:"みんな つぎの こうげきを ブロック！", effect:{type:C.SHIELD_TEAM},     needsTarget:false },
-    { id:"heal",       name_jp:"バナナ かいふく",   icon:"🍌", cost:1, text_jp:"なかまの HP を 5 かいふく！",  effect:{type:C.HEAL_TARGET, v:5}, needsTarget:true, targetType:"player" },
-    { id:"team_heal",  name_jp:"おなら きゅういん",  icon:"🌬️", cost:2, text_jp:"みんなの HP を 3 かいふく！",  effect:{type:C.HEAL_TEAM, v:3},   needsTarget:false },
-    { id:"energy",     name_jp:"エナジードリンク",   icon:"🥤", cost:0, text_jp:"エナジー +2！",                effect:{type:C.ENERGY, v:2},      needsTarget:false },
-    { id:"draw_two",   name_jp:"カードドロー",       icon:"🎴", cost:1, text_jp:"カードを 2まい ひく！",        effect:{type:C.DRAW, v:2},        needsTarget:false },
-    { id:"combo",      name_jp:"チーム コンボ！",    icon:"🔥", cost:1, text_jp:"つぎの なかまの こうげきが ×2！", effect:{type:C.DOUBLE_NEXT},     needsTarget:false },
-    { id:"spread",     name_jp:"ベロ ビーム",       icon:"👅", cost:2, text_jp:"ランダムな パーツに 2ダメ ×2！", effect:{type:C.HIT_RANDOM_2, v:2},  needsTarget:false, attackMod:false },
-    { id:"reveal",     name_jp:"スパイ チェック",   icon:"🔍", cost:1, text_jp:"だれかの ロールを みる！",       effect:{type:C.REVEAL_ROLE},      needsTarget:true, targetType:"player" },
-    { id:"escape",     name_jp:"にげる！",           icon:"🏃", cost:1, text_jp:"つぎの ボスこうげきを かわす！", effect:{type:C.SKIP_BOSS_ATK},    needsTarget:false },
-    { id:"hint",       name_jp:"ヒント！",           icon:"💡", cost:0, text_jp:"まちがいを 1つ けす！",        effect:{type:C.HINT},             needsTarget:false, beforeQ:true },
-    { id:"reroll",     name_jp:"きあいだ！",         icon:"💪", cost:1, text_jp:"もんだいを やりなおす！",      effect:{type:C.REROLL_Q},         needsTarget:false, beforeQ:true },
+  // Mechanical card definitions (no localizable strings). Display text comes
+  // from the active locale via window.JP.cards[id] (or window.I18N.card(id)).
+  const POOL_BASE = [
+    { id:"fart_bomb",  icon:"💨", cost:1, effect:{type:C.DMG_BONUS, v:3},    needsTarget:false, attackMod:true },
+    { id:"mega_punch", icon:"👊", cost:2, effect:{type:C.DMG_BONUS, v:5},    needsTarget:false, attackMod:true },
+    { id:"unko_shield",icon:"🛡️", cost:1, effect:{type:C.SHIELD_SELF},        needsTarget:false },
+    { id:"team_shield",icon:"✨", cost:2, effect:{type:C.SHIELD_TEAM},        needsTarget:false },
+    { id:"heal",       icon:"🍌", cost:1, effect:{type:C.HEAL_TARGET, v:5},   needsTarget:true, targetType:"player" },
+    { id:"team_heal",  icon:"🌬️", cost:2, effect:{type:C.HEAL_TEAM, v:3},     needsTarget:false },
+    { id:"energy",     icon:"🥤", cost:0, effect:{type:C.ENERGY, v:2},        needsTarget:false },
+    { id:"draw_two",   icon:"🎴", cost:1, effect:{type:C.DRAW, v:2},          needsTarget:false },
+    { id:"combo",      icon:"🔥", cost:1, effect:{type:C.DOUBLE_NEXT},        needsTarget:false },
+    { id:"spread",     icon:"👅", cost:2, effect:{type:C.HIT_RANDOM_2, v:2},  needsTarget:false, attackMod:false },
+    { id:"reveal",     icon:"🔍", cost:1, effect:{type:C.REVEAL_ROLE},        needsTarget:true, targetType:"player" },
+    { id:"escape",     icon:"🏃", cost:1, effect:{type:C.SKIP_BOSS_ATK},      needsTarget:false },
+    { id:"hint",       icon:"💡", cost:0, effect:{type:C.HINT},               needsTarget:false, beforeQ:true },
+    { id:"reroll",     icon:"💪", cost:1, effect:{type:C.REROLL_Q},           needsTarget:false, beforeQ:true },
   ];
+
+  // Look up flavor for a card id from the active locale, with safe fallback.
+  function flavor(id) {
+    if (window.I18N && typeof window.I18N.card === "function") return window.I18N.card(id);
+    return (window.JP && window.JP.cards && window.JP.cards[id]) || {};
+  }
+  function withFlavor(c) {
+    if (!c) return c;
+    const f = flavor(c.id);
+    return { ...c, name_jp: f.name_jp || c.id, text_jp: f.text_jp || "" };
+  }
+
+  // Public POOL (read-only convenience): mechanical fields + active-locale flavor.
+  // Cards drawn into hands are fresh copies via buildDeck/byId, so locale switches
+  // affect newly-built decks; existing cards in hand keep the old text until the
+  // next deck build (acceptable since locale switches require a reload anyway).
+  const POOL = POOL_BASE.map(withFlavor);
 
   // Build the deck: more copies of cheap cards
   function buildDeck(jinroMode) {
@@ -45,9 +68,9 @@ window.Cards = (() => {
       team_heal: 2, energy: 4, draw_two: 3, combo: 3, spread: 2,
       reveal: jinroMode ? 3 : 0, escape: 3, hint: 4, reroll: 0
     };
-    for (const c of POOL) {
+    for (const c of POOL_BASE) {
       const n = counts[c.id] || 0;
-      for (let i = 0; i < n; i++) deck.push({...c});
+      for (let i = 0; i < n; i++) deck.push(withFlavor(c));
     }
     // shuffle
     for (let i = deck.length - 1; i > 0; i--) {
@@ -56,7 +79,7 @@ window.Cards = (() => {
     }
     return deck;
   }
-  function byId(id) { return POOL.find(c => c.id === id); }
+  function byId(id) { return withFlavor(POOL_BASE.find(c => c.id === id)); }
 
   return { POOL, buildDeck, byId, C };
 })();
