@@ -103,10 +103,12 @@ window.SND = (() => {
         } catch(_){}
         const a = new Audio("assets/audio/en/" + hash + ".opus");
         a.preload = "auto";
-        // opts.rate maps to playbackRate (Web Audio doesn't preserve pitch by
-        // default, but at 0.5–2.0 Chrome/Safari preserve pitch automatically
-        // for Audio elements).
-        if (opts.rate != null)   a.playbackRate = Math.max(0.5, Math.min(2.0, opts.rate));
+        // Default the Piper voice to 85% speed — at native rate she sounds a
+        // bit fast for kids who are still parsing the words. Callers that pass
+        // an explicit rate (e.g., hint-card slow audio at 0.65) override it.
+        // playbackRate at 0.5–2.0 preserves pitch automatically in Chrome/Safari.
+        const rate = (opts.rate != null) ? opts.rate : 0.85;
+        a.playbackRate = Math.max(0.5, Math.min(2.0, rate));
         if (opts.volume != null) a.volume = Math.max(0, Math.min(1, opts.volume));
         _enCurrent = a;
         const p = a.play();
