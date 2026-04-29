@@ -171,7 +171,12 @@ window.UI = (() => {
           <h2 style="margin: 8px 0;">${JP.setup_title}</h2>
           <div class="subtle">${count}にん プレイ</div>
           <div class="subtle" style="margin-top:14px;">${JP.level}</div>
-          <div class="row" id="lvl-row"></div>
+          <div class="row" id="lvl-row" style="gap:6px;justify-content:center;"></div>
+          <div id="lvl-desc" style="margin-top:4px;">
+            <div style="font-size:22px; font-weight:900; color:var(--accent);">${JP["level"+level]}</div>
+            ${level === 1 ? `<div class="subtle" style="font-size:13px;">${JP.level1_desc||""}</div>` : ``}
+          </div>
+          <div class="subtle" style="margin-top:18px;">なまえ</div>
           <div class="row" id="names-row"></div>
           <button class="toggle ${showAdvanced?'on':''}" id="adv-panel" style="margin-top:14px; font-size:14px;">${showAdvanced?'▼ オプション':'▶ オプション'}</button>
           <div id="adv-content" style="display:${showAdvanced?'block':'none'}; margin-top:8px;">
@@ -202,8 +207,8 @@ window.UI = (() => {
         </div>
       `));
       const lr = $("lvl-row");
-      [[1,JP.level1],[2,JP.level2],[3,JP.level3]].forEach(([n, lbl]) => {
-        const b = el(`<button class="toggle ${level===n?'on':''}" style="font-size:14px;">${lbl}</button>`);
+      [1,2,3,4].forEach(n => {
+        const b = el(`<button class="toggle ${level===n?'on':''}" style="font-size:22px;padding:10px 18px;min-width:54px;font-weight:900;">${n}</button>`);
         tap(b, () => { level = n; redraw(); });
         lr.appendChild(b);
       });
@@ -217,9 +222,9 @@ window.UI = (() => {
         inp.oninput = (e) => { names[i] = e.target.value; };
         wrap.appendChild(inp);
         if (advanced) {
-          [["★",1],["★★",2],["★★★",3]].forEach(([lbl, n]) => {
+          [1,2,3,4].forEach(n => {
             const cur = playerLevels[i] ?? level;
-            const b = el(`<button class="toggle ${cur===n?'on':''}" style="font-size:14px;padding:6px 10px;">L${n}</button>`);
+            const b = el(`<button class="toggle ${cur===n?'on':''}" style="font-size:13px;padding:6px 8px;">L${n}</button>`);
             tap(b, () => { playerLevels[i] = n; redraw(); });
             wrap.appendChild(b);
           });

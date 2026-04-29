@@ -7,7 +7,8 @@ window.Questions = (() => {
   function pool(level) {
     if (level === 1) return window.QUESTIONS_LEVEL1 || [];
     if (level === 2) return window.QUESTIONS_LEVEL2 || [];
-    return window.QUESTIONS_LEVEL3 || [];
+    if (level === 3) return window.QUESTIONS_LEVEL3 || [];
+    return window.QUESTIONS_LEVEL4 || [];
   }
 
   // ctx: { misses: {ptype: count}, seenIds: [..ids..] }
@@ -38,7 +39,7 @@ window.Questions = (() => {
   }
 
   function counts() {
-    return [1,2,3].map(lvl => ({
+    return [1,2,3,4].map(lvl => ({
       level: lvl,
       total: pool(lvl).length,
       s1: pool(lvl).filter(q=>q.stars===1).length,
