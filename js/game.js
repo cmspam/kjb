@@ -882,13 +882,13 @@ window.Game = (() => {
     }
     let spyWins = false;
     if (S.jinro) spyWins = false;
-    UI.renderVictory({ players: S.players, jinro: S.jinro, spyWins },
+    UI.renderVictory({ players: S.players, jinro: S.jinro, spyWins, boss: S.boss },
       () => location.reload(),
       () => location.reload());
   }
   function doDefeat() {
     let spyWins = S.jinro;
-    UI.renderDefeat({ players: S.players, jinro: S.jinro, spyWins },
+    UI.renderDefeat({ players: S.players, jinro: S.jinro, spyWins, boss: S.boss },
       () => location.reload(),
       () => location.reload());
   }

@@ -8,13 +8,19 @@ window.SND = (() => {
     muted = localStorage.getItem("kjb_muted") === "1";
     preferredVoiceName = localStorage.getItem("kjb_voice") || null;
   } catch(e) {}
-  function setMuted(v) { muted = !!v; try { localStorage.setItem("kjb_muted", muted?"1":"0"); } catch(e) {} }
+  function setMuted(v) {
+    muted = !!v;
+    try { localStorage.setItem("kjb_muted", muted?"1":"0"); } catch(e) {}
+    if (muted) { try { stopTheme(0); } catch(_){} try { speechSynthesis.cancel(); } catch(_){} }
+  }
   function isMuted() { return muted; }
   // Visual settings (default on, persisted)
   function getSlingshot() { try { const v = localStorage.getItem("kjb_sling"); return v === null ? true : v === "1"; } catch(e) { return true; } }
   function setSlingshot(v) { try { localStorage.setItem("kjb_sling", v?"1":"0"); } catch(e) {} }
   function getBossAnim() { try { const v = localStorage.getItem("kjb_bossanim"); return v === null ? true : v === "1"; } catch(e) { return true; } }
   function setBossAnim(v) { try { localStorage.setItem("kjb_bossanim", v?"1":"0"); } catch(e) {} }
+  function getThemes() { try { const v = localStorage.getItem("kjb_themes"); return v === null ? true : v === "1"; } catch(e) { return true; } }
+  function setThemes(v) { try { localStorage.setItem("kjb_themes", v?"1":"0"); } catch(e) {} if (!v) stopTheme(0); }
   function setVoice(name) {
     preferredVoiceName = name || null;
     try { localStorage.setItem("kjb_voice", preferredVoiceName || ""); } catch(e) {}
@@ -114,7 +120,106 @@ window.SND = (() => {
     o.start(); o.stop(a.currentTime + .4);
   }
 
+  // ---------- BOSS THEME MUSIC ----------
+  // One 30s mp3 per boss in assets/themes/<bossId>.mp3. We lazy-load on first
+  // request (no upfront 4.5MB hit) and keep the HTMLAudioElement around so the
+  // browser can cache it for the rest of the session.
+  //
+  // Three play modes:
+  //   playTheme(id, {loop, volume, fadeIn})   — start playing from the top
+  //   playThemeSnippet(id, durationMs)        — random offset, fade in + out
+  //   stopTheme(fadeMs)                       — fade out and pause
+  //
+  // iOS note: HTMLAudioElement.play() needs user gesture. Game flow always has
+  // a recent tap before themes trigger (boss intro = tap "battle start"; boss
+  // attack = the player's earlier action drove the turn). We catch rejections
+  // silently so the game keeps working if the browser blocks playback.
+  const themeCache = {};
+  let currentTheme = null;
+  let fadeRAF = null;
+
+  function getThemeAudio(bossId) {
+    if (!themeCache[bossId]) {
+      const a = new Audio(`assets/themes/${bossId}.mp3`);
+      a.preload = "auto";
+      a.crossOrigin = "anonymous"; // harmless if not needed
+      themeCache[bossId] = a;
+    }
+    return themeCache[bossId];
+  }
+
+  function cancelFade() {
+    if (fadeRAF) { cancelAnimationFrame(fadeRAF); fadeRAF = null; }
+  }
+  function fadeTo(audio, targetVol, ms, onDone) {
+    if (!audio) { if (onDone) onDone(); return; }
+    cancelFade();
+    const startVol = audio.volume;
+    const startT = performance.now();
+    function tick(t) {
+      const p = ms <= 0 ? 1 : Math.min(1, (t - startT) / ms);
+      audio.volume = startVol + (targetVol - startVol) * p;
+      if (p < 1) fadeRAF = requestAnimationFrame(tick);
+      else { fadeRAF = null; if (onDone) onDone(); }
+    }
+    fadeRAF = requestAnimationFrame(tick);
+  }
+
+  function stopTheme(fadeMs = 250) {
+    const a = currentTheme;
+    currentTheme = null;
+    if (!a) return;
+    if (fadeMs <= 0) { a.pause(); a.volume = 0; return; }
+    fadeTo(a, 0, fadeMs, () => { try { a.pause(); } catch(_){} });
+  }
+
+  function playTheme(bossId, opts = {}) {
+    if (muted || !getThemes()) return null;
+    const loop    = !!opts.loop;
+    const target  = (opts.volume ?? 0.55);
+    const fadeIn  = (opts.fadeIn  ?? 250);
+    const startAt = (opts.startAt ?? 0);
+    // Stop any previous theme first
+    if (currentTheme && currentTheme !== themeCache[bossId]) stopTheme(150);
+    const a = getThemeAudio(bossId);
+    a.loop = loop;
+    a.volume = 0;
+    try {
+      // currentTime can throw on some browsers if metadata not yet loaded; guard.
+      if (!Number.isNaN(a.duration) && Number.isFinite(a.duration)) {
+        a.currentTime = Math.max(0, Math.min(Math.max(0, a.duration - 0.1), startAt));
+      } else {
+        a.currentTime = startAt;
+      }
+    } catch(_) {}
+    const p = a.play();
+    if (p && p.catch) p.catch(() => {}); // iOS gesture-blocked: silently no-op
+    currentTheme = a;
+    fadeTo(a, target, fadeIn);
+    return a;
+  }
+
+  function playThemeSnippet(bossId, durationMs = 4000, volume = 0.5) {
+    if (muted || !getThemes()) return;
+    const a = getThemeAudio(bossId);
+    const start = () => {
+      const dur = (Number.isFinite(a.duration) && a.duration > 1) ? a.duration : 30;
+      // Pick a random window inside the song that fits the snippet length.
+      const snip = durationMs / 1000;
+      const maxStart = Math.max(0, dur - snip - 0.3);
+      const startAt = Math.random() * maxStart;
+      playTheme(bossId, { startAt, volume, fadeIn: 200 });
+      // Fade out and stop a bit before the requested duration ends so the
+      // tail of the snippet is the fade, not a hard cut.
+      setTimeout(() => stopTheme(350), Math.max(0, durationMs - 350));
+    };
+    if (a.readyState >= 1 /*HAVE_METADATA*/) start();
+    else a.addEventListener("loadedmetadata", start, { once: true });
+  }
+
   return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat, sfxPop, sfxFart,
            setMuted, isMuted, setVoice, listVoices,
-           getSlingshot, setSlingshot, getBossAnim, setBossAnim };
+           getSlingshot, setSlingshot, getBossAnim, setBossAnim,
+           getThemes, setThemes,
+           playTheme, playThemeSnippet, stopTheme };
 })();

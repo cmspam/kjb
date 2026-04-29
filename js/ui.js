@@ -24,6 +24,11 @@ window.UI = (() => {
       handler(e);
     });
   }
+  // Screens where boss-theme music is allowed to keep playing across a render
+  // (the screens that explicitly start a theme manage their own stop). For all
+  // other transitions, kill any lingering theme so it doesn't bleed into e.g.
+  // the question screen.
+  const THEME_SCREENS = new Set(["title", "victory", "defeat"]);
   function show(name) {
     SCREENS.forEach(n => {
       const el = $("screen-"+n);
@@ -31,6 +36,7 @@ window.UI = (() => {
       el.classList.toggle("hidden", n !== name);
       if (n !== name) el.innerHTML = "";
     });
+    if (!THEME_SCREENS.has(name) && SND && SND.stopTheme) SND.stopTheme(300);
     // Exit button is visible during a fight (any in-game screen except title/setup/victory/defeat)
     const exitBtn = $("exit-btn");
     if (exitBtn) {
@@ -120,6 +126,7 @@ window.UI = (() => {
     const isMuted = SND.isMuted();
     const slingOn = SND.getSlingshot();
     const bossAnimOn = SND.getBossAnim();
+    const themesOn = SND.getThemes ? SND.getThemes() : true;
     const voices = SND.listVoices ? SND.listVoices() : [];
     const currentName = (() => {
       try { return localStorage.getItem("kjb_voice") || ""; } catch(e) { return ""; }
@@ -136,6 +143,9 @@ window.UI = (() => {
           <button class="toggle ${slingOn?'on':''}" id="sling-toggle" style="font-size:16px;padding:10px 16px;">🎯 スリングショット ${slingOn?'ON':'OFF'}</button>
           <button class="toggle ${bossAnimOn?'on':''}" id="bossanim-toggle" style="font-size:16px;padding:10px 16px;">💥 ボス アニメ ${bossAnimOn?'ON':'OFF'}</button>
 
+          <div style="font-size:18px; margin:18px 0 8px;">ボスの テーマソング</div>
+          <button class="toggle ${themesOn?'on':''}" id="themes-toggle" style="font-size:16px;padding:10px 16px;">🎵 テーマソング ${themesOn?'ON':'OFF'}</button>
+
           <div style="font-size:18px; margin:18px 0 8px;">えいごの こえ</div>
           <select id="voice-pick" style="font-size:16px; padding:8px; border-radius:8px; width:100%; max-width:340px;">
             <option value="">じどうで えらぶ</option>
@@ -151,6 +161,7 @@ window.UI = (() => {
     tap($("mute-off"), () => { SND.setMuted(true); showSettings(onBack); });
     tap($("sling-toggle"), () => { SND.setSlingshot(!slingOn); showSettings(onBack); });
     tap($("bossanim-toggle"), () => { SND.setBossAnim(!bossAnimOn); showSettings(onBack); });
+    tap($("themes-toggle"), () => { SND.setThemes(!themesOn); SND.sfxPop(); showSettings(onBack); });
     tap($("voice-test"), () => { SND.speak("Hello! Let's play."); });
     const vsel = $("voice-pick");
     if (vsel) vsel.onchange = () => { SND.setVoice(vsel.value || null); };
@@ -474,7 +485,10 @@ window.UI = (() => {
         </div>
         <button class="btn huge hot" id="intro-go" style="margin-top:18px;">バトル スタート！⚔️</button>
       </div>`));
-    tap($("intro-go"), () => onContinue());
+    // Loop the boss's theme song while the kid reads the backstory. The render
+    // is reached as a result of a user tap, so iOS audio gesture is satisfied.
+    SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 600 });
+    tap($("intro-go"), () => { SND.stopTheme(400); onContinue(); });
   }
 
   // -------- SLINGSHOT (interactive attack animation) --------
@@ -615,8 +629,11 @@ window.UI = (() => {
       { duration: 400, iterations: 2 }
     );
 
-    // ----- Stage 1: boss charges with phrase -----
+    // ----- Stage 1: boss charges with phrase + boss theme snippet -----
     // Bumped from 1200 → 1700 so the WARNING text gets a real beat to read.
+    // The theme snippet covers the charge → emoji burst → bang window
+    // (~3s, fades out before the final attack-name reveal so dialogue reads cleanly).
+    if (boss && boss.id) SND.playThemeSnippet(boss.id, 3000, 0.45);
     setTimeout(() => {
       overlay.innerHTML = `
         <div class="boss-anim-stage">
@@ -1553,7 +1570,7 @@ window.UI = (() => {
   }
 
   // -------- VICTORY / DEFEAT --------
-  function renderVictory({ players, jinro, spyWins, mode, winner }, onAgain, onTitle) {
+  function renderVictory({ players, jinro, spyWins, mode, winner, boss }, onAgain, onTitle) {
     show("victory");
     const s = $("screen-victory"); s.innerHTML = "";
     SND.sfxVictory();
@@ -1578,11 +1595,15 @@ window.UI = (() => {
           <button class="btn ghost" id="title">${JP.back_to_title}</button>
         </div>
       </div>`));
-    tap($("again"), () => onAgain());
-    tap($("title"), () => onTitle());
+    // Theme picks: PvP → champion's monster theme; hero → defeated boss's theme.
+    const themeId = (mode === "pvp" && winner && winner.monster) ? winner.monster.id
+                  : (boss && boss.id) ? boss.id : null;
+    if (themeId) SND.playTheme(themeId, { loop: true, volume: 0.55, fadeIn: 800 });
+    tap($("again"), () => { SND.stopTheme(400); onAgain(); });
+    tap($("title"), () => { SND.stopTheme(400); onTitle(); });
   }
 
-  function renderDefeat({ players, jinro, spyWins }, onAgain, onTitle) {
+  function renderDefeat({ players, jinro, spyWins, boss }, onAgain, onTitle) {
     show("defeat");
     const s = $("screen-defeat"); s.innerHTML = "";
     SND.sfxDefeat();
@@ -1601,8 +1622,10 @@ window.UI = (() => {
           <button class="btn ghost" id="title">${JP.back_to_title}</button>
         </div>
       </div>`));
-    tap($("again"), () => onAgain());
-    tap($("title"), () => onTitle());
+    // The boss won — let their theme blare in triumph.
+    if (boss && boss.id) SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 700 });
+    tap($("again"), () => { SND.stopTheme(400); onAgain(); });
+    tap($("title"), () => { SND.stopTheme(400); onTitle(); });
   }
 
   // -------- VOTE (Jinro mode) --------
