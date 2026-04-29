@@ -107,6 +107,8 @@ window.UI = (() => {
     show("title");
     const s = $("screen-title"); s.innerHTML = "";
     const isMuted = SND.isMuted();
+    const slingOn = SND.getSlingshot();
+    const bossAnimOn = SND.getBossAnim();
     const voices = SND.listVoices ? SND.listVoices() : [];
     const currentName = (() => {
       try { return localStorage.getItem("kjb_voice") || ""; } catch(e) { return ""; }
@@ -117,8 +119,13 @@ window.UI = (() => {
         <div style="background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow); text-align:left;">
           <div style="font-size:18px; margin-bottom:8px;">おと</div>
           <button class="toggle ${isMuted?'':'on'}" id="mute-on" style="font-size:18px;padding:10px 16px;">🔊 おと ON</button>
-          <button class="toggle ${isMuted?'on':''}" id="mute-off" style="font-size:18px;padding:10px 16px;">🔇 おと OFF (ミュート)</button>
-          <div style="font-size:18px; margin:14px 0 8px;">えいごの こえ</div>
+          <button class="toggle ${isMuted?'on':''}" id="mute-off" style="font-size:18px;padding:10px 16px;">🔇 おと OFF</button>
+
+          <div style="font-size:18px; margin:18px 0 8px;">こうげき アニメ</div>
+          <button class="toggle ${slingOn?'on':''}" id="sling-toggle" style="font-size:16px;padding:10px 16px;">🎯 スリングショット ${slingOn?'ON':'OFF'}</button>
+          <button class="toggle ${bossAnimOn?'on':''}" id="bossanim-toggle" style="font-size:16px;padding:10px 16px;">💥 ボス アニメ ${bossAnimOn?'ON':'OFF'}</button>
+
+          <div style="font-size:18px; margin:18px 0 8px;">えいごの こえ</div>
           <select id="voice-pick" style="font-size:16px; padding:8px; border-radius:8px; width:100%; max-width:340px;">
             <option value="">じどうで えらぶ</option>
             ${voices.map(v => `<option value="${escapeHTML(v.name)}" ${v.name===currentName?'selected':''}>${escapeHTML(v.name)} (${escapeHTML(v.lang)})</option>`).join("")}
@@ -131,6 +138,8 @@ window.UI = (() => {
       </div>`));
     tap($("mute-on"), () => { SND.setMuted(false); SND.sfxPop(); showSettings(onBack); });
     tap($("mute-off"), () => { SND.setMuted(true); showSettings(onBack); });
+    tap($("sling-toggle"), () => { SND.setSlingshot(!slingOn); showSettings(onBack); });
+    tap($("bossanim-toggle"), () => { SND.setBossAnim(!bossAnimOn); showSettings(onBack); });
     tap($("voice-test"), () => { SND.speak("Hello! Let's play."); });
     const vsel = $("voice-pick");
     if (vsel) vsel.onchange = () => { SND.setVoice(vsel.value || null); };
@@ -405,6 +414,154 @@ window.UI = (() => {
         setTimeout(speak, 350);
       }
     }
+  }
+
+  // -------- BOSS INTRO (shown once at game start) --------
+  function renderBossIntro(boss, onContinue) {
+    show("title");
+    const s = $("screen-title"); s.innerHTML = "";
+    s.appendChild(el(`
+      <div class="center" style="max-width: 720px; margin: 12px auto; padding: 0 12px;">
+        <div class="subtle" style="color:var(--accent); letter-spacing:4px;">★ きょうの あいて ★</div>
+        <h2 style="margin: 4px 0; color: var(--accent);">${escapeHTML(boss.name_jp)}</h2>
+        <div class="subtle" style="font-size: 13px; opacity: .7;">${escapeHTML(boss.name_en||"")}</div>
+        <div class="stage" style="height:280px; max-width:520px; margin: 8px auto;">${Monsters.renderBossSVG(boss)}</div>
+        <div style="background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow); text-align:left; max-width:520px; margin: 0 auto; line-height: 1.7;">
+          <div style="font-size:14px; color:var(--accent); font-weight:900; margin-bottom:6px;">▶ ストーリー</div>
+          <div style="font-size:16px; white-space: pre-line;">${escapeHTML(boss.backstory||"なぞの カイジュウ。")}</div>
+        </div>
+        <button class="btn huge hot" id="intro-go" style="margin-top:18px;">バトル スタート！⚔️</button>
+      </div>`));
+    tap($("intro-go"), () => onContinue());
+  }
+
+  // -------- SLINGSHOT (interactive attack animation) --------
+  function showSlingshot(boss, partName, onFire) {
+    SND.unlock();
+    const taunt = pickRand(JP.slingshot_taunts || ["うってみろよ！"]);
+    const modal = document.createElement("div");
+    modal.className = "sling-modal";
+    modal.innerHTML = `
+      <div class="sling-bubble">${escapeHTML(taunt)}</div>
+      <div class="sling-target-area">
+        <div class="sling-emoji-target">🎯</div>
+        <div class="sling-target-name">${escapeHTML(partName||"")}</div>
+      </div>
+      <svg viewBox="0 0 400 500" id="sling-svg" preserveAspectRatio="xMidYEnd meet">
+        <line x1="200" y1="500" x2="200" y2="280" stroke="#7a4520" stroke-width="22" stroke-linecap="round"/>
+        <line x1="200" y1="290" x2="120" y2="190" stroke="#7a4520" stroke-width="20" stroke-linecap="round"/>
+        <line x1="200" y1="290" x2="280" y2="190" stroke="#7a4520" stroke-width="20" stroke-linecap="round"/>
+        <line x1="120" y1="190" x2="200" y2="310" stroke="#222" stroke-width="6" id="band-l" stroke-linecap="round"/>
+        <line x1="280" y1="190" x2="200" y2="310" stroke="#222" stroke-width="6" id="band-r" stroke-linecap="round"/>
+        <g id="pouch-g">
+          <ellipse cx="200" cy="310" rx="26" ry="18" fill="#5a3a1a" stroke="#000" stroke-width="3"/>
+          <circle cx="200" cy="306" r="14" fill="#888" stroke="#000" stroke-width="2"/>
+          <circle cx="196" cy="302" r="3" fill="#fff" opacity=".7"/>
+        </g>
+      </svg>
+      <div class="sling-text">ひっぱって はなして！👇</div>`;
+    document.body.appendChild(modal);
+    const bandL = modal.querySelector("#band-l");
+    const bandR = modal.querySelector("#band-r");
+    const pouchG = modal.querySelector("#pouch-g");
+    const svg = modal.querySelector("#sling-svg");
+    let dragging = false;
+    let pulledY = 310;
+    function setY(y) {
+      pulledY = Math.max(310, Math.min(440, y));
+      pouchG.setAttribute("transform", `translate(0, ${pulledY - 310})`);
+      bandL.setAttribute("y2", pulledY);
+      bandR.setAttribute("y2", pulledY);
+    }
+    function svgY(clientY) {
+      const r = svg.getBoundingClientRect();
+      return ((clientY - r.top) / r.height) * 500;
+    }
+    function onDown(e) {
+      dragging = true;
+      e.preventDefault();
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      const cy = e.clientY ?? (e.touches && e.touches[0] && e.touches[0].clientY);
+      if (cy == null) return;
+      setY(svgY(cy));
+    }
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      const pull = pulledY - 310;
+      if (pull < 25) { setY(310); return; }
+      fire();
+    }
+    modal.addEventListener("pointerdown", onDown);
+    modal.addEventListener("pointermove", onMove);
+    modal.addEventListener("pointerup", onUp);
+    modal.addEventListener("pointercancel", onUp);
+    // Tap-anywhere fallback (just fire after a small delay if user can't drag)
+    let tapStart = 0;
+    modal.addEventListener("touchstart", () => { tapStart = Date.now(); }, { passive: true });
+    function fire() {
+      pouchG.style.transition = "transform 0.18s cubic-bezier(.18,.89,.32,1.28)";
+      pouchG.setAttribute("transform", "translate(0, -20)");
+      bandL.setAttribute("y2", "260");
+      bandR.setAttribute("y2", "260");
+      SND.sfxPop();
+      const proj = document.createElement("div");
+      proj.className = "sling-proj";
+      proj.textContent = "🪨";
+      modal.appendChild(proj);
+      requestAnimationFrame(() => { proj.style.top = "5%"; proj.style.transform = "translate(-50%, 0) scale(1.4) rotate(180deg)"; });
+      setTimeout(() => {
+        const bang = document.createElement("div");
+        bang.className = "sling-bang";
+        bang.textContent = "💥";
+        modal.appendChild(bang);
+        SND.sfxHit();
+      }, 380);
+      setTimeout(() => { modal.remove(); onFire(); }, 900);
+    }
+  }
+
+  // -------- BOSS ATTACK ANIMATION (powerup + emoji burst + reveal) --------
+  function showBossAttackAnim(boss, attack, targetName, dmg, missed, onDone) {
+    SND.unlock();
+    const phrase = pickRand(attack.phrases || [attack.name]);
+    // Extract trailing emoji from attack.name
+    const m = (attack.name || "").match(/(\p{Extended_Pictographic}️?)\s*$/u);
+    const emoji = m ? m[1] : "💥";
+    const overlay = document.createElement("div");
+    overlay.className = "boss-anim-overlay";
+    overlay.innerHTML = `
+      <div class="boss-anim-stage">
+        <div class="boss-anim-svg">${Monsters.renderBossSVG(boss)}</div>
+        <div class="boss-anim-bubble">${escapeHTML(phrase)}</div>
+        <div class="boss-anim-emoji" style="visibility:hidden;">${emoji}</div>
+        <div class="boss-anim-bang" style="visibility:hidden;">💥</div>
+        <div class="boss-anim-name" style="visibility:hidden;">
+          <div class="atk-name">${escapeHTML(attack.name)}</div>
+          <div class="atk-target">${missed ? `${escapeHTML(targetName)}に はずれた！` : `→ ${escapeHTML(targetName)} に <b>${dmg}</b> ダメージ！`}</div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxBoss();
+    setTimeout(() => {
+      const e = overlay.querySelector(".boss-anim-emoji");
+      e.style.visibility = "visible";
+      e.classList.add("anim-burst");
+    }, 900);
+    setTimeout(() => {
+      const b = overlay.querySelector(".boss-anim-bang");
+      b.style.visibility = "visible";
+      b.classList.add("anim-bang");
+      SND.sfxHit();
+    }, 1300);
+    setTimeout(() => {
+      const n = overlay.querySelector(".boss-anim-name");
+      n.style.visibility = "visible";
+      n.classList.add("anim-reveal");
+    }, 1600);
+    setTimeout(() => { overlay.remove(); onDone(); }, 2600);
   }
 
   // -------- RANDOM POP-IN EVENTS (fairy / bomb / thief) --------
@@ -1135,8 +1292,8 @@ window.UI = (() => {
     s.appendChild(el(buildHeader(boss, players, null)));
     s.appendChild(el(`
       <div class="center" style="width:100%;">
-        <h2>${JP.boss_turn} 👹</h2>
-        <div class="boss-bubble" style="position:static;display:inline-block;margin:12px;">${pickRand([boss.catchphrase, ...JP.boss_atk_words])}</div>
+        <h2>${JP.boss_turn(boss.name_jp)} 👹</h2>
+        <div class="boss-bubble" style="position:static;display:inline-block;margin:12px;">${pickRand([boss.catchphrase, ...JP.boss_atk_words.map(a=>a.name)])}</div>
         <div id="log" style="font-size:18px; margin: 12px auto; line-height:1.6; max-width:600px; max-height: 30vh; overflow-y: auto;"></div>
         <button class="btn huge cool" id="cont">${JP.next}</button>
       </div>`));
@@ -1288,5 +1445,6 @@ window.UI = (() => {
            renderResult, renderAction, renderTargetPicker, renderBoss, renderVictory,
            renderDefeat, renderVote, renderDefenseQ, toast, show, showRules, tap,
            renderFairyEvent, renderBombEvent, renderThiefEvent,
-           renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent };
+           renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
+           renderBossIntro, showSlingshot, showBossAttackAnim };
 })();

@@ -10,6 +10,11 @@ window.SND = (() => {
   } catch(e) {}
   function setMuted(v) { muted = !!v; try { localStorage.setItem("kjb_muted", muted?"1":"0"); } catch(e) {} }
   function isMuted() { return muted; }
+  // Visual settings (default on, persisted)
+  function getSlingshot() { try { const v = localStorage.getItem("kjb_sling"); return v === null ? true : v === "1"; } catch(e) { return true; } }
+  function setSlingshot(v) { try { localStorage.setItem("kjb_sling", v?"1":"0"); } catch(e) {} }
+  function getBossAnim() { try { const v = localStorage.getItem("kjb_bossanim"); return v === null ? true : v === "1"; } catch(e) { return true; } }
+  function setBossAnim(v) { try { localStorage.setItem("kjb_bossanim", v?"1":"0"); } catch(e) {} }
   function setVoice(name) {
     preferredVoiceName = name || null;
     try { localStorage.setItem("kjb_voice", preferredVoiceName || ""); } catch(e) {}
@@ -110,5 +115,6 @@ window.SND = (() => {
   }
 
   return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat, sfxPop, sfxFart,
-           setMuted, isMuted, setVoice, listVoices };
+           setMuted, isMuted, setVoice, listVoices,
+           getSlingshot, setSlingshot, getBossAnim, setBossAnim };
 })();

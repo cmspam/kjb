@@ -302,6 +302,7 @@ window.Monsters = (() => {
       name_jp: "タコタコ サフール",
       name_en: "Tako Tako Sahur",
       catchphrase: "タコ・タコ・サフール！",
+      backstory: "もとは ふつうの たこ焼きの たこだった。\nある日 だれかが 鉄板に トレーニング ジュースを こぼし、たこは ぐんぐん巨大化！\n8本足で ぱくぱく 食べると とまらない…\n\n👹 やぼう：\nせかい中の たこ焼き店を のっとり、すべての 食べ物を たこ焼きに 変える！\n「ハンバーガーも アイスも たこ焼きじゃ〜！」",
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -365,6 +366,7 @@ window.Monsters = (() => {
       name_jp: "ボンバルディロ ウンコディロ",
       name_en: "Bombardiro Unkodilo",
       catchphrase: "ボンバルディロ・ウンコディロ！",
+      backstory: "ある プログラマーが ふざけて作った ロボワニ。\n中身は ぜんぶ うんち！\n爆発と におい が ぶき。\nファブリーズが 大の苦手。\n\n👹 やぼう：\n世界中の 川を ぜんぶ うんちに 変える！\nトイレを 「うんち博物館」に 改造！\n「みんな 茶色が テーマカラーじゃ〜！」",
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -435,6 +437,7 @@ window.Monsters = (() => {
       name_jp: "トラララ パクパク",
       name_en: "Tralalero Pakupaku",
       catchphrase: "トラララ・トラララ・パクパク！",
+      backstory: "イタリアからきた さかな・かえる ハイブリッド。\n海中コンサートの 最中 つよい 海流に 流された。\n気づいたら 日本に 着いていた！\nオペラが 得意。\n\n👹 やぼう：\nみんなを むりやり イタリア語で 歌わせる！\n日本語きんし！「Tralalero しか みとめん！」\n海ぜんぶ パクパク 食べる！",
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -505,6 +508,7 @@ window.Monsters = (() => {
       name_jp: "ブルブル パンパム",
       name_en: "Brr Brr Pampamu",
       catchphrase: "ブルブル・ブルブル・パンパム！",
+      backstory: "もとは こどもの ぬいぐるみだった。\nある日 すてられて 雨に ぬれた…\nふしぎな 力で 命を 持ってしまった！\nふわふわ かわいいけど、おこると こわい。\n\n👹 やぼう：\nせかいの こども ぜんぶ 自分の コレクションに！\nだっこして はなさない！\n「ふわふわ 国家を つくるんじゃ〜！」",
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -579,6 +583,7 @@ window.Monsters = (() => {
       name_jp: "パフェイワシ",
       name_en: "Parfait Iwashi",
       catchphrase: "パフェ・パフェ・パフェイワシ！",
+      backstory: "ある サラダバー店。おじいさんは パフェを 食べていた。\nおばあさんは イワシを 食べていた。\n「これ、おいしいよ」「あらそう？」\nふたりが おさらを 取りかえた しゅんかん…\nパフェと イワシが あいしあって ひとつに なった！\n\n👹 やぼう：\n世界中の 寿司を パフェに 変える！\n「魚は あまく あるべきじゃ〜！」\nスーパーの 食べ物 ぜんぶ ホイップクリーム ぬる！",
       color,
       attacksPerRound: 2,
       bodySVG: () => `
@@ -690,6 +695,7 @@ window.Monsters = (() => {
       name_jp: "アンパンマグロ",
       name_en: "Anpan Maguro",
       catchphrase: "アンパン・アンパン・アンパンマグロ！",
+      backstory: "寿司屋と パン屋が となりあう 商店街で…\nある夜、店の中で マグロと アンパンが ぐうぜん 合体！\nジャムおじさんも バタコさんも びっくり。\n海と陸の ヒーロー…の つもり。\n\n👹 やぼう：\nアンパンマンを たおして 自分が 主役になる！\n国旗を 自分の顔に する！\n「ぼくの 顔は たべて いいけど アンパンマンの顔は ダメ！」",
       color,
       attacksPerRound: 2,
       bodySVG: () => `

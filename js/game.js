@@ -96,12 +96,12 @@ window.Game = (() => {
   function showSetup(count) {
     UI.renderSetup({ count, onConfirm: (opts) => {
       newGame(opts);
-      // First-round role reveal
-      if (S.jinro) {
-        revealRolesSequentially(0, () => startRound());
-      } else {
-        startRound();
-      }
+      // Boss intro screen first, then jinro role reveals (if any), then start.
+      const begin = () => {
+        if (S.jinro) revealRolesSequentially(0, () => startRound());
+        else startRound();
+      };
+      UI.renderBossIntro(S.boss, begin);
     }});
   }
 
@@ -397,6 +397,15 @@ window.Game = (() => {
       }
       dmg = reduced;
     }
+    // Optional slingshot animation before damage applies
+    if (SND.getSlingshot && SND.getSlingshot()) {
+      UI.showSlingshot(S.boss, part.name_jp, () => applyPartHit(p, part, dmg));
+      return;
+    }
+    applyPartHit(p, part, dmg);
+  }
+
+  function applyPartHit(p, part, dmg) {
     part.hp = Math.max(0, part.hp - dmg);
     SND.sfxHit();
     const stage = document.querySelector(".stage");
@@ -590,7 +599,7 @@ window.Game = (() => {
         target.skipBossAtk = false; continue;
       }
       if (Math.random() < mods.missChance) {
-        lines.push(`${target.name} に ${pickRand(JP.boss_atk_words)} … はずれ〜！`);
+        lines.push(`${target.name} に ${pickRand(JP.boss_atk_words).name} … はずれ〜！`);
         continue;
       }
       if (target.shield) {
@@ -602,42 +611,51 @@ window.Game = (() => {
       if (mouthAlive && mods.hasSpecial && Math.random() < 0.35) dmg += 2;
       queue.push({ target, dmg });
     }
-    if (S.hardMode && queue.length) {
-      processBossAttack(queue, 0, lines);
-    } else {
-      queue.forEach(({target, dmg}) => {
-        target.hp = Math.max(0, target.hp - dmg);
-        lines.push(`${target.name} に ${pickRand(JP.boss_atk_words)} → ${dmg} ダメージ！`);
-        if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…💀`); }
-      });
-      finishBossTurn(lines);
-    }
+    if (queue.length) processBossAttack(queue, 0, lines);
+    else finishBossTurn(lines);
   }
 
-  // Hard mode: targeted player must answer a quick question to dodge.
+  // Process attacks one at a time. Three modes:
+  //   • Hard mode: target answers a defensive Q to dodge
+  //   • Boss anim: powerup → emoji burst → attack name reveal
+  //   • Plain: apply damage immediately
   function processBossAttack(queue, idx, lines) {
     if (idx >= queue.length) return finishBossTurn(lines);
     const { target, dmg } = queue[idx];
     if (target.dead) return processBossAttack(queue, idx+1, lines);
-    const q = Questions.pick(target.level || S.level, 1, { misses: target.misses, seenIds: target.seenIds });
-    if (!q) {
-      target.hp = Math.max(0, target.hp - dmg);
-      lines.push(`${target.name} に ${dmg} ダメージ！`);
-      if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…`); }
-      return processBossAttack(queue, idx+1, lines);
-    }
-    target.seenIds.push(q.id);
-    UI.renderDefenseQ(target, q, dmg, S.boss, S.players, (correct) => {
-      if (correct) {
-        lines.push(`${target.name} は こたえて かわした！ ✨`);
-      } else {
-        target.hp = Math.max(0, target.hp - dmg);
-        lines.push(`${target.name} に ${pickRand(JP.boss_atk_words)} → ${dmg} ダメージ！`);
-        if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…💀`); }
-        const t = q.ptype; if (t) target.misses[t] = (target.misses[t]||0)+1;
+
+    if (S.hardMode) {
+      const q = Questions.pick(target.level || S.level, 1, { misses: target.misses, seenIds: target.seenIds });
+      if (q) {
+        target.seenIds.push(q.id);
+        UI.renderDefenseQ(target, q, dmg, S.boss, S.players, (correct) => {
+          const atk = pickRand(JP.boss_atk_words);
+          if (correct) {
+            lines.push(`${target.name} は こたえて かわした！ ✨`);
+          } else {
+            target.hp = Math.max(0, target.hp - dmg);
+            lines.push(`${target.name} に ${atk.name} → ${dmg} ダメージ！`);
+            if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…💀`); }
+            const t = q.ptype; if (t) target.misses[t] = (target.misses[t]||0)+1;
+          }
+          setTimeout(() => processBossAttack(queue, idx+1, lines), 500);
+        });
+        return;
       }
-      setTimeout(() => processBossAttack(queue, idx+1, lines), 600);
-    });
+    }
+
+    const atk = pickRand(JP.boss_atk_words);
+    const apply = () => {
+      target.hp = Math.max(0, target.hp - dmg);
+      lines.push(`${target.name} に ${atk.name} → ${dmg} ダメージ！`);
+      if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…💀`); }
+      processBossAttack(queue, idx+1, lines);
+    };
+    if (SND.getBossAnim && SND.getBossAnim()) {
+      UI.showBossAttackAnim(S.boss, atk, target.name, dmg, false, apply);
+    } else {
+      apply();
+    }
   }
 
   function finishBossTurn(lines) {
