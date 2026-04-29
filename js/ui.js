@@ -490,7 +490,11 @@ window.UI = (() => {
     });
 
     if (question.audio) {
-      const speak = () => SND.speak(question.audio);
+      // When the hint card is in play (slowAudio flag), the TTS rate is ducked
+      // from the default 0.9 → 0.65 so kids who can't pick out the word at
+      // normal speed get a clearer pass.
+      const rate = opts && opts.slowAudio ? 0.65 : 0.9;
+      const speak = () => SND.speak(question.audio, { rate });
       const lb = $("listen-btn"); if (lb) tap(lb, speak);
       const sa = $("say-again"); if (sa) tap(sa, speak);
       // Auto-speak after a tick if listen-only
@@ -623,6 +627,10 @@ window.UI = (() => {
     modal.addEventListener("pointermove", onMove);
     modal.addEventListener("pointerup", onUp);
     modal.addEventListener("pointercancel", onUp);
+    // Block page scroll/rubber-band while the slingshot is up — touch-action: none
+    // on the modal alone isn't enough on iOS Safari.
+    const blockScroll = (e) => { if (e.cancelable) e.preventDefault(); };
+    document.addEventListener("touchmove", blockScroll, { passive: false });
     // Tap-anywhere fallback (just fire after a small delay if user can't drag)
     let tapStart = 0;
     modal.addEventListener("touchstart", () => { tapStart = Date.now(); }, { passive: true });
@@ -644,7 +652,11 @@ window.UI = (() => {
         modal.appendChild(bang);
         SND.sfxHit();
       }, 380);
-      setTimeout(() => { modal.remove(); onFire(); }, 900);
+      setTimeout(() => {
+        document.removeEventListener("touchmove", blockScroll);
+        modal.remove();
+        onFire();
+      }, 900);
     }
   }
 
@@ -1847,7 +1859,26 @@ window.UI = (() => {
   }
 
   // -------- VICTORY / DEFEAT --------
-  function renderVictory({ players, jinro, spyWins, mode, winner, boss }, onAgain, onTitle) {
+  // Build a tiny end-of-battle recap. Returns an HTML string: lists English
+  // words the kid got right (de-duped, capped) and missed (de-duped, capped).
+  function buildRecap(stats) {
+    if (!stats) return "";
+    const dedupe = (arr) => Array.from(new Set((arr||[]).filter(Boolean)));
+    const right = dedupe(stats.right);
+    const wrong = dedupe(stats.wrong);
+    if (!right.length && !wrong.length) return "";
+    const cap = (arr, n=8) => arr.length > n ? arr.slice(0, n).concat([`+${arr.length-n}`]) : arr;
+    const rightLine = right.length ? `<div style="margin:6px 0;"><span style="color:var(--good); font-weight:900;">🎯 おぼえた:</span> ${cap(right).map(escapeHTML).join(", ")}</div>` : "";
+    const wrongLine = wrong.length ? `<div style="margin:6px 0;"><span style="color:var(--bad); font-weight:900;">🔁 ふくしゅう:</span> ${cap(wrong).map(escapeHTML).join(", ")}</div>` : "";
+    return `
+      <div style="background:var(--card); border-radius:12px; padding:12px 14px; margin: 14px auto; max-width: 520px; font-size: 16px; text-align:left; line-height:1.6;">
+        <div style="font-size:14px; color:var(--accent); font-weight:900; margin-bottom:4px;">▶ きょうの ことば</div>
+        ${rightLine}
+        ${wrongLine}
+      </div>`;
+  }
+
+  function renderVictory({ players, jinro, spyWins, mode, winner, boss, stats }, onAgain, onTitle) {
     show("victory");
     const s = $("screen-victory"); s.innerHTML = "";
     SND.sfxVictory();
@@ -1866,8 +1897,9 @@ window.UI = (() => {
         ${winnerMonster}
         <div style="font-size:22px;color:var(--good);">${mode==='pvp'?'チャンピオン！':JP.victory_sub}</div>
         <div style="margin-top:18px;">
-          ${players.map(p => `<div>${p.name}${p.dead?' 💀':''} ${p.role==='spy'?'🕵️':''}</div>`).join("")}
+          ${players.map(p => `<div>${p.avatar?p.avatar+' ':''}${p.name}${p.dead?' 💀':''} ${p.role==='spy'?'🕵️':''}${p.bestCombo>=3?` 🔥 さいこう ×${p.bestCombo}`:''}</div>`).join("")}
         </div>
+        ${buildRecap(stats)}
         <div class="row" style="margin-top:24px;">
           <button class="btn huge good" id="again">${JP.play_again}</button>
           <button class="btn ghost" id="title">${JP.back_to_title}</button>
@@ -1882,7 +1914,7 @@ window.UI = (() => {
     tap($("title"), () => { SND.stopTheme(400); onTitle(); });
   }
 
-  function renderDefeat({ players, jinro, spyWins, boss }, onAgain, onTitle) {
+  function renderDefeat({ players, jinro, spyWins, boss, stats }, onAgain, onTitle) {
     show("defeat");
     const s = $("screen-defeat"); s.innerHTML = "";
     SND.sfxDefeat();
@@ -1894,8 +1926,9 @@ window.UI = (() => {
         <div style="font-size:120px;">😵</div>
         <div style="font-size:22px;color:var(--bad);">${JP.defeat_sub}</div>
         <div style="margin-top:24px;">
-          ${players.map(p => `<div>${p.name}: HP ${p.hp} ${p.role==='spy'?'🕵️':''}</div>`).join("")}
+          ${players.map(p => `<div>${p.avatar?p.avatar+' ':''}${p.name}: HP ${p.hp} ${p.role==='spy'?'🕵️':''}${p.bestCombo>=3?` 🔥 さいこう ×${p.bestCombo}`:''}</div>`).join("")}
         </div>
+        ${buildRecap(stats)}
         <div class="row" style="margin-top:24px;">
           <button class="btn huge bad" id="again">${JP.play_again}</button>
           <button class="btn ghost" id="title">${JP.back_to_title}</button>

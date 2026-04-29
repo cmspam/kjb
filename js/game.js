@@ -55,6 +55,10 @@ window.Game = (() => {
       doubleNextAttack: false,
       rolesRevealed: false,
       revealedThisGame: [],
+      // Per-battle stats for the end-of-fight recap. Stores the English answer
+      // text of each question got right / wrong this battle so kids can see
+      // what they learned.
+      battleStats: { right: [], wrong: [] },
     };
     // Deal starting hands (3 cards default)
     players.forEach(p => { for (let i = 0; i < STARTING_HAND; i++) drawCard(p); });
@@ -389,13 +393,24 @@ window.Game = (() => {
       const wrong = S.currentQuestion.options.map((_,i)=>i).filter(i=>i!==S.currentQuestion.answer);
       hintIdx = wrong[(Math.random()*wrong.length)|0];
     }
-    UI.renderQuestion(p, S.currentQuestion, S.boss, S.players, { hintMaskIdx: hintIdx, timerSec: S.timerSec },
+    UI.renderQuestion(p, S.currentQuestion, S.boss, S.players, { hintMaskIdx: hintIdx, timerSec: S.timerSec, slowAudio: S.hintForCurrentQ },
       (correct, chosen) => handleAnswer(correct, chosen),
       () => {});
   }
 
   function handleAnswer(correct, chosen) {
     const p = currentPlayer();
+    // Battle stats + cross-session history. Use the English answer text as the
+    // "word" so the end-of-battle recap is useful as a vocabulary list.
+    const q = S.currentQuestion;
+    if (q) {
+      const word = (q.options && q.answer != null) ? q.options[q.answer] : null;
+      if (word) {
+        if (correct) S.battleStats.right.push(word);
+        else         S.battleStats.wrong.push(word);
+      }
+      if (Questions.recordAnswer) Questions.recordAnswer(q.id, !!correct);
+    }
     if (correct) {
       const stars = S.currentWager;
       p.energy += stars;
@@ -668,7 +683,7 @@ window.Game = (() => {
       p.hand.splice(idx, 1);
       S.discard.push(card);
       const ef = card.effect;
-      if (ef.type === Cards.C.HINT) { S.hintForCurrentQ = true; UI.toast("ヒント! まちがいを 1つ けすよ"); }
+      if (ef.type === Cards.C.HINT) { S.hintForCurrentQ = true; UI.toast("ヒント！ まちがいを 1つ けして、おとも ゆっくり〜"); }
       else if (ef.type === Cards.C.REROLL_Q) { S.rerolledThisQ = true; UI.toast("やりなおし！"); }
       else if (ef.type === Cards.C.ENERGY) { p.energy += ef.v; UI.toast(`エナジー +${ef.v}`); }
       else if (ef.type === Cards.C.DRAW) { for (let i=0;i<ef.v;i++) drawCard(p); UI.toast(`カードを ${ef.v}まい ひいた`); }
@@ -951,8 +966,10 @@ window.Game = (() => {
   function doVictory(opts={}) {
     if (S.mode === "pvp" && opts.winner) {
       // PvP K.O. is shown per-opponent at the kill moment by the attack flow.
-      UI.renderVictory({ players: S.players, mode: "pvp", winner: opts.winner },
-        () => location.reload(), () => location.reload());
+      UI.renderVictory({
+        players: S.players, mode: "pvp", winner: opts.winner,
+        stats: S.battleStats,
+      }, () => location.reload(), () => location.reload());
       return;
     }
     // Hero mode: play the K.O. cinematic once before the victory screen.
@@ -965,15 +982,17 @@ window.Game = (() => {
     }
     let spyWins = false;
     if (S.jinro) spyWins = false;
-    UI.renderVictory({ players: S.players, jinro: S.jinro, spyWins, boss: S.boss },
-      () => location.reload(),
-      () => location.reload());
+    UI.renderVictory({
+      players: S.players, jinro: S.jinro, spyWins, boss: S.boss,
+      stats: S.battleStats,
+    }, () => location.reload(), () => location.reload());
   }
   function doDefeat() {
     let spyWins = S.jinro;
-    UI.renderDefeat({ players: S.players, jinro: S.jinro, spyWins, boss: S.boss },
-      () => location.reload(),
-      () => location.reload());
+    UI.renderDefeat({
+      players: S.players, jinro: S.jinro, spyWins, boss: S.boss,
+      stats: S.battleStats,
+    }, () => location.reload(), () => location.reload());
   }
 
   return { start, AVATARS: AVATAR_POOL };
