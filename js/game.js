@@ -3,6 +3,10 @@ window.Game = (() => {
   const STARTING_HP = 25;
   const STARTING_HAND = 3;
   const MAX_HAND = 6;
+  // Avatar emoji pool — kid picks one at setup (or a random one is assigned).
+  // Shows on player tiles, pass screen, etc., for instant "this is me" recognition.
+  const AVATAR_POOL = ['🐶','🦄','🥷','👻','🤖','🐱','🐰','🐯','🐼','🦊','🐲','👽','🎃','🌟','🍕','🍣','⚔️','🔥','💎','🎨','🐸','🐙','🐝','🦖'];
+  function pickRandAvatar() { return AVATAR_POOL[(Math.random()*AVATAR_POOL.length)|0]; }
 
   let S = null; // current game state
 
@@ -10,10 +14,13 @@ window.Game = (() => {
     const isPvP = opts.mode === "pvp" && opts.names.length >= 2;
     const players = opts.names.map((name, i) => ({
       id: "p"+i, name, hp: STARTING_HP, maxHp: STARTING_HP,
+      avatar: (opts.avatars && opts.avatars[i]) || pickRandAvatar(),
       level: (opts.levels && opts.levels[i]) || opts.level,
       energy: 2, hand: [], role: "hero",
       shield: false, skipBossAtk: false,
       attackPower: 0, dead: false, scanned: false,
+      combo: 0,        // consecutive correct answers; resets on wrong
+      bestCombo: 0,    // tracked for end-of-battle recap (Pass 3)
       misses: {},
       seenIds: [],
       monster: null,  // set in PvP mode by pickMonstersSequentially
@@ -146,7 +153,7 @@ window.Game = (() => {
     if (idx >= S.players.length) { done(); return; }
     const p = S.players[idx];
     const usedIds = S.players.slice(0, idx).map(x => x.monster && x.monster.id).filter(Boolean);
-    UI.renderPass(p.name, () => {
+    UI.renderPass(p, () => {
       UI.renderMonsterPick(p.name, usedIds, (chosenFactory) => {
         p.monster = chosenFactory();
         pickMonstersSequentially(idx+1, done);
@@ -157,7 +164,7 @@ window.Game = (() => {
   function revealRolesSequentially(idx, done) {
     if (idx >= S.players.length) { done(); return; }
     const p = S.players[idx];
-    UI.renderPass(p.name, () => {
+    UI.renderPass(p, () => {
       UI.renderRole(p, p.role === "spy", () => revealRolesSequentially(idx+1, done));
     });
   }
@@ -199,7 +206,7 @@ window.Game = (() => {
     S.currentQuestion = null;
     S.currentWager = null;
     if (S.solo) maybeRandomEvent(p, () => goWager());
-    else UI.renderPass(p.name, () => maybeRandomEvent(p, () => goWager()));
+    else UI.renderPass(p, () => maybeRandomEvent(p, () => goWager()));
   }
 
   // True when only one player has an alive monster (PvP win condition).
@@ -394,14 +401,24 @@ window.Game = (() => {
       p.energy += stars;
       p.attackPower = stars;
       drawCard(p);
-      // Skip the result screen on correct — too many taps. Toast + go to action.
+      // Combo: streak of consecutive correct answers. Bonus damage at 3+,
+      // bonus card draw at 5+. Resets on a wrong answer.
+      p.combo = (p.combo || 0) + 1;
+      if (p.combo > (p.bestCombo || 0)) p.bestCombo = p.combo;
+      let bonusDmg = 0;
+      let bonusCard = false;
+      if (p.combo >= 3) { p.attackPower += 1; bonusDmg = 1; }
+      if (p.combo >= 5) { drawCard(p);          bonusCard = true; }
       const cheer = pickRand(JP.correct_cheer || ["ナイス〜！"]);
-      UI.toast(`✨ ${cheer} ⚡+${stars} ⚔️${stars} 🎴+1`, 1800);
+      const comboTxt = p.combo >= 2 ? ` 🔥×${p.combo}` : "";
+      const bonusTxt = (bonusDmg||bonusCard) ? ` (+${bonusDmg?'⚔️':''}${bonusCard?'🎴':''} ボーナス！)` : "";
+      UI.toast(`✨ ${cheer} ⚡+${stars} ⚔️${stars}${bonusDmg?'+'+bonusDmg:''} 🎴+${bonusCard?2:1}${comboTxt}${bonusTxt}`, 1800);
       SND.sfxCorrect();
       setTimeout(() => goAction(), 1500);
     } else {
       const t = S.currentQuestion?.ptype;
       if (t) p.misses[t] = (p.misses[t] || 0) + 1;
+      p.combo = 0; // streak broken
       // Wrong answers still go through the result screen so kids see the correct
       // answer + explanation.
       UI.renderResult({
@@ -959,5 +976,5 @@ window.Game = (() => {
       () => location.reload());
   }
 
-  return { start };
+  return { start, AVATARS: AVATAR_POOL };
 })();

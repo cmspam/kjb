@@ -230,6 +230,11 @@ window.UI = (() => {
     const names = namePool.slice(0, 6);
     while (names.length < 6) names.push("");
     const playerLevels = [null,null,null,null,null,null];
+    // Per-player avatar emoji. Default: random from the Game.AVATARS pool. Kid
+    // can tap their avatar button next to the name to cycle through the pool.
+    const avatarPool = (window.Game && Game.AVATARS) || ['🐱'];
+    const avatars = [];
+    for (let i = 0; i < 6; i++) avatars[i] = avatarPool[(Math.random()*avatarPool.length)|0];
 
     function pickFunnyName(usedNames) {
       const pool = (window.FUNNY_NAMES || []).filter(n => !usedNames.includes(n));
@@ -292,6 +297,14 @@ window.UI = (() => {
       for (let i = 0; i < count; i++) {
         const wrap = document.createElement("div");
         wrap.style.cssText = "display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap;justify-content:center;";
+        // Avatar button — tap to cycle through the emoji pool.
+        const avatarBtn = el(`<button class="toggle on" title="アバターを かえる" style="font-size:24px;padding:4px 10px;min-width:44px;">${avatars[i]}</button>`);
+        tap(avatarBtn, () => {
+          const idx = (avatarPool.indexOf(avatars[i]) + 1) % avatarPool.length;
+          avatars[i] = avatarPool[idx];
+          avatarBtn.textContent = avatars[i];
+        });
+        wrap.appendChild(avatarBtn);
         const inp = el(`<input class="player-input" maxlength="10" placeholder="${JP.player_n(i+1)}" value="${escapeHTML(names[i]||"")}"/>`);
         inp.oninput = (e) => { names[i] = e.target.value; };
         wrap.appendChild(inp);
@@ -320,8 +333,9 @@ window.UI = (() => {
           used.push(fn); return fn;
         });
         const finalLevels = playerLevels.slice(0, count).map(l => l ?? level);
+        const finalAvatars = avatars.slice(0, count);
         SND.sfxPop();
-        onConfirm({ count, level, levels: finalLevels, jinro: jinro && count >= 4, names: finalNames, timerSec, hardMode });
+        onConfirm({ count, level, levels: finalLevels, jinro: jinro && count >= 4, names: finalNames, avatars: finalAvatars, timerSec, hardMode });
       });
       tap($("back"), () => location.reload());
     }
@@ -329,13 +343,17 @@ window.UI = (() => {
   }
 
   // -------- PASS / hand-off --------
-  function renderPass(playerName, onReady) {
+  // Accepts either a player object {name, avatar} or a plain name string
+  // (callers in some flows still pass a string).
+  function renderPass(player, onReady) {
     show("pass");
+    const name = (player && player.name) || player;
+    const avatar = (player && player.avatar) || "📱";
     const s = $("screen-pass");
     s.innerHTML = `
       <div class="center" style="margin-top: 18vh;">
-        <div class="pass-big bob">📱</div>
-        <h2>${JP.pass_to(playerName)}</h2>
+        <div class="pass-big bob">${avatar}</div>
+        <h2>${JP.pass_to(name)}</h2>
         <div class="pass-instr" style="white-space: pre-line;">${JP.pass_instr}</div>
         <button class="btn huge cool" id="ready">${JP.ok}</button>
       </div>`;
@@ -1707,7 +1725,7 @@ window.UI = (() => {
       const coreHp = core ? `${Math.max(0, core.hp)}/${core.maxHP}` : "?";
       const tile = el(`
         <button class="part-btn ${isDead?'dead':''}" style="${isSelf?'border-color: var(--accent); background: linear-gradient(160deg, #5a3a00, #2a1500);':''}padding:8px;">
-          <div class="pn" style="font-size:14px;color:${isSelf?'var(--accent)':'#fff'};">${escapeHTML(pp.name)}${isSelf?' (じぶん)':''}${isDead?' 💀':''}</div>
+          <div class="pn" style="font-size:14px;color:${isSelf?'var(--accent)':'#fff'};">${pp.avatar?pp.avatar+' ':''}${escapeHTML(pp.name)}${isSelf?' (じぶん)':''}${isDead?' 💀':''}</div>
           <div style="height:90px;">${monster ? Monsters.renderBossSVG(monster) : ''}</div>
           <div class="ph" style="font-size:11px;">${monster ? escapeHTML(monster.name_jp) : ''}</div>
           <div class="ph" style="font-size:11px;">HP ${totalHp}/${maxHp} ／ コア ${coreHp}</div>
@@ -1913,12 +1931,15 @@ window.UI = (() => {
   function buildHeader(boss, players, currentPlayer) {
     const svg = boss ? Monsters.renderBossSVG(boss) : "";
     const ragedClass = boss && boss.raged ? " raged" : "";
-    const playerTiles = (players||[]).map(p => `
-      <div class="player ${currentPlayer && p.id===currentPlayer.id?'active':''} ${p.dead?'dead':''}">
-        <div class="name">${escapeHTML(p.name)}</div>
+    const playerTiles = (players||[]).map(p => {
+      const lowHp = !p.dead && p.maxHp && p.hp <= p.maxHp * 0.3;
+      return `
+      <div class="player ${currentPlayer && p.id===currentPlayer.id?'active':''} ${p.dead?'dead':''} ${lowHp?'low-hp':''}">
+        <div class="name">${p.avatar?p.avatar+' ':''}${escapeHTML(p.name)}</div>
         <div class="hp ${p.hp<=5?'low':''}">❤️ ${p.hp}</div>
-        <div class="energy">⚡ ${p.energy} 🎴 ${p.hand?p.hand.length:0}</div>
-      </div>`).join("");
+        <div class="energy">⚡ ${p.energy} 🎴 ${p.hand?p.hand.length:0}${p.combo>=2?` 🔥×${p.combo}`:''}</div>
+      </div>`;
+    }).join("");
     return `
       <div class="header-wrap">
         <div class="round-banner">${boss ? `${boss.name_jp}${boss.raged?' 😡':''}` : ""}</div>
