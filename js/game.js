@@ -28,6 +28,8 @@ window.Game = (() => {
       solo: players.length === 1,
       timerSec: opts.timerSec || 0,
       hardMode: !!opts.hardMode,
+      eventProb: 0,    // ramps up each turn until an event fires; resets to 0.05 on fire
+      turnsTaken: 0,   // total player turns; first turn never spawns an event
       currentIdx: 0,
       round: 1,
       voteUsedThisRound: false,
@@ -88,11 +90,11 @@ window.Game = (() => {
   }
 
   function start() {
-    UI.renderTitle({ onStart: showSetup });
+    UI.renderTitle({ onStart: ({ count }) => showSetup(count) });
   }
 
-  function showSetup() {
-    UI.renderSetup({ onConfirm: (opts) => {
+  function showSetup(count) {
+    UI.renderSetup({ count, onConfirm: (opts) => {
       newGame(opts);
       // First-round role reveal
       if (S.jinro) {
@@ -139,24 +141,41 @@ window.Game = (() => {
     else UI.renderPass(p.name, () => maybeRandomEvent(p, () => goWager()));
   }
 
-  // ~5% chance of a random pop-in event (~1.7% each: fairy, bomb-kun, thief cat).
+  // Random pop-in events with ramping probability:
+  //   • Never on the first player turn of the whole game
+  //   • Each turn that doesn't fire: probability += 3% (capped at 20%)
+  //   • When it fires: drops back to 5%
+  // Then randomly picks one of 7 events: fairy, bomb, thief, rush, gambler, janken, ninja.
   function maybeRandomEvent(p, onContinue) {
-    const r = Math.random();
-    if (r >= 0.05) return onContinue();
-    const which = Math.floor((r / 0.05) * 3); // 0,1,2
-    if (which === 0) {
-      UI.renderFairyEvent(p, () => {
-        p.hp = p.maxHp;
-        UI.toast(`✨ ${p.name} は HP まんたん！`, 1600);
-        onContinue();
-      });
-    } else if (which === 1) {
+    S.turnsTaken = (S.turnsTaken || 0) + 1;
+    if (S.turnsTaken <= 1) {
+      // Skip events on the very first turn — the player needs to learn the basics first.
+      S.eventProb = 0.03;
+      return onContinue();
+    }
+    const fire = Math.random() < (S.eventProb || 0);
+    if (!fire) {
+      S.eventProb = Math.min(0.20, (S.eventProb || 0) + 0.03);
+      return onContinue();
+    }
+    S.eventProb = 0.05;
+    const events = ["fairy", "bomb", "thief", "rush", "gambler", "janken", "ninja"];
+    const which = events[Math.floor(Math.random() * events.length)];
+    runEvent(which, p, onContinue);
+  }
+
+  function runEvent(which, p, onContinue) {
+    if (which === "fairy") return UI.renderFairyEvent(p, () => {
+      p.hp = p.maxHp;
+      UI.toast(`✨ ${p.name} は HP まんたん！`, 1600);
+      onContinue();
+    });
+    if (which === "bomb") {
       const q = Questions.pick(p.level || S.level, 1, { misses: p.misses, seenIds: p.seenIds });
       if (!q) return onContinue();
       p.seenIds.push(q.id);
-      UI.renderBombEvent(p, q, ({ correct }) => {
+      return UI.renderBombEvent(p, q, ({ correct }) => {
         if (correct) {
-          // Hit a random non-core part (or core if everything else is dead) for 15
           const aliveNonCore = S.boss.parts.filter(pp => pp.hp > 0 && pp.effect !== "win");
           const targets = aliveNonCore.length ? aliveNonCore : S.boss.parts.filter(pp => pp.hp > 0);
           if (targets.length) {
@@ -176,20 +195,90 @@ window.Game = (() => {
         }
         onContinue();
       });
-    } else {
-      UI.renderThiefEvent(p, () => {
-        const aliveParts = S.boss.parts.filter(pp => pp.hp > 0);
-        if (aliveParts.length) {
-          const tp = aliveParts[(Math.random()*aliveParts.length)|0];
-          tp.hp = Math.max(0, tp.hp - 5);
+    }
+    if (which === "thief") return UI.renderThiefEvent(p, () => {
+      const aliveParts = S.boss.parts.filter(pp => pp.hp > 0);
+      if (aliveParts.length) {
+        const tp = aliveParts[(Math.random()*aliveParts.length)|0];
+        tp.hp = Math.max(0, tp.hp - 5);
+      }
+      p.hp = Math.min(p.maxHp, p.hp + 5);
+      UI.toast(`🐱 ${p.name} は HP +5！ボス -5！`, 1600);
+      const core = S.boss.parts.find(x => x.effect === "win");
+      if (core && core.hp <= 0) return doVictory();
+      onContinue();
+    });
+    if (which === "rush") return UI.renderRushEvent(p, S.level, (correctCount) => {
+      // Each correct = +2 dmg, dealt to a random non-core part
+      const dmg = correctCount * 2;
+      if (dmg > 0) {
+        const aliveNonCore = S.boss.parts.filter(pp => pp.hp > 0 && pp.effect !== "win");
+        const targets = aliveNonCore.length ? aliveNonCore : S.boss.parts.filter(pp => pp.hp > 0);
+        if (targets.length) {
+          const tp = targets[(Math.random()*targets.length)|0];
+          tp.hp = Math.max(0, tp.hp - dmg);
+          UI.toast(`🎤 ${correctCount}もん せいかい！${tp.name_jp} に ${dmg} ダメージ！`, 2000);
+          const core = S.boss.parts.find(x => x.effect === "win");
+          if (core && core.hp <= 0) return doVictory();
         }
-        p.hp = Math.min(p.maxHp, p.hp + 5);
-        UI.toast(`🐱 ${p.name} は HP +5！ボス -5！`, 1600);
+      } else {
+        UI.toast(`🎤 ざんねん…0もん`, 1500);
+      }
+      onContinue();
+    });
+    if (which === "gambler") return UI.renderGamblerEvent(p, ({ wager, lucky }) => {
+      // Player loses `wager` HP; deals wager (or wager*2 on lucky) to a random non-core part
+      p.hp = Math.max(0, p.hp - wager);
+      const dmg = lucky ? wager * 2 : wager;
+      const aliveNonCore = S.boss.parts.filter(pp => pp.hp > 0 && pp.effect !== "win");
+      const targets = aliveNonCore.length ? aliveNonCore : S.boss.parts.filter(pp => pp.hp > 0);
+      if (targets.length) {
+        const tp = targets[(Math.random()*targets.length)|0];
+        tp.hp = Math.max(0, tp.hp - dmg);
+        UI.toast(`🎩 -${wager} HP → ${tp.name_jp} に ${dmg} ダメージ${lucky?'！(大あたり!)':'！'}`, 2200);
+      }
+      if (p.hp === 0) {
+        p.dead = true;
+        if (S.players.every(x => x.dead)) return doDefeat();
+      }
+      const core = S.boss.parts.find(x => x.effect === "win");
+      if (core && core.hp <= 0) return doVictory();
+      onContinue();
+    });
+    if (which === "janken") return UI.renderJankenEvent(p, ({ playerPick, masterPick, outcome }) => {
+      let dmg = 0;
+      if (outcome === "win") dmg = 10;
+      else if (outcome === "tie") dmg = 3;
+      if (dmg > 0) {
+        const aliveNonCore = S.boss.parts.filter(pp => pp.hp > 0 && pp.effect !== "win");
+        const targets = aliveNonCore.length ? aliveNonCore : S.boss.parts.filter(pp => pp.hp > 0);
+        if (targets.length) {
+          const tp = targets[(Math.random()*targets.length)|0];
+          tp.hp = Math.max(0, tp.hp - dmg);
+          UI.toast(`✊ ${tp.name_jp} に ${dmg} ダメージ！`, 1800);
+          const core = S.boss.parts.find(x => x.effect === "win");
+          if (core && core.hp <= 0) return doVictory();
+        }
+      } else {
+        UI.toast(`✊ まけ… エナジー -1`, 1500);
+        p.energy = Math.max(0, p.energy - 1);
+      }
+      onContinue();
+    });
+    if (which === "ninja") return UI.renderNinjaEvent(p, () => {
+      const aliveNonCore = S.boss.parts.filter(pp => pp.hp > 0 && pp.effect !== "win");
+      const targets = aliveNonCore.length ? aliveNonCore : S.boss.parts.filter(pp => pp.hp > 0);
+      const dmg = 8;
+      if (targets.length) {
+        const tp = targets[(Math.random()*targets.length)|0];
+        tp.hp = Math.max(0, tp.hp - dmg);
+        UI.toast(`🥷 シュッ！ ${tp.name_jp} に ${dmg} ダメージ！`, 1800);
         const core = S.boss.parts.find(x => x.effect === "win");
         if (core && core.hp <= 0) return doVictory();
-        onContinue();
-      });
-    }
+      }
+      onContinue();
+    });
+    onContinue();
   }
 
   function currentPlayer() { return S.players[S.currentIdx]; }
@@ -228,39 +317,37 @@ window.Game = (() => {
 
   function handleAnswer(correct, chosen) {
     const p = currentPlayer();
-    let energyEarned = 0, cardsDrawn = 0;
     if (correct) {
-      energyEarned = S.currentWager;
-      p.energy += energyEarned;
-      p.attackPower = S.currentWager;
-      drawCard(p); cardsDrawn = 1;
+      const stars = S.currentWager;
+      p.energy += stars;
+      p.attackPower = stars;
+      drawCard(p);
+      // Skip the result screen on correct — too many taps. Toast + go to action.
+      const cheer = pickRand(JP.correct_cheer || ["ナイス〜！"]);
+      UI.toast(`✨ ${cheer} ⚡+${stars} ⚔️${stars} 🎴+1`, 1300);
+      SND.sfxCorrect();
+      setTimeout(() => goAction(), 950);
     } else {
-      // Track miss so future Questions.pick can rebalance
       const t = S.currentQuestion?.ptype;
       if (t) p.misses[t] = (p.misses[t] || 0) + 1;
+      // Wrong answers still go through the result screen so kids see the correct
+      // answer + explanation.
+      UI.renderResult({
+        correct: false, energyEarned: 0, cardsDrawn: 0,
+        question: S.currentQuestion, chosen,
+        player: p, boss: S.boss, players: S.players
+      }, () => goAction());
     }
-    UI.renderResult({
-      correct, energyEarned, cardsDrawn,
-      question: S.currentQuestion, chosen,
-      player: p, boss: S.boss, players: S.players
-    }, () => goAction());
   }
 
-  // -------- ACTION --------
+  // -------- ACTION (combined: attack + cards on one screen) --------
   function goAction() {
     const p = currentPlayer();
     UI.renderAction(p, S.boss, S.players,
-      () => goPickTarget(),
+      (target) => doAttack(p, target),
       (card, idx) => playCardInAction(p, card, idx),
       () => endTurn()
     );
-  }
-
-  function goPickTarget() {
-    const p = currentPlayer();
-    UI.renderTargetPicker(p, S.boss, S.players,
-      (target) => doAttack(p, target),
-      () => goAction());
   }
 
   function doAttack(p, target) {

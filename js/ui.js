@@ -60,33 +60,47 @@ window.UI = (() => {
   }
 
   // -------- TITLE --------
+  // Title also picks player count (default 1) so the setup screen has fewer controls.
   function renderTitle({ onStart }) {
     show("title");
     const s = $("screen-title"); s.innerHTML = "";
-    s.appendChild(el(`
-      <div class="center" style="margin-top: 8vh;">
-        <h1 class="pop">${JP.title}</h1>
-        <div class="title-en bob">${JP.titleEn}</div>
-        <div style="font-size: 80px; margin: 20px 0;" class="bob">🐙💩👾🦑</div>
-        <button class="btn huge hot" id="btn-start">${JP.start} ⚔️</button>
-        <div class="row" style="margin-top:8px;">
-          <button class="btn ghost" id="btn-rules">あそびかた ❓</button>
-          <button class="btn ghost" id="btn-settings">せってい ⚙️</button>
-        </div>
-        <div class="subtle" style="margin-top: 28px;">タップで おとが でます 🔊</div>
-      </div>`));
-    tap($("btn-start"), () => {
-      try { SND.unlock(); SND.sfxPop(); } catch(e) {}
-      onStart();
-    });
-    tap($("btn-rules"), () => {
-      try { SND.unlock(); } catch(e) {}
-      showRules(() => renderTitle({onStart}));
-    });
-    tap($("btn-settings"), () => {
-      try { SND.unlock(); } catch(e) {}
-      showSettings(() => renderTitle({onStart}));
-    });
+    let count = 1;
+    function paint() {
+      s.innerHTML = "";
+      s.appendChild(el(`
+        <div class="center" style="margin-top: 4vh;">
+          <h1 class="pop">${JP.title}</h1>
+          <div class="title-en bob">${JP.titleEn}</div>
+          <div style="font-size: 64px; margin: 12px 0;" class="bob">🐙💩👾🦑</div>
+          <div class="subtle" style="margin-top: 8px;">なんにん で あそぶ？</div>
+          <div class="row" id="t-count-row" style="margin: 6px 0 14px;"></div>
+          <button class="btn huge hot" id="btn-start">${JP.start} ⚔️</button>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn ghost" id="btn-rules">あそびかた ❓</button>
+            <button class="btn ghost" id="btn-settings">せってい ⚙️</button>
+          </div>
+          <div class="subtle" style="margin-top: 14px;">タップで おとが でます 🔊</div>
+        </div>`));
+      const cr = $("t-count-row");
+      [1,2,3,4,5,6].forEach(n => {
+        const b = el(`<button class="toggle ${count===n?'on':''}" style="font-size:22px;padding:10px 16px;min-width:50px;">${n}</button>`);
+        tap(b, () => { count = n; paint(); });
+        cr.appendChild(b);
+      });
+      tap($("btn-start"), () => {
+        try { SND.unlock(); SND.sfxPop(); } catch(e) {}
+        onStart({ count });
+      });
+      tap($("btn-rules"), () => {
+        try { SND.unlock(); } catch(e) {}
+        showRules(() => renderTitle({onStart}));
+      });
+      tap($("btn-settings"), () => {
+        try { SND.unlock(); } catch(e) {}
+        showSettings(() => renderTitle({onStart}));
+      });
+    }
+    paint();
   }
 
   function showSettings(onBack) {
@@ -124,18 +138,17 @@ window.UI = (() => {
   }
 
   // -------- SETUP --------
-  function renderSetup({ onConfirm }) {
+  function renderSetup({ onConfirm, count: initialCount }) {
     show("setup");
     clear("setup");
     const s = $("screen-setup");
-    let count = 3;
-    let level = 2;        // global default level
+    let count = initialCount || 1;
+    let level = 2;
     let jinro = false;
-    let advanced = false; // show per-player level overrides
-    let timerSec = 0;     // 0 = no timer; otherwise seconds per question
-    let hardMode = false; // boss attacks require defensive Q to dodge
-    // Pre-fill name fields with shuffled, unique funny names — kids see them on entry
-    // and can keep them or type over them.
+    let advanced = false;
+    let timerSec = 0;
+    let hardMode = false;
+    let showAdvanced = false; // collapsible "advanced" panel toggle
     const namePool = (window.FUNNY_NAMES || []).slice();
     for (let i = namePool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -143,7 +156,7 @@ window.UI = (() => {
     }
     const names = namePool.slice(0, 6);
     while (names.length < 6) names.push("");
-    const playerLevels = [null,null,null,null,null,null]; // null = use global
+    const playerLevels = [null,null,null,null,null,null];
 
     function pickFunnyName(usedNames) {
       const pool = (window.FUNNY_NAMES || []).filter(n => !usedNames.includes(n));
@@ -154,42 +167,40 @@ window.UI = (() => {
     function redraw() {
       s.innerHTML = "";
       s.appendChild(el(`
-        <div class="center" style="width:100%;">
-          <h2>${JP.setup_title}</h2>
-          <div class="subtle">${JP.player_count}</div>
-          <div class="row" id="count-row"></div>
-          <div class="subtle" style="margin-top:12px;">${JP.level}（みんなの デフォルト）</div>
+        <div class="center" style="width:100%; max-width: 600px; margin: 0 auto;">
+          <h2 style="margin: 8px 0;">${JP.setup_title}</h2>
+          <div class="subtle">${count}にん プレイ</div>
+          <div class="subtle" style="margin-top:14px;">${JP.level}</div>
           <div class="row" id="lvl-row"></div>
           <div class="row" id="names-row"></div>
-          <div class="row" style="margin-top:8px;">
-            <button class="toggle ${advanced?'on':''}" id="adv-toggle">${advanced?'こべつレベル ON':'こべつレベル OFF'}</button>
+          <button class="toggle ${showAdvanced?'on':''}" id="adv-panel" style="margin-top:14px; font-size:14px;">${showAdvanced?'▼ オプション':'▶ オプション'}</button>
+          <div id="adv-content" style="display:${showAdvanced?'block':'none'}; margin-top:8px;">
+            <div class="row" style="margin-top:8px;">
+              <button class="toggle ${advanced?'on':''}" id="adv-toggle">${advanced?'こべつレベル ON':'こべつレベル OFF'}</button>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <span class="subtle" style="margin-right:8px;">じかん せいげん:</span>
+              <button class="toggle ${timerSec===0?'on':''}" data-sec="0">なし</button>
+              <button class="toggle ${timerSec===30?'on':''}" data-sec="30">30s</button>
+              <button class="toggle ${timerSec===20?'on':''}" data-sec="20">20s</button>
+              <button class="toggle ${timerSec===10?'on':''}" data-sec="10">10s</button>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <button class="toggle ${hardMode?'on':''}" id="hard-toggle">${hardMode?'ハードモード ON':'ハードモード OFF'}</button>
+            </div>
+            ${count >= 4 ? `
+              <div class="row" style="margin-top:8px;">
+                <button class="toggle ${jinro?'on':''}" id="jinro-toggle">${jinro?JP.jinro_on:JP.jinro_off}</button>
+              </div>
+              <div class="subtle" style="font-size:13px;">${JP.jinro_hint}</div>
+            ` : ``}
           </div>
-          <div class="row" style="margin-top:8px;">
-            <span class="subtle" style="margin-right:8px;">じかん せいげん:</span>
-            <button class="toggle ${timerSec===0?'on':''}" data-sec="0">なし</button>
-            <button class="toggle ${timerSec===30?'on':''}" data-sec="30">30びょう</button>
-            <button class="toggle ${timerSec===20?'on':''}" data-sec="20">20びょう</button>
-            <button class="toggle ${timerSec===10?'on':''}" data-sec="10">10びょう</button>
-          </div>
-          <div class="row" style="margin-top:8px;">
-            <button class="toggle ${hardMode?'on':''}" id="hard-toggle">${hardMode?'ハードモード ON (こたえて かわす!)':'ハードモード OFF'}</button>
-          </div>
-          ${count >= 4 ? `
-            <div class="subtle" style="margin-top:12px;">${JP.jinro_hint}</div>
-            <div class="row"><button class="toggle ${jinro?'on':''}" id="jinro-toggle">${jinro?JP.jinro_on:JP.jinro_off}</button></div>
-          ` : ``}
-          <div class="row" style="margin-top:24px;">
+          <div class="row" style="margin-top:20px;">
             <button class="btn huge good" id="go">${JP.start_battle} 🚀</button>
             <button class="btn ghost" id="back">${JP.back}</button>
           </div>
         </div>
       `));
-      const cr = $("count-row");
-      [1,2,3,4,5,6].forEach(n => {
-        const b = el(`<button class="toggle ${count===n?'on':''}">${n}</button>`);
-        tap(b, () => { count = n; if (count < 4) jinro = false; redraw(); });
-        cr.appendChild(b);
-      });
       const lr = $("lvl-row");
       [[1,JP.level1],[2,JP.level2],[3,JP.level3]].forEach(([n, lbl]) => {
         const b = el(`<button class="toggle ${level===n?'on':''}" style="font-size:14px;">${lbl}</button>`);
@@ -215,9 +226,9 @@ window.UI = (() => {
         }
         nr.appendChild(wrap);
       }
-      tap($("adv-toggle"), () => { advanced = !advanced; redraw(); });
-      tap($("hard-toggle"), () => { hardMode = !hardMode; redraw(); });
-      // Timer buttons (data-sec attribute on each toggle)
+      tap($("adv-panel"), () => { showAdvanced = !showAdvanced; redraw(); });
+      const advT = $("adv-toggle"); if (advT) tap(advT, () => { advanced = !advanced; redraw(); });
+      const hardT = $("hard-toggle"); if (hardT) tap(hardT, () => { hardMode = !hardMode; redraw(); });
       s.querySelectorAll("[data-sec]").forEach(b => tap(b, () => { timerSec = parseInt(b.dataset.sec,10); redraw(); }));
       const jinroBtn = $("jinro-toggle"); if (jinroBtn) tap(jinroBtn, () => { jinro = !jinro; redraw(); });
       tap($("go"), () => {
@@ -560,6 +571,284 @@ window.UI = (() => {
     }
   }
 
+  // 🎤 クイズマスター — 20-second rapid-fire 1★ rush. Each correct = +2 dmg.
+  const QUIZMASTER_SVG = `
+    <svg viewBox="0 0 200 220" class="event-svg" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="100" cy="200" rx="55" ry="14" fill="#000" opacity=".3"/>
+      <ellipse cx="100" cy="180" rx="44" ry="22" fill="#1a1a3a" stroke="#000" stroke-width="3"/>
+      <rect x="80" y="120" width="40" height="50" fill="#1a1a3a" stroke="#000" stroke-width="3"/>
+      <polygon points="80,120 120,120 130,135 70,135" fill="#1a1a3a" stroke="#000" stroke-width="3"/>
+      <rect x="84" y="135" width="32" height="6" fill="#fff"/>
+      <polygon points="92,141 100,148 108,141" fill="#e02030" stroke="#000" stroke-width="2"/>
+      <circle cx="100" cy="80" r="40" fill="#fde0c0" stroke="#000" stroke-width="3"/>
+      <ellipse cx="100" cy="55" rx="32" ry="14" fill="#3a2a1a"/>
+      <path d="M 70 70 Q 100 50 130 70" stroke="#3a2a1a" stroke-width="6" fill="none"/>
+      <circle cx="86" cy="80" r="5" fill="#000"/>
+      <circle cx="114" cy="80" r="5" fill="#000"/>
+      <circle cx="87" cy="79" r="2" fill="#fff"/>
+      <circle cx="115" cy="79" r="2" fill="#fff"/>
+      <ellipse cx="78" cy="92" rx="6" ry="3" fill="#ff88bb" opacity=".7"/>
+      <ellipse cx="122" cy="92" rx="6" ry="3" fill="#ff88bb" opacity=".7"/>
+      <path d="M 88 96 Q 100 108 112 96" stroke="#000" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <line x1="135" y1="140" x2="155" y2="100" stroke="#222" stroke-width="4" stroke-linecap="round"/>
+      <ellipse cx="158" cy="92" rx="11" ry="14" fill="#222" stroke="#000" stroke-width="2"/>
+      <ellipse cx="158" cy="88" rx="7" ry="9" fill="#666"/>
+    </svg>`;
+
+  // 🎩 ギャンブラー — wagers your HP for boss damage; coin-flip can double it.
+  const GAMBLER_SVG = `
+    <svg viewBox="0 0 200 220" class="event-svg" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="100" cy="208" rx="55" ry="12" fill="#000" opacity=".3"/>
+      <path d="M 60 120 L 60 200 L 140 200 L 140 120 L 130 110 L 70 110 Z" fill="#3a3a3a" stroke="#000" stroke-width="3"/>
+      <path d="M 90 110 L 90 200 M 110 110 L 110 200" stroke="#1a1a1a" stroke-width="2"/>
+      <rect x="92" y="115" width="16" height="20" fill="#fff"/>
+      <line x1="100" y1="120" x2="100" y2="135" stroke="#000" stroke-width="2"/>
+      <circle cx="100" cy="78" r="36" fill="#d4a878" stroke="#000" stroke-width="3"/>
+      <ellipse cx="60" cy="48" rx="50" ry="8" fill="#1a1a1a" stroke="#000" stroke-width="2"/>
+      <path d="M 70 50 L 70 36 L 130 36 L 130 50 Z" fill="#1a1a1a" stroke="#000" stroke-width="2"/>
+      <rect x="68" y="48" width="64" height="6" fill="#8a3030" stroke="#000" stroke-width="1.5"/>
+      <circle cx="86" cy="78" r="4" fill="#000"/>
+      <circle cx="114" cy="78" r="4" fill="#000"/>
+      <line x1="80" y1="72" x2="92" y2="72" stroke="#000" stroke-width="2"/>
+      <line x1="108" y1="72" x2="120" y2="72" stroke="#000" stroke-width="2"/>
+      <circle cx="100" cy="98" r="4" fill="#fff"/>
+      <line x1="98" y1="100" x2="120" y2="106" stroke="#a06030" stroke-width="2"/>
+      <g stroke="#3a2a1a" stroke-width=".5">
+        <circle cx="80" cy="100" r=".5"/><circle cx="84" cy="102" r=".5"/>
+        <circle cx="88" cy="103" r=".5"/><circle cx="92" cy="104" r=".5"/>
+        <circle cx="108" cy="104" r=".5"/><circle cx="112" cy="103" r=".5"/>
+        <circle cx="116" cy="102" r=".5"/><circle cx="120" cy="100" r=".5"/>
+      </g>
+      <ellipse cx="155" cy="115" rx="18" ry="18" fill="#ffe45c" stroke="#a08020" stroke-width="3"/>
+      <text x="155" y="122" text-anchor="middle" font-size="22" font-weight="900" fill="#a08020">¥</text>
+      <line x1="138" y1="118" x2="148" y2="115" stroke="#d4a878" stroke-width="6" stroke-linecap="round"/>
+    </svg>`;
+
+  // ✊ ジャンケン マスター — rock/paper/scissors duel.
+  const JANKEN_SVG = `
+    <svg viewBox="0 0 200 220" class="event-svg" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="100" cy="208" rx="55" ry="12" fill="#000" opacity=".3"/>
+      <path d="M 50 200 L 60 130 L 140 130 L 150 200 Z" fill="#5a3050" stroke="#000" stroke-width="3"/>
+      <line x1="100" y1="130" x2="100" y2="200" stroke="#1a1a3a" stroke-width="2"/>
+      <path d="M 60 130 Q 100 145 140 130" stroke="#ffe45c" stroke-width="4" fill="none"/>
+      <circle cx="100" cy="92" r="38" fill="#fde0c0" stroke="#000" stroke-width="3"/>
+      <path d="M 65 80 Q 100 60 135 80" stroke="#1a1a1a" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <ellipse cx="100" cy="60" rx="14" ry="10" fill="#1a1a1a" stroke="#000" stroke-width="2"/>
+      <rect x="94" y="46" width="12" height="20" fill="#1a1a1a" stroke="#000" stroke-width="2"/>
+      <ellipse cx="100" cy="46" rx="6" ry="5" fill="#1a1a1a"/>
+      <path d="M 75 90 Q 80 86 85 90" stroke="#000" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M 115 90 Q 120 86 125 90" stroke="#000" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <line x1="93" y1="103" x2="107" y2="103" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="160" cy="155" rx="18" ry="22" fill="#fde0c0" stroke="#000" stroke-width="3" transform="rotate(-15 160 155)"/>
+      <text x="160" y="162" text-anchor="middle" font-size="20">✊</text>
+    </svg>`;
+
+  // 🥷 ニンジャ — silent strike, free 8 dmg to a random non-core part.
+  const NINJA_SVG = `
+    <svg viewBox="0 0 200 220" class="event-svg" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="100" cy="208" rx="55" ry="12" fill="#000" opacity=".3"/>
+      <path d="M 60 200 L 65 130 L 135 130 L 140 200 Z" fill="#1a1a1a" stroke="#000" stroke-width="3"/>
+      <circle cx="100" cy="100" r="38" fill="#1a1a1a" stroke="#000" stroke-width="3"/>
+      <rect x="60" y="90" width="80" height="14" fill="#fde0c0"/>
+      <ellipse cx="84" cy="97" rx="5" ry="5" fill="#fff"/>
+      <ellipse cx="116" cy="97" rx="5" ry="5" fill="#fff"/>
+      <circle cx="84" cy="97" r="2" fill="#000"/>
+      <circle cx="116" cy="97" r="2" fill="#000"/>
+      <path d="M 60 110 Q 100 130 140 110" stroke="#000" stroke-width="2"/>
+      <rect x="62" y="86" width="76" height="6" fill="#1a1a1a"/>
+      <line x1="62" y1="86" x2="138" y2="86" stroke="#444" stroke-width="1"/>
+      <g transform="translate(160,140) rotate(25)">
+        <polygon points="0,-15 5,-5 15,-3 7,3 10,15 0,8 -10,15 -7,3 -15,-3 -5,-5" fill="#888" stroke="#000" stroke-width="2"/>
+        <circle cx="0" cy="0" r="3" fill="#222"/>
+      </g>
+      <line x1="40" y1="60" x2="55" y2="75" stroke="#888" stroke-width="2" stroke-dasharray="4 2"/>
+      <line x1="155" y1="135" x2="135" y2="115" stroke="#888" stroke-width="2" stroke-dasharray="4 2"/>
+    </svg>`;
+
+  function renderRushEvent(player, level, onResolve) {
+    SND.unlock(); SND.sfxBoss();
+    const intro = `
+      <div class="event-rare">★ レアキャラ ★</div>
+      <div class="event-name">クイズマスター 🎤</div>
+      ${QUIZMASTER_SVG}
+      <div class="event-line">「ラッシュ もんだい！20びょう で<br>なんもん こたえられる？！」</div>
+      <div class="event-line subtle">せいかい × 2 ダメージ！</div>
+      <div class="event-buttons">
+        <button class="btn huge hot" id="ev-go">スタート！🔥</button>
+      </div>`;
+    const modal = showModal(intro);
+    tap(modal.querySelector("#ev-go"), () => startRush());
+
+    function startRush() {
+      let correctCount = 0;
+      let remaining = 20;
+      let answered = false;
+      let timerHandle = null;
+      const ec = modal.querySelector(".event-card");
+
+      function nextQ() {
+        const q = Questions.pick(level || 2, 1, { misses: player.misses, seenIds: player.seenIds });
+        if (!q) return finish();
+        player.seenIds.push(q.id);
+        answered = false;
+        let displayPrompt = "";
+        if (q.promptImage) displayPrompt += `<div style="font-size:48px;line-height:1;">${q.promptImage}</div>`;
+        if (q.prompt) displayPrompt += `<div style="font-size:22px;font-weight:900;margin:6px 0;">${escapeHTML(q.prompt).replace(/\n/g,"<br>")}</div>`;
+        ec.innerHTML = `
+          <div style="font-size:14px;color:var(--accent);">クイズマスター ラッシュ</div>
+          <div class="q-timer" id="q-timer" style="position:relative;display:inline-block;margin:6px 0;">⏱️ <span id="q-timer-num">${remaining}</span> / ✅ ${correctCount}</div>
+          <div style="font-size:18px;color:#d8c8ff;">${q.prompt_jp}</div>
+          ${displayPrompt}
+          <div class="options" id="rush-opts" style="margin-top:8px;"></div>`;
+        const optsEl = modal.querySelector("#rush-opts");
+        q.options.forEach((opt, i) => {
+          const o = document.createElement("div");
+          o.className = "opt"; o.dataset.i = i; o.textContent = opt;
+          o.style.fontSize = "20px"; o.style.padding = "10px"; o.style.minHeight = "56px";
+          tap(o, () => {
+            if (answered) return; answered = true;
+            const correct = i === q.answer;
+            o.classList.add(correct ? "right" : "wrong");
+            optsEl.querySelectorAll(".opt").forEach(x => x.classList.add("disabled"));
+            if (correct) { correctCount++; SND.sfxCorrect(); } else SND.sfxWrong();
+            setTimeout(() => { if (remaining > 0) nextQ(); }, 250);
+          });
+          optsEl.appendChild(o);
+        });
+        if (q.audio) setTimeout(() => SND.speak(q.audio), 100);
+      }
+      function finish() {
+        if (timerHandle) clearInterval(timerHandle);
+        ec.innerHTML = `
+          <div class="event-rare">★ レアキャラ ★</div>
+          <div class="event-name">クイズマスター 🎤</div>
+          ${QUIZMASTER_SVG}
+          <div class="event-line">「${correctCount}もん せいかい！」</div>
+          <div class="event-line" style="color:var(--good);">${correctCount * 2} ダメージ！</div>
+          <div class="event-buttons">
+            <button class="btn huge good" id="ev-ok">いっこう だ！⚔️</button>
+          </div>`;
+        tap(modal.querySelector("#ev-ok"), () => {
+          closeModal(modal);
+          onResolve(correctCount);
+        });
+      }
+      timerHandle = setInterval(() => {
+        remaining--;
+        const tn = modal.querySelector("#q-timer-num");
+        if (tn) tn.textContent = remaining;
+        if (remaining <= 0) {
+          clearInterval(timerHandle);
+          finish();
+        }
+      }, 1000);
+      nextQ();
+    }
+  }
+
+  function renderGamblerEvent(player, onResolve) {
+    SND.unlock(); SND.sfxPop();
+    const html = `
+      <div class="event-rare">★ レアキャラ ★</div>
+      <div class="event-name">ギャンブラー 🎩</div>
+      ${GAMBLER_SVG}
+      <div class="event-line">「あんちゃん…じぶんの HP かけて<br>こうげき しねぇか？」</div>
+      <div class="event-line subtle">HPを かける → ダメージ！コインで うんが よければ ×2！</div>
+      <div class="event-buttons">
+        <button class="btn good" id="ev-5">5 HP かける</button>
+        <button class="btn cool" id="ev-10">10 HP かける</button>
+        <button class="btn hot" id="ev-15">15 HP かける</button>
+      </div>
+      <button class="btn ghost" id="ev-no" style="margin-top:8px;">パス…</button>`;
+    const modal = showModal(html);
+    function pickWager(wager) {
+      // Coin flip animation
+      const ec = modal.querySelector(".event-card");
+      ec.innerHTML = `
+        <div class="event-name">コイン トス…</div>
+        <div style="font-size:80px;animation:coin-spin .9s linear infinite;display:inline-block;">🪙</div>
+        <style>@keyframes coin-spin{0%,100%{transform:rotateY(0)}50%{transform:rotateY(180deg)}}</style>`;
+      const lucky = Math.random() < 0.5;
+      setTimeout(() => {
+        ec.innerHTML = `
+          <div class="event-name">${lucky?'🎉 大あたり！':'😅 ふつう…'}</div>
+          ${GAMBLER_SVG}
+          <div class="event-line">${lucky?`「ラッキー！ダメージ ${wager*2}！」`:`「ざんねん！ダメージ ${wager}…」`}</div>
+          <div class="event-buttons">
+            <button class="btn huge ${lucky?'good':'cool'}" id="ev-ok">うけとる！</button>
+          </div>`;
+        tap(modal.querySelector("#ev-ok"), () => {
+          closeModal(modal);
+          onResolve({ wager, lucky });
+        });
+      }, 1300);
+    }
+    tap(modal.querySelector("#ev-5"),  () => pickWager(5));
+    tap(modal.querySelector("#ev-10"), () => pickWager(10));
+    tap(modal.querySelector("#ev-15"), () => pickWager(15));
+    tap(modal.querySelector("#ev-no"), () => { closeModal(modal); onResolve({ wager: 0, lucky: false }); });
+  }
+
+  function renderJankenEvent(player, onResolve) {
+    SND.unlock(); SND.sfxPop();
+    const html = `
+      <div class="event-rare">★ レアキャラ ★</div>
+      <div class="event-name">ジャンケン マスター ✊</div>
+      ${JANKEN_SVG}
+      <div class="event-line">「ジャンケン しょうぶ じゃ！」</div>
+      <div class="event-buttons">
+        <button class="btn cool" id="j-rock">✊<br>グー</button>
+        <button class="btn good" id="j-paper">✋<br>パー</button>
+        <button class="btn hot" id="j-sci">✌️<br>チョキ</button>
+      </div>`;
+    const modal = showModal(html);
+    function play(playerPick) {
+      const choices = ["rock", "paper", "scissors"];
+      const masterPick = choices[(Math.random()*3)|0];
+      let outcome = "tie";
+      if (playerPick !== masterPick) {
+        const wins = { rock: "scissors", paper: "rock", scissors: "paper" };
+        outcome = wins[playerPick] === masterPick ? "win" : "lose";
+      }
+      const emoji = { rock: "✊", paper: "✋", scissors: "✌️" };
+      const ec = modal.querySelector(".event-card");
+      ec.innerHTML = `
+        <div class="event-name">じゃーんけーん…</div>
+        <div style="font-size:48px;margin:14px 0;">
+          <div style="display:inline-block;width:90px;text-align:center;">あなた<br>${emoji[playerPick]}</div>
+          <div style="display:inline-block;width:90px;text-align:center;">マスター<br>${emoji[masterPick]}</div>
+        </div>
+        <div class="event-line" style="color:${outcome==='win'?'var(--good)':outcome==='tie'?'var(--accent)':'var(--bad)'};">
+          ${outcome==='win'?'🎉 かち！ 10 ダメージ！':outcome==='tie'?'😐 あいこ！ 3 ダメージ':'😢 まけ… エナジー -1'}
+        </div>
+        <div class="event-buttons">
+          <button class="btn huge cool" id="ev-ok">OK！</button>
+        </div>`;
+      tap(modal.querySelector("#ev-ok"), () => {
+        closeModal(modal);
+        onResolve({ playerPick, masterPick, outcome });
+      });
+    }
+    tap(modal.querySelector("#j-rock"),  () => play("rock"));
+    tap(modal.querySelector("#j-paper"), () => play("paper"));
+    tap(modal.querySelector("#j-sci"),   () => play("scissors"));
+  }
+
+  function renderNinjaEvent(player, onResolve) {
+    SND.unlock(); SND.sfxHit();
+    const html = `
+      <div class="event-rare">★ レアキャラ ★</div>
+      <div class="event-name">にんじゃ 🥷</div>
+      ${NINJA_SVG}
+      <div class="event-line">「シュッ！しずかに ボスを いっげき！」</div>
+      <div class="event-line" style="color:var(--good);">8 ダメージ！</div>
+      <div class="event-buttons">
+        <button class="btn huge good" id="ev-ok">サンキュー 🥷</button>
+      </div>`;
+    const modal = showModal(html);
+    tap(modal.querySelector("#ev-ok"), () => { closeModal(modal); onResolve(); });
+  }
+
   // 🐱 Thief Cat: steals HP from boss, gives to player.
   function renderThiefEvent(player, onResolve) {
     SND.unlock(); SND.sfxPop();
@@ -696,29 +985,70 @@ window.UI = (() => {
     }
   }
 
-  // -------- ACTION (attack / cards) --------
+  // -------- ACTION (now combined with target picker) --------
+  // If hasAtk: show boss parts as direct attack targets + cards + end-turn link.
+  // If no hasAtk: just cards + end-turn (after a wrong answer).
+  // onAttack(target) is called with the same {kind, part/target} shape the old picker used.
   function renderAction(player, boss, players, onAttack, onCard, onEnd) {
     show("action");
     const s = $("screen-action"); s.innerHTML = "";
     s.appendChild(el(buildHeader(boss, players, player)));
     const hasAtk = player.attackPower > 0;
+    const isSpy = player.role === "spy";
     s.appendChild(el(`
       <div class="center" style="width:100%;">
-        <h3>${hasAtk ? "カイジュウを やっつけろ！" : "ターンを おわるよ"}</h3>
-        <div class="subtle">エナジー ${player.energy}${hasAtk?` / こうげきパワー ${player.attackPower}`:""}</div>
-        <div class="row">
-          ${hasAtk
-            ? `<button class="btn huge hot" id="atk">⚔️ ${JP.action_attack}！</button>`
-            : `<button class="btn huge cool" id="end">${JP.action_end} →</button>`
-          }
-        </div>
-        ${hasAtk ? `<button class="btn ghost" id="end" style="margin-top:8px;font-size:14px;">${JP.action_end}</button>` : ``}
-        <h3 style="margin-top:16px;">カード</h3>
+        ${hasAtk ? `
+          <h3>⚔️ こうげきパワー ${player.attackPower} ／ ⚡ ${player.energy}</h3>
+          <div class="subtle">こうげきしたい パーツを タップ！</div>
+          <div class="parts-pick" id="parts"></div>
+          ${isSpy ? `
+            <div class="subtle" style="margin-top:14px;color:#ff7799;font-weight:900;">🕵️ スパイの ひみつ オプション</div>
+            <div class="parts-pick" id="spy-targets"></div>
+          ` : ``}
+        ` : `
+          <h3>ターンを おわるよ</h3>
+          <div class="subtle">⚡ ${player.energy}</div>
+        `}
+        <h3 style="margin-top:14px; font-size:18px;">カード</h3>
         <div id="hand-area"></div>
+        <button class="btn ${hasAtk?'ghost':'huge cool'}" id="end" style="margin-top:14px;${hasAtk?'font-size:14px;':''}">${JP.action_end} →</button>
       </div>
     `));
     if (hasAtk) {
-      tap($("atk"), () => onAttack());
+      const partsEl = $("parts");
+      boss.parts.forEach(p => {
+        const dead = p.hp <= 0;
+        const effLabel = effectLabel(p);
+        const isCore = p.effect === "win";
+        const cls = `part-btn ${dead?'dead':''} ${isCore?'core-btn':''}`;
+        const icon = isCore ? "⭐ " : "";
+        const node = el(`<button class="${cls}">
+          <div class="pn">${icon}${p.name_jp}${isCore?' （よわてん）':''}</div>
+          <div class="ph">HP ${Math.max(0,p.hp)}/${p.maxHP}</div>
+          <div class="pe">${effLabel}</div>
+        </button>`);
+        if (!dead) tap(node, () => { SND.sfxPop(); onAttack({ kind: "boss-part", part: p }); });
+        partsEl.appendChild(node);
+      });
+      if (isSpy) {
+        const sp = $("spy-targets");
+        players.filter(pp => !pp.dead && pp.id !== player.id).forEach(teammate => {
+          const node = el(`<button class="part-btn" style="border-color:#ff7799;">
+            <div class="pn">😈 ${escapeHTML(teammate.name)}</div>
+            <div class="ph">HP ${teammate.hp}/${teammate.maxHp}</div>
+            <div class="pe" style="color:#ff7799;">なかまを こうげき！</div>
+          </button>`);
+          tap(node, () => { SND.sfxPop(); onAttack({ kind: "teammate", target: teammate }); });
+          sp.appendChild(node);
+        });
+        const healBoss = el(`<button class="part-btn" style="border-color:#ff7799;">
+          <div class="pn">💚 ボスを かいふく</div>
+          <div class="ph">+5 ボスHP</div>
+          <div class="pe" style="color:#ff7799;">こっそり たすける</div>
+        </button>`);
+        tap(healBoss, () => { SND.sfxPop(); onAttack({ kind: "heal-boss" }); });
+        sp.appendChild(healBoss);
+      }
     }
     tap($("end"), () => { SND.sfxPop(); onEnd(); });
     renderHandInto($("hand-area"), player, false, onCard);
@@ -952,5 +1282,6 @@ window.UI = (() => {
   return { renderTitle, renderSetup, renderPass, renderRole, renderWager, renderQuestion,
            renderResult, renderAction, renderTargetPicker, renderBoss, renderVictory,
            renderDefeat, renderVote, renderDefenseQ, toast, show, showRules, tap,
-           renderFairyEvent, renderBombEvent, renderThiefEvent };
+           renderFairyEvent, renderBombEvent, renderThiefEvent,
+           renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent };
 })();
