@@ -28,7 +28,11 @@ window.UI = (() => {
   // (the screens that explicitly start a theme manage their own stop). For all
   // other transitions, kill any lingering theme so it doesn't bleed into e.g.
   // the question screen.
-  const THEME_SCREENS = new Set(["title", "victory", "defeat"]);
+  //
+  // "action" is included so the PvP turn theme survives the renderPvpAction →
+  // renderTargetPicker handoff (both call show("action")). In hero mode no
+  // theme is started on the action screen, so the inclusion is a no-op there.
+  const THEME_SCREENS = new Set(["title", "victory", "defeat", "action"]);
   function show(name) {
     SCREENS.forEach(n => {
       const el = $("screen-"+n);
@@ -36,7 +40,12 @@ window.UI = (() => {
       el.classList.toggle("hidden", n !== name);
       if (n !== name) el.innerHTML = "";
     });
-    if (!THEME_SCREENS.has(name) && SND && SND.stopTheme) SND.stopTheme(300);
+    if (!THEME_SCREENS.has(name)) {
+      if (SND && SND.stopTheme) SND.stopTheme(300);
+      // Leaving the action phase ends the PvP turn — reset the auto-start
+      // tracker so the next time a player's turn opens, their theme plays.
+      pvpThemePlayerId = null;
+    }
     // Exit button is visible during a fight (any in-game screen except title/setup/victory/defeat)
     const exitBtn = $("exit-btn");
     if (exitBtn) {
@@ -1444,12 +1453,23 @@ window.UI = (() => {
   // Shows the field of monsters (everyone's). Active player's monster is highlighted.
   // Tapping an opponent monster triggers onPickOpponent(opp); the game then drills
   // into that opponent's parts for the actual target choice.
+  // Tracks which player's PvP turn theme has been auto-started, so a manual
+  // mute via the 🎵 button isn't immediately reversed when the screen re-renders
+  // (e.g., after canceling out of the target picker).
+  let pvpThemePlayerId = null;
+
   function renderPvpAction(player, players, onPickOpponent, onCard, onEnd) {
     show("action");
     const s = $("screen-action"); s.innerHTML = "";
     const hasAtk = player.attackPower > 0;
+    const themePlaying = SND.isThemePlaying ? SND.isThemePlaying() : false;
+    const isNewTurn = pvpThemePlayerId !== player.id;
     s.appendChild(el(`
-      <div class="center" style="width:100%;">
+      <div class="center" style="width:100%; position:relative;">
+        <button id="pvp-music" class="btn ghost" title="テーマソング ON/OFF"
+                style="position:absolute; right:6px; top:0; padding:6px 10px; font-size:18px; min-height:0;">
+          ${themePlaying ? '🎵' : '🔇'}
+        </button>
         <h3 style="margin:6px 0;">${hasAtk?`⚔️ こうげきパワー ${player.attackPower}`:'こうげき できない'} ／ ⚡ ${player.energy}</h3>
         <div class="subtle">${hasAtk?'こうげきする モンスターを タップ！':'カードを つかうか ターンを おわってね'}</div>
         <div id="pvp-field" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 10px 0; max-width: 760px; width:100%;"></div>
@@ -1457,6 +1477,24 @@ window.UI = (() => {
         <div id="hand-area"></div>
         <button class="btn ${hasAtk?'ghost':'huge cool'}" id="end" style="margin-top:14px;${hasAtk?'font-size:14px;':''}">${JP.action_end} →</button>
       </div>`));
+    // Start the active player's monster theme on loop on the first render of
+    // their turn. On subsequent re-renders (e.g., after canceling out of the
+    // target picker) we respect a prior manual mute — the kid sees 🔇 and can
+    // re-enable.
+    if (player.monster && player.monster.id && isNewTurn) {
+      pvpThemePlayerId = player.id;
+      SND.playTheme(player.monster.id, { loop: true, volume: 0.4, fadeIn: 500 });
+      const b = $("pvp-music"); if (b) b.textContent = '🎵';
+    }
+    tap($("pvp-music"), () => {
+      if (SND.isThemePlaying()) {
+        SND.stopTheme(250);
+        $("pvp-music").textContent = '🔇';
+      } else if (player.monster && player.monster.id) {
+        SND.playTheme(player.monster.id, { loop: true, volume: 0.4, fadeIn: 300 });
+        $("pvp-music").textContent = '🎵';
+      }
+    });
     const field = $("pvp-field");
     players.forEach(pp => {
       const isSelf = pp.id === player.id;
@@ -1489,8 +1527,14 @@ window.UI = (() => {
     const s = $("screen-action"); s.innerHTML = "";
     s.appendChild(el(buildHeader(boss, players, player)));
     const isSpy = player.role === "spy";
+    // Show a music toggle if a theme is currently playing (PvP turn music
+    // started in renderPvpAction and persists into this screen). Hidden in
+    // hero mode where no theme is running.
+    const themePlaying = SND.isThemePlaying ? SND.isThemePlaying() : false;
     s.appendChild(el(`
-      <div class="center" style="width:100%;">
+      <div class="center" style="width:100%; position:relative;">
+        ${themePlaying ? `<button id="tp-music" class="btn ghost" title="テーマソング ON/OFF"
+                style="position:absolute; right:6px; top:0; padding:6px 10px; font-size:18px; min-height:0;">🎵</button>` : ``}
         <h3>${JP.pick_target}</h3>
         <div class="parts-pick" id="parts"></div>
         ${isSpy ? `
@@ -1499,6 +1543,17 @@ window.UI = (() => {
         ` : ``}
         <button class="btn ghost" id="cancel">${JP.cancel}</button>
       </div>`));
+    if (themePlaying) {
+      tap($("tp-music"), () => {
+        if (SND.isThemePlaying()) {
+          SND.stopTheme(250);
+          const b = $("tp-music"); if (b) b.textContent = '🔇';
+        } else if (player.monster && player.monster.id) {
+          SND.playTheme(player.monster.id, { loop: true, volume: 0.4, fadeIn: 300 });
+          const b = $("tp-music"); if (b) b.textContent = '🎵';
+        }
+      });
+    }
     const partsEl = $("parts");
     boss.parts.forEach(p => {
       const dead = p.hp <= 0;

@@ -172,6 +172,7 @@ window.SND = (() => {
     if (fadeMs <= 0) { a.pause(); a.volume = 0; return; }
     fadeTo(a, 0, fadeMs, () => { try { a.pause(); } catch(_){} });
   }
+  function isThemePlaying() { return !!currentTheme && !currentTheme.paused; }
 
   function playTheme(bossId, opts = {}) {
     if (muted || !getThemes()) return null;
@@ -221,5 +222,5 @@ window.SND = (() => {
            setMuted, isMuted, setVoice, listVoices,
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
            getThemes, setThemes,
-           playTheme, playThemeSnippet, stopTheme };
+           playTheme, playThemeSnippet, stopTheme, isThemePlaying };
 })();
