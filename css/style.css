@@ -344,6 +344,42 @@ h3 { font-size: 28px; margin: 4px 0; }
 #exit-btn.hidden { display:none; }
 #exit-btn:active { transform: scale(0.9); }
 
+/* Rare event hype intro overlay */
+.rare-event-overlay {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(255,204,0,.96), rgba(80,40,0,.98));
+  z-index: 1500;
+  overflow: hidden;
+}
+.rare-flash {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+.rare-content {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 90%;
+}
+.rare-stars { font-size: 70px; line-height: 1; margin-bottom: 8px; }
+.rare-title {
+  font-size: 64px; font-weight: 900; color: #fff;
+  text-shadow: 0 6px 0 #000, 0 0 30px #ff8800;
+  letter-spacing: 4px;
+}
+.rare-sub {
+  font-size: 24px; color: var(--bg1);
+  letter-spacing: 8px;
+  font-weight: 900;
+  margin-top: 6px;
+  text-shadow: 0 2px 0 #fff;
+}
+@media (max-width: 700px) {
+  .rare-stars { font-size: 50px; }
+  .rare-title { font-size: 40px; }
+  .rare-sub { font-size: 18px; letter-spacing: 4px; }
+}
+
 /* Furigana (ruby) styling so kanji reads like a kids' book */
 ruby { ruby-align: center; }
 rt {

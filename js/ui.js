@@ -698,6 +698,44 @@ window.UI = (() => {
     setTimeout(() => { overlay.remove(); onDone(); }, 4600);
   }
 
+  // -------- RARE EVENT HYPE INTRO --------
+  // Big "★ レアイベント ★" splash to hype the player before any random pop-in.
+  function showRareEventIntro(onDone) {
+    SND.unlock();
+    const overlay = document.createElement("div");
+    overlay.className = "rare-event-overlay";
+    overlay.innerHTML = `
+      <div class="rare-flash"></div>
+      <div class="rare-content">
+        <div class="rare-stars">✨⭐✨</div>
+        <div class="rare-title">レアイベント！</div>
+        <div class="rare-sub">RARE!</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxVictory();
+    overlay.querySelector(".rare-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0) rotate(-20deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.2) rotate(5deg)", opacity: 1, offset: 0.55 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1 }
+      ],
+      { duration: 600, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".rare-flash").animate(
+      [
+        { background: "rgba(255, 255, 255, 0)" },
+        { background: "rgba(255, 255, 255, 0.5)", offset: 0.5 },
+        { background: "rgba(255, 255, 255, 0)" }
+      ],
+      { duration: 500, iterations: 2 }
+    );
+    overlay.querySelector(".rare-stars").animate(
+      [{ transform: "rotate(0)" }, { transform: "rotate(360deg)" }],
+      { duration: 1500, iterations: Infinity }
+    );
+    setTimeout(() => { overlay.remove(); onDone(); }, 1500);
+  }
+
   // -------- RANDOM POP-IN EVENTS (fairy / bomb / thief) --------
   // Each shows in a modal overlay. Caller passes `onResolve(effect)` where
   // effect is whatever the event decided to do.
@@ -1628,5 +1666,5 @@ window.UI = (() => {
            renderFairyEvent, renderBombEvent, renderThiefEvent,
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
            renderBossIntro, showSlingshot, showBossAttackAnim,
-           renderMonsterPick, renderPvpAction };
+           renderMonsterPick, renderPvpAction, showRareEventIntro };
 })();
