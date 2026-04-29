@@ -215,6 +215,7 @@ window.UI = (() => {
     const slingOn = SND.getSlingshot();
     const bossAnimOn = SND.getBossAnim();
     const themesOn = SND.getThemes ? SND.getThemes() : true;
+    const spellOn = SND.getSpellMode ? SND.getSpellMode() : false;
     const voices = SND.listVoices ? SND.listVoices() : [];
     const currentName = (() => {
       try { return localStorage.getItem("kjb_voice") || ""; } catch(e) { return ""; }
@@ -234,6 +235,10 @@ window.UI = (() => {
           <div style="font-size:18px; margin:18px 0 8px;">ボスの テーマソング</div>
           <button class="toggle ${themesOn?'on':''}" id="themes-toggle" style="font-size:16px;padding:10px 16px;">🎵 テーマソング ${themesOn?'ON':'OFF'}</button>
 
+          <div style="font-size:18px; margin:18px 0 8px;">スペルモード</div>
+          <div class="subtle" style="font-size:13px; margin-bottom:6px;">えいごの たんごを じぶんで タイプ！(L0/L1 ゆるめ)</div>
+          <button class="toggle ${spellOn?'on':''}" id="spell-toggle" style="font-size:16px;padding:10px 16px;">📝 スペル ${spellOn?'ON':'OFF'}</button>
+
           <div style="font-size:18px; margin:18px 0 8px;">えいごの こえ</div>
           <select id="voice-pick" style="font-size:16px; padding:8px; border-radius:8px; width:100%; max-width:340px;">
             <option value="">じどうで えらぶ</option>
@@ -250,6 +255,7 @@ window.UI = (() => {
     tap($("sling-toggle"), () => { SND.setSlingshot(!slingOn); showSettings(onBack); });
     tap($("bossanim-toggle"), () => { SND.setBossAnim(!bossAnimOn); showSettings(onBack); });
     tap($("themes-toggle"), () => { SND.setThemes(!themesOn); SND.sfxPop(); showSettings(onBack); });
+    tap($("spell-toggle"),  () => { SND.setSpellMode(!spellOn); SND.sfxPop(); showSettings(onBack); });
     tap($("voice-test"), () => { SND.speak("Hello! Let's play."); });
     const vsel = $("voice-pick");
     if (vsel) vsel.onchange = () => { SND.setVoice(vsel.value || null); };
@@ -513,27 +519,69 @@ window.UI = (() => {
       }, 1000);
     }
     const optsEl = $("opts");
-    question.options.forEach((opt, i) => {
-      const disabled = i === masked;
-      const o = el(`<div class="opt ${disabled?'disabled':''}" data-i="${i}">${escapeHTML(opt)}</div>`);
-      if (!disabled) {
-        tap(o, () => {
-          if (answered) return;
-          answered = true;
-          if (timerHandle) clearInterval(timerHandle);
-          const correct = i === question.answer;
-          o.classList.add(correct ? "right" : "wrong");
-          if (!correct) {
-            const right = optsEl.querySelector(`[data-i="${question.answer}"]`);
-            if (right) right.classList.add("right");
-          }
-          optsEl.querySelectorAll(".opt").forEach(x => x.classList.add("disabled"));
-          if (correct) SND.sfxCorrect(); else SND.sfxWrong();
-          setTimeout(() => onAnswer(correct, i), 850);
-        });
+    // Spelling mode (settings → 📝 スペル ON): when the answer is a real
+    // English word and all options are ASCII (vocab-like question), replace
+    // the multiple-choice grid with a text input the kid types into. At ★1,
+    // a 1-character typo is forgiven. Otherwise exact match required.
+    const ans = question.options[question.answer];
+    const spellModeOn = SND.getSpellMode && SND.getSpellMode();
+    const ansIsAscii = typeof ans === "string" && /^[a-zA-Z][a-zA-Z\s'-]{0,29}$/.test(ans);
+    const allAscii = question.options.every(o => typeof o === "string" && /^[a-zA-Z\s'-]+$/.test(String(o).trim()));
+    const useSpell = spellModeOn && ansIsAscii && allAscii;
+
+    if (useSpell) {
+      optsEl.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:10px; align-items:center; padding: 8px 0;">
+          <input type="text" id="spell-inp" class="spell-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="40" placeholder="えいごで タイプ！">
+          <button class="btn good" id="spell-go">こたえる！</button>
+        </div>`;
+      const inp = $("spell-inp"); const go = $("spell-go");
+      const submit = () => {
+        if (answered) return;
+        const guess = (inp.value||"").trim().toLowerCase();
+        if (!guess) { try { inp.focus(); } catch(_){} return; }
+        const target = ans.toLowerCase();
+        const allowFuzzy = question.stars <= 1;
+        const ok = guess === target || (allowFuzzy && levenshtein1(guess, target));
+        answered = true;
+        if (timerHandle) clearInterval(timerHandle);
+        if (ok) SND.sfxCorrect(); else SND.sfxWrong();
+        inp.classList.add(ok ? "right" : "wrong");
+        inp.disabled = true; if (go) go.disabled = true;
+        if (!ok) {
+          const hint = el(`<div style="margin-top:8px; color: var(--good); font-weight:900; font-size:20px;">→ ${escapeHTML(ans)}</div>`);
+          optsEl.appendChild(hint);
+        }
+        setTimeout(() => onAnswer(ok, ok ? question.answer : -1), 1200);
+      };
+      if (go) tap(go, submit);
+      if (inp) {
+        inp.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+        setTimeout(() => { try { inp.focus(); } catch(_){} }, 200);
       }
-      optsEl.appendChild(o);
-    });
+    } else {
+      question.options.forEach((opt, i) => {
+        const disabled = i === masked;
+        const o = el(`<div class="opt ${disabled?'disabled':''}" data-i="${i}">${escapeHTML(opt)}</div>`);
+        if (!disabled) {
+          tap(o, () => {
+            if (answered) return;
+            answered = true;
+            if (timerHandle) clearInterval(timerHandle);
+            const correct = i === question.answer;
+            o.classList.add(correct ? "right" : "wrong");
+            if (!correct) {
+              const right = optsEl.querySelector(`[data-i="${question.answer}"]`);
+              if (right) right.classList.add("right");
+            }
+            optsEl.querySelectorAll(".opt").forEach(x => x.classList.add("disabled"));
+            if (correct) SND.sfxCorrect(); else SND.sfxWrong();
+            setTimeout(() => onAnswer(correct, i), 850);
+          });
+        }
+        optsEl.appendChild(o);
+      });
+    }
 
     if (question.audio) {
       // When the hint card is in play (slowAudio flag), the TTS rate is ducked
@@ -2088,6 +2136,24 @@ window.UI = (() => {
       });
     }
     container.appendChild(hand);
+  }
+
+  // True if two strings differ by at most one edit (insert / delete / substitute).
+  // Used by spelling mode to forgive a single typo at ★1 questions for younger kids.
+  function levenshtein1(a, b) {
+    if (a === b) return true;
+    const la = a.length, lb = b.length;
+    if (Math.abs(la - lb) > 1) return false;
+    let i = 0, j = 0, edits = 0;
+    while (i < la && j < lb) {
+      if (a[i] === b[j]) { i++; j++; continue; }
+      if (++edits > 1) return false;
+      if (la === lb) { i++; j++; }       // substitution
+      else if (la > lb) { i++; }          // delete from a
+      else { j++; }                       // insert into a
+    }
+    if (i < la || j < lb) edits++;
+    return edits <= 1;
   }
 
   function escapeHTML(s) {

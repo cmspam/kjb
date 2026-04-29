@@ -21,6 +21,10 @@ window.SND = (() => {
   function setBossAnim(v) { try { localStorage.setItem("kjb_bossanim", v?"1":"0"); } catch(e) {} }
   function getThemes() { try { const v = localStorage.getItem("kjb_themes"); return v === null ? true : v === "1"; } catch(e) { return true; } }
   function setThemes(v) { try { localStorage.setItem("kjb_themes", v?"1":"0"); } catch(e) {} if (!v) stopTheme(0); }
+  // Spelling mode: when ON, English-word vocab questions render as a text
+  // input (kid types the answer) instead of multiple choice. Default OFF.
+  function getSpellMode() { try { return localStorage.getItem("kjb_spell") === "1"; } catch(e) { return false; } }
+  function setSpellMode(v){ try { localStorage.setItem("kjb_spell", v?"1":"0"); } catch(e) {} }
   function setVoice(name) {
     preferredVoiceName = name || null;
     try { localStorage.setItem("kjb_voice", preferredVoiceName || ""); } catch(e) {}
@@ -274,7 +278,7 @@ window.SND = (() => {
   return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat, sfxPop, sfxFart,
            setMuted, isMuted, setVoice, listVoices,
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
-           getThemes, setThemes,
+           getThemes, setThemes, getSpellMode, setSpellMode,
            playTheme, playThemeSnippet, stopTheme, isThemePlaying,
            isSpeechSupported, recognizeOnce };
 })();

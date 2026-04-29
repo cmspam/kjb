@@ -249,6 +249,16 @@ h3 { font-size: 28px; margin: 4px 0; }
   font-size: 22px; padding: 8px 12px; border-radius: 10px;
   width: 200px; font-family: inherit;
 }
+.spell-input {
+  background: #fff; color: #2a1500; border: 3px solid var(--accent);
+  font-size: 28px; padding: 12px 16px; border-radius: 14px;
+  width: 280px; max-width: 90%; font-family: inherit;
+  font-weight: 900; text-align: center;
+  box-shadow: var(--shadow);
+}
+.spell-input.right { background: #d8f7c8; border-color: var(--good); }
+.spell-input.wrong { background: #ffd8d8; border-color: var(--bad); }
+.spell-input:disabled { opacity: .9; }
 .toggle {
   background: var(--card); color: #fff; padding: 8px 16px; border-radius: 10px;
   cursor: pointer; border: 3px solid transparent;
