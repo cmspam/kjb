@@ -639,11 +639,23 @@ window.UI = (() => {
   //   Stage 4 (1200ms) — attack name + damage reveal
   // Each stage uses Web Animations API on FRESH elements so animations always
   // replay (CSS class-based animations sometimes get cached across overlays).
-  function showBossAttackAnim(boss, attack, targetName, dmg, missed, onDone) {
+  function showBossAttackAnim(boss, attack, targetName, dmg, missed, onDone, missReason) {
     SND.unlock();
     const phrase = pickRand(attack.phrases || [attack.name]);
     const m = (attack.name || "").match(/(\p{Extended_Pictographic}️?)\s*$/u);
     const emoji = m ? m[1] : "💥";
+    // Stage-3 visual + final reveal text vary by why the attack didn't land.
+    // Hits use the default 💥 / damage flow.
+    const missVisual = (
+      missReason === "shield" ? { sweep: "🛡️", label: "ふせいだ！" } :
+      missReason === "escape" ? { sweep: "🏃", label: "にげた！" } :
+                                { sweep: "💨", label: "はずれ！" }
+    );
+    const missRevealHTML = (
+      missReason === "shield" ? `→ ${escapeHTML(targetName)} は シールドで ふせいだ！ 🛡️` :
+      missReason === "escape" ? `→ ${escapeHTML(targetName)} は うまく にげた！ 🏃` :
+                                `→ ${escapeHTML(targetName)} は かわした！ ✨`
+    );
 
     const overlay = document.createElement("div");
     overlay.className = "boss-anim-overlay";
@@ -735,7 +747,7 @@ window.UI = (() => {
         // Whoosh: emoji streaks across screen instead of crashing into target.
         const whoosh = document.createElement("div");
         whoosh.className = "boss-anim-bang";
-        whoosh.textContent = "💨";
+        whoosh.textContent = missVisual.sweep;
         overlay.appendChild(whoosh);
         whoosh.animate(
           [
@@ -747,7 +759,7 @@ window.UI = (() => {
         );
         const miss = document.createElement("div");
         miss.className = "boss-anim-bang boss-anim-miss";
-        miss.textContent = "はずれ！";
+        miss.textContent = missVisual.label;
         overlay.appendChild(miss);
         miss.animate(
           [
@@ -781,7 +793,7 @@ window.UI = (() => {
       name.className = "boss-anim-name";
       name.innerHTML = `
         <div class="atk-name">${escapeHTML(attack.name)}</div>
-        <div class="atk-target" style="${missed?'color:#7ff0a0;':''}">${missed ? `→ ${escapeHTML(targetName)} は かわした！ ✨` : `→ ${escapeHTML(targetName)} に <b>${dmg}</b> ダメージ！`}</div>`;
+        <div class="atk-target" style="${missed?'color:#7ff0a0;':''}">${missed ? missRevealHTML : `→ ${escapeHTML(targetName)} に <b>${dmg}</b> ダメージ！`}</div>`;
       overlay.appendChild(name);
       name.animate(
         [

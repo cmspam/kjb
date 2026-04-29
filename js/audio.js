@@ -136,7 +136,11 @@ window.SND = (() => {
   // silently so the game keeps working if the browser blocks playback.
   const themeCache = {};
   let currentTheme = null;
-  let fadeRAF = null;
+  // Per-audio fade tracking. Earlier we shared a single fadeRAF, but that meant
+  // crossfading from boss A → boss B canceled A's fade-out RAF (so A's onDone
+  // pause never fired and A kept playing indefinitely under B). With a Map keyed
+  // by the audio element, each fade lives its own life.
+  const audioFadeRAF = new WeakMap();
 
   function getThemeAudio(bossId) {
     if (!themeCache[bossId]) {
@@ -148,21 +152,20 @@ window.SND = (() => {
     return themeCache[bossId];
   }
 
-  function cancelFade() {
-    if (fadeRAF) { cancelAnimationFrame(fadeRAF); fadeRAF = null; }
-  }
   function fadeTo(audio, targetVol, ms, onDone) {
     if (!audio) { if (onDone) onDone(); return; }
-    cancelFade();
+    // Cancel any prior fade on THIS audio element only.
+    const prior = audioFadeRAF.get(audio);
+    if (prior) cancelAnimationFrame(prior);
     const startVol = audio.volume;
     const startT = performance.now();
     function tick(t) {
       const p = ms <= 0 ? 1 : Math.min(1, (t - startT) / ms);
       audio.volume = startVol + (targetVol - startVol) * p;
-      if (p < 1) fadeRAF = requestAnimationFrame(tick);
-      else { fadeRAF = null; if (onDone) onDone(); }
+      if (p < 1) audioFadeRAF.set(audio, requestAnimationFrame(tick));
+      else { audioFadeRAF.delete(audio); if (onDone) onDone(); }
     }
-    fadeRAF = requestAnimationFrame(tick);
+    audioFadeRAF.set(audio, requestAnimationFrame(tick));
   }
 
   function stopTheme(fadeMs = 250) {

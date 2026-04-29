@@ -783,17 +783,22 @@ window.Game = (() => {
       const aliveHeroes = S.players.filter(p => !p.dead);
       if (aliveHeroes.length === 0) break;
       const target = aliveHeroes[(Math.random()*aliveHeroes.length)|0];
+      // All "didn't damage" outcomes go through the animation pipeline so the
+      // kid still gets the WARNING + boss charge + theme music + dramatic
+      // resolution. Only the final reveal text differs.
       if (target.skipBossAtk) {
-        lines.push(`${target.name} は うまく にげた！ 🏃`);
-        target.skipBossAtk = false; continue;
+        queue.push({ target, dmg: 0, missed: true, missReason: "escape" });
+        target.skipBossAtk = false;
+        continue;
       }
       if (Math.random() < mods.missChance) {
-        queue.push({ target, dmg: 0, missed: true });
+        queue.push({ target, dmg: 0, missed: true, missReason: "miss" });
         continue;
       }
       if (target.shield) {
-        lines.push(`${target.name} は シールドで ふせいだ！ 🛡️`);
-        target.shield = false; continue;
+        queue.push({ target, dmg: 0, missed: true, missReason: "shield" });
+        target.shield = false;
+        continue;
       }
       let dmg = 4 + Math.floor(S.round/2);
       const mouthAlive = S.boss.parts.find(p=>p.type==="mouth" && p.hp>0);
@@ -810,7 +815,7 @@ window.Game = (() => {
   //   • Plain: apply damage immediately
   function processBossAttack(queue, idx, lines) {
     if (idx >= queue.length) return finishBossTurn(lines);
-    const { target, dmg, missed } = queue[idx];
+    const { target, dmg, missed, missReason } = queue[idx];
     if (target.dead) return processBossAttack(queue, idx+1, lines);
 
     // Hard-mode defensive Q only fires for hits (a miss already misses).
@@ -837,7 +842,14 @@ window.Game = (() => {
     const atk = pickRand((S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words);
     const apply = () => {
       if (missed) {
-        lines.push(`${target.name} に ${atk.name} … はずれ〜！ 💨`);
+        // Log line varies by why the attack didn't connect.
+        let line;
+        switch (missReason) {
+          case "escape": line = `${target.name} は ${atk.name} を かわした！ 🏃`; break;
+          case "shield": line = `${target.name} は シールドで ${atk.name} を ふせいだ！ 🛡️`; break;
+          default:       line = `${target.name} に ${atk.name} … はずれ〜！ 💨`; break;
+        }
+        lines.push(line);
       } else {
         target.hp = Math.max(0, target.hp - dmg);
         lines.push(`${target.name} に ${atk.name} → ${dmg} ダメージ！`);
@@ -846,7 +858,7 @@ window.Game = (() => {
       processBossAttack(queue, idx+1, lines);
     };
     if (SND.getBossAnim && SND.getBossAnim()) {
-      UI.showBossAttackAnim(S.boss, atk, target.name, dmg, !!missed, apply);
+      UI.showBossAttackAnim(S.boss, atk, target.name, dmg, !!missed, apply, missReason);
     } else {
       apply();
     }
