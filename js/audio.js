@@ -25,6 +25,14 @@ window.SND = (() => {
   // input (kid types the answer) instead of multiple choice. Default OFF.
   function getSpellMode() { try { return localStorage.getItem("kjb_spell") === "1"; } catch(e) { return false; } }
   function setSpellMode(v){ try { localStorage.setItem("kjb_spell", v?"1":"0"); } catch(e) {} }
+  // Accessibility mode: bumps text sizes everywhere via a body class. Useful
+  // for younger kids and for low-vision / dyslexia accommodations.
+  function getA11y()    { try { return localStorage.getItem("kjb_a11y") === "1"; } catch(e) { return false; } }
+  function setA11y(v)   { try { localStorage.setItem("kjb_a11y", v?"1":"0"); } catch(e) {} applyA11y(); }
+  function applyA11y()  { try { document.body.classList.toggle("a11y-mode", getA11y()); } catch(e) {} }
+  // Apply on load so a kid's saved preference takes effect immediately.
+  if (typeof document !== "undefined" && document.body) applyA11y();
+  else if (typeof window !== "undefined") window.addEventListener("DOMContentLoaded", applyA11y);
   function setVoice(name) {
     preferredVoiceName = name || null;
     try { localStorage.setItem("kjb_voice", preferredVoiceName || ""); } catch(e) {}
@@ -278,7 +286,7 @@ window.SND = (() => {
   return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat, sfxPop, sfxFart,
            setMuted, isMuted, setVoice, listVoices,
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
-           getThemes, setThemes, getSpellMode, setSpellMode,
+           getThemes, setThemes, getSpellMode, setSpellMode, getA11y, setA11y,
            playTheme, playThemeSnippet, stopTheme, isThemePlaying,
            isSpeechSupported, recognizeOnce };
 })();

@@ -17,12 +17,16 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
   }, { passive: true });
-  // Exit button — confirm then reload to title. Uses UI.confirmModal because
-  // native confirm() is unreliable from iOS Safari touch handlers.
+  // Exit button → pause menu. Tapping it pauses the game (sort of — modal
+  // overlays everything) and offers options. native confirm() is unreliable
+  // on iOS Safari so we use UI.menuModal everywhere.
   const exitBtn = document.getElementById("exit-btn");
   if (exitBtn) {
     UI.tap(exitBtn, () => {
-      UI.confirmModal("バトルを やめて タイトルに もどる？", () => location.reload());
+      UI.menuModal("⏸️ ポーズ", [
+        { label: "▶️ つづける",         style: "good",  action: () => {} },
+        { label: "🏠 タイトルへ もどる", style: "ghost", action: () => location.reload() },
+      ]);
     });
   }
   Game.start();

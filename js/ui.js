@@ -129,6 +129,29 @@ window.UI = (() => {
     });
   }
 
+  // Generic menu modal — N options stacked vertically. Used for the pause menu
+  // (and anywhere else we want more than a yes/no choice).
+  // items = [ { label, action, style } ]; style is a btn variant ("good", "ghost", "cool", "bad").
+  function menuModal(title, items) {
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-overlay";
+    const itemsHTML = items.map((it,i) =>
+      `<button class="btn ${it.style||'cool'}" id="mn-${i}" style="width:100%; max-width:280px;">${escapeHTML(it.label)}</button>`
+    ).join("");
+    overlay.innerHTML = `
+      <div class="confirm-card">
+        ${title ? `<div class="confirm-msg">${escapeHTML(title)}</div>` : ``}
+        <div class="confirm-row" style="flex-direction:column; gap:8px; align-items:center;">${itemsHTML}</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    items.forEach((it, i) => {
+      tap(overlay.querySelector(`#mn-${i}`), () => {
+        overlay.remove();
+        if (it.action) it.action();
+      });
+    });
+  }
+
   // Custom confirm modal — used in place of native confirm() because iOS Safari
   // sometimes silently suppresses confirm() called from inside touch handlers.
   function confirmModal(msg, onYes, onNo) {
@@ -216,6 +239,7 @@ window.UI = (() => {
     const bossAnimOn = SND.getBossAnim();
     const themesOn = SND.getThemes ? SND.getThemes() : true;
     const spellOn = SND.getSpellMode ? SND.getSpellMode() : false;
+    const a11yOn = SND.getA11y ? SND.getA11y() : false;
     const voices = SND.listVoices ? SND.listVoices() : [];
     const currentName = (() => {
       try { return localStorage.getItem("kjb_voice") || ""; } catch(e) { return ""; }
@@ -236,8 +260,12 @@ window.UI = (() => {
           <button class="toggle ${themesOn?'on':''}" id="themes-toggle" style="font-size:16px;padding:10px 16px;">🎵 テーマソング ${themesOn?'ON':'OFF'}</button>
 
           <div style="font-size:18px; margin:18px 0 8px;">スペルモード</div>
-          <div class="subtle" style="font-size:13px; margin-bottom:6px;">えいごの たんごを じぶんで タイプ！(L0/L1 ゆるめ)</div>
+          <div class="subtle" style="font-size:13px; margin-bottom:6px;">えいごの たんごを じぶんで くみたてる！</div>
           <button class="toggle ${spellOn?'on':''}" id="spell-toggle" style="font-size:16px;padding:10px 16px;">📝 スペル ${spellOn?'ON':'OFF'}</button>
+
+          <div style="font-size:18px; margin:18px 0 8px;">よみやすく モード</div>
+          <div class="subtle" style="font-size:13px; margin-bottom:6px;">もじを おおきく する</div>
+          <button class="toggle ${a11yOn?'on':''}" id="a11y-toggle" style="font-size:16px;padding:10px 16px;">👀 よみやすく ${a11yOn?'ON':'OFF'}</button>
 
           <div style="font-size:18px; margin:18px 0 8px;">えいごの こえ</div>
           <select id="voice-pick" style="font-size:16px; padding:8px; border-radius:8px; width:100%; max-width:340px;">
@@ -256,6 +284,7 @@ window.UI = (() => {
     tap($("bossanim-toggle"), () => { SND.setBossAnim(!bossAnimOn); showSettings(onBack); });
     tap($("themes-toggle"), () => { SND.setThemes(!themesOn); SND.sfxPop(); showSettings(onBack); });
     tap($("spell-toggle"),  () => { SND.setSpellMode(!spellOn); SND.sfxPop(); showSettings(onBack); });
+    tap($("a11y-toggle"),   () => { SND.setA11y(!a11yOn); SND.sfxPop(); showSettings(onBack); });
     tap($("voice-test"), () => { SND.speak("Hello! Let's play."); });
     const vsel = $("voice-pick");
     if (vsel) vsel.onchange = () => { SND.setVoice(vsel.value || null); };
@@ -519,46 +548,111 @@ window.UI = (() => {
       }, 1000);
     }
     const optsEl = $("opts");
-    // Spelling mode (settings → 📝 スペル ON): when the answer is a real
-    // English word and all options are ASCII (vocab-like question), replace
-    // the multiple-choice grid with a text input the kid types into. At ★1,
-    // a 1-character typo is forgiven. Otherwise exact match required.
+    // Spelling mode (settings → 📝 スペル ON): when the answer is a single
+    // English word, replace the multiple-choice grid with a letter-tile
+    // builder. The kid sees the target word's letters PLUS 2-3 distractor
+    // letters in scrambled order, then taps tiles in sequence to build the
+    // word. No keyboard autocorrect, no "kat" passes for "cat" — they have
+    // to use the right letters in the right order.
     const ans = question.options[question.answer];
     const spellModeOn = SND.getSpellMode && SND.getSpellMode();
-    const ansIsAscii = typeof ans === "string" && /^[a-zA-Z][a-zA-Z\s'-]{0,29}$/.test(ans);
+    const ansIsSingleWord = typeof ans === "string" && /^[a-zA-Z]{2,12}$/.test(ans);
     const allAscii = question.options.every(o => typeof o === "string" && /^[a-zA-Z\s'-]+$/.test(String(o).trim()));
-    const useSpell = spellModeOn && ansIsAscii && allAscii;
+    const useSpell = spellModeOn && ansIsSingleWord && allAscii;
 
     if (useSpell) {
+      const target = ans.toLowerCase();
+      const targetLetters = target.split("");
+      // Distractor letters: pick 2-3 random lowercase letters not in target.
+      // ★1 gets 1-2, ★2/★3 get 2-3 to make ordering harder.
+      const distractCount = Math.max(1, Math.min(3, question.stars + 1));
+      const inWord = new Set(targetLetters);
+      const alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
+      const candidates = alphabet.filter(c => !inWord.has(c));
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = (Math.random() * (i + 1)) | 0;
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      }
+      const distractors = candidates.slice(0, distractCount);
+      // Tile pool: target letters (with duplicates preserved) + distractors,
+      // shuffled. Each tile carries its index so we can mark exactly the
+      // right tile as "used" when tapped (handles duplicate letters cleanly).
+      const allTiles = [...targetLetters, ...distractors];
+      for (let i = allTiles.length - 1; i > 0; i--) {
+        const j = (Math.random() * (i + 1)) | 0;
+        [allTiles[i], allTiles[j]] = [allTiles[j], allTiles[i]];
+      }
+      const tileUsed = allTiles.map(() => false);
+      const built = []; // [{ char, tileIdx }]
+
       optsEl.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:10px; align-items:center; padding: 8px 0;">
-          <input type="text" id="spell-inp" class="spell-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="40" placeholder="えいごで タイプ！">
-          <button class="btn good" id="spell-go">こたえる！</button>
+        <div class="spell-built" id="spell-built">
+          ${target.split("").map((_,i) => `<span class="spell-slot" data-slot="${i}"></span>`).join("")}
+        </div>
+        <div class="spell-tiles" id="spell-tiles"></div>
+        <div class="row" style="margin-top:10px; gap:10px; justify-content:center;">
+          <button class="btn ghost" id="spell-del" style="font-size:16px;min-height:48px;min-width:0;padding:8px 14px;">⌫ もどす</button>
+          <button class="btn good" id="spell-go" disabled>こたえる！</button>
         </div>`;
-      const inp = $("spell-inp"); const go = $("spell-go");
+
+      const builtEl = $("spell-built");
+      const tilesEl = $("spell-tiles");
+      const goBtn = $("spell-go");
+
+      function refreshSlots() {
+        const slots = builtEl.querySelectorAll(".spell-slot");
+        slots.forEach((slot, i) => {
+          slot.textContent = built[i] ? built[i].char.toUpperCase() : "";
+          slot.classList.toggle("filled", !!built[i]);
+        });
+        goBtn.disabled = built.length !== target.length;
+      }
+      function tapTile(idx, tileEl) {
+        if (answered) return;
+        if (tileUsed[idx]) return;
+        if (built.length >= target.length) return;
+        built.push({ char: allTiles[idx], tileIdx: idx });
+        tileUsed[idx] = true;
+        tileEl.classList.add("used");
+        refreshSlots();
+      }
+      allTiles.forEach((c, idx) => {
+        const t = el(`<button class="spell-tile" data-idx="${idx}">${c.toUpperCase()}</button>`);
+        tap(t, () => tapTile(idx, t));
+        tilesEl.appendChild(t);
+      });
+      tap($("spell-del"), () => {
+        if (answered) return;
+        const last = built.pop();
+        if (last) {
+          tileUsed[last.tileIdx] = false;
+          const tile = tilesEl.querySelector(`[data-idx="${last.tileIdx}"]`);
+          if (tile) tile.classList.remove("used");
+          refreshSlots();
+        }
+      });
       const submit = () => {
         if (answered) return;
-        const guess = (inp.value||"").trim().toLowerCase();
-        if (!guess) { try { inp.focus(); } catch(_){} return; }
-        const target = ans.toLowerCase();
-        const allowFuzzy = question.stars <= 1;
-        const ok = guess === target || (allowFuzzy && levenshtein1(guess, target));
+        if (built.length !== target.length) return;
+        const guess = built.map(b => b.char).join("").toLowerCase();
+        const ok = guess === target;
         answered = true;
         if (timerHandle) clearInterval(timerHandle);
         if (ok) SND.sfxCorrect(); else SND.sfxWrong();
-        inp.classList.add(ok ? "right" : "wrong");
-        inp.disabled = true; if (go) go.disabled = true;
+        // Visual feedback on the slots
+        builtEl.querySelectorAll(".spell-slot").forEach(slot => {
+          slot.classList.add(ok ? "right" : "wrong");
+        });
         if (!ok) {
-          const hint = el(`<div style="margin-top:8px; color: var(--good); font-weight:900; font-size:20px;">→ ${escapeHTML(ans)}</div>`);
+          const hint = el(`<div style="margin-top:8px; color: var(--good); font-weight:900; font-size:20px;">→ ${escapeHTML(ans).toUpperCase()}</div>`);
           optsEl.appendChild(hint);
         }
-        setTimeout(() => onAnswer(ok, ok ? question.answer : -1), 1200);
+        // Lock the tiles
+        tilesEl.querySelectorAll(".spell-tile").forEach(t => t.classList.add("used"));
+        goBtn.disabled = true;
+        setTimeout(() => onAnswer(ok, ok ? question.answer : -1), 1300);
       };
-      if (go) tap(go, submit);
-      if (inp) {
-        inp.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
-        setTimeout(() => { try { inp.focus(); } catch(_){} }, 200);
-      }
+      tap(goBtn, submit);
     } else {
       question.options.forEach((opt, i) => {
         const disabled = i === masked;
@@ -974,6 +1068,47 @@ window.UI = (() => {
       { duration: 1500, iterations: Infinity }
     );
     setTimeout(() => { overlay.remove(); onDone(); }, 1500);
+  }
+
+  // -------- PVP FACE-OFF INTRO --------
+  // Boxer-entrance style splash before round 1 of monster-vs-monster mode.
+  // Shows every kid's monster in a row separated by VS, then a big "FIGHT!".
+  function showPvpFaceoff(players, onDone) {
+    SND.unlock();
+    const overlay = document.createElement("div");
+    overlay.className = "round-intro-overlay";
+    const lineup = players.map(p => `
+      <div style="text-align:center; min-width:120px;">
+        <div style="height:120px;">${p.monster ? Monsters.renderBossSVG(p.monster) : ''}</div>
+        <div style="color:var(--accent); font-weight:900; font-size:14px;">${p.avatar?p.avatar+' ':''}${escapeHTML(p.name)}</div>
+        <div style="font-size:10px; opacity:.8;">${p.monster?escapeHTML(p.monster.name_jp):''}</div>
+      </div>`).join('<div style="font-size:32px; color:var(--bad); font-weight:900; align-self:center;">VS</div>');
+    overlay.innerHTML = `
+      <div class="round-flash"></div>
+      <div class="round-content" style="width:95%; max-width: 760px;">
+        <div class="round-label">⚔️ MONSTER BATTLE</div>
+        <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin: 16px 0; flex-wrap:wrap;">${lineup}</div>
+        <div class="round-num" style="font-size: 88px; color: var(--bad); text-shadow: 0 8px 0 #000, 0 0 30px var(--bad);">FIGHT!</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxBoss();
+    overlay.querySelector(".round-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0.6)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.05)", opacity: 1, offset: 0.6 },
+        { transform: "translate(-50%, -50%) scale(1)", opacity: 1 }
+      ],
+      { duration: 700, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".round-flash").animate(
+      [
+        { background: "rgba(255,255,255,0)" },
+        { background: "rgba(255,255,255,0.5)", offset: 0.5 },
+        { background: "rgba(255,255,255,0)" }
+      ],
+      { duration: 500, iterations: 2 }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 2400);
   }
 
   // -------- ROUND ANNOUNCEMENT --------
@@ -2251,5 +2386,6 @@ window.UI = (() => {
            renderBossIntro, showSlingshot, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, showRareEventIntro,
            showRoundIntro, showRageIntro, showKO, spawnConfetti,
-           showCompendium, runSpeechChallenge };
+           showCompendium, runSpeechChallenge,
+           menuModal, showPvpFaceoff };
 })();
