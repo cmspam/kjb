@@ -11,7 +11,11 @@ window.SND = (() => {
   function setMuted(v) {
     muted = !!v;
     try { localStorage.setItem("kjb_muted", muted?"1":"0"); } catch(e) {}
-    if (muted) { try { stopTheme(0); } catch(_){} try { speechSynthesis.cancel(); } catch(_){} }
+    if (muted) {
+      try { stopTheme(0); } catch(_){}
+      try { stopBossVoice(); } catch(_){}
+      try { speechSynthesis.cancel(); } catch(_){}
+    }
   }
   function isMuted() { return muted; }
   // Visual settings (default on, persisted)
@@ -189,6 +193,49 @@ window.SND = (() => {
   }
   function isThemePlaying() { return !!currentTheme && !currentTheme.paused; }
 
+  // ---------- BOSS VOICE LINES ----------
+  // Each boss has a pre-rendered Opus clip per line they ever say (catchphrase,
+  // attack name, attack phrase, hit reaction, taunt, slingshot heckle, rage
+  // phrase, backstory). Files live at assets/voices/<bossId>/<hash>.opus where
+  // hash is the djb2 of the source text — same hash function the build script
+  // uses, so resolution lines up without shipping a manifest.
+  //
+  // Furigana markup is stripped before hashing so 漢字[よみ] → よみ matches what
+  // the synth script saw. Missing files no-op silently — the bubble still shows.
+  function djb2Hash(s) {
+    let h = 5381 | 0;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return ((h >>> 0).toString(16)).padStart(8, '0');
+  }
+  function stripFurigana(s) {
+    if (!s) return '';
+    return String(s).replace(/([一-鿿々ヶ]+)\[([^\]]+)\]/g, '$2');
+  }
+  // Track the most recent voice line so a fast-following call can interrupt the
+  // previous one (we don't want overlapping bosses talking over themselves).
+  let _currentVoice = null;
+  function playBossLine(bossId, text) {
+    if (muted) return null;
+    if (!bossId || !text) return null;
+    const cleaned = stripFurigana(String(text)).replace(/\s+/g, ' ').trim();
+    if (!cleaned) return null;
+    // Stop any line currently playing on the same channel
+    try { if (_currentVoice && !_currentVoice.paused) _currentVoice.pause(); } catch(_){}
+    const hash = djb2Hash(cleaned);
+    const url = `assets/voices/${encodeURIComponent(bossId)}/${hash}.opus`;
+    const a = new Audio(url);
+    a.preload = "auto";
+    a.volume = 0.95;
+    _currentVoice = a;
+    const p = a.play();
+    if (p && p.catch) p.catch(() => {}); // 404 / iOS gesture block — silent
+    return a;
+  }
+  function stopBossVoice() {
+    try { if (_currentVoice && !_currentVoice.paused) _currentVoice.pause(); } catch(_){}
+    _currentVoice = null;
+  }
+
   // ---------- SIREN SFX (warning splashes) ----------
   // Brief siren burst played during the boss-attack WARNING screen and the
   // RARE EVENT splash. Lazy-loaded HTMLAudioElement, plays from the start each
@@ -310,5 +357,6 @@ window.SND = (() => {
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
            getThemes, setThemes, getSpellMode, setSpellMode, getA11y, setA11y,
            playTheme, playThemeSnippet, stopTheme, isThemePlaying, playSiren,
+           playBossLine, stopBossVoice,
            isSpeechSupported, recognizeOnce };
 })();

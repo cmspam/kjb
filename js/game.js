@@ -627,14 +627,17 @@ window.Game = (() => {
           // (otherwise the dmg-num overlays the speech bubble at the same y-band).
           const hits = opponent.monster.hits || [];
           if (hits.length) {
+            const line = hits[(Math.random()*hits.length)|0];
             setTimeout(() => {
               const stageNow = document.querySelector(".stage");
               if (!stageNow) return;
               const bubble = document.createElement("div");
               bubble.className = "hit-bubble pop";
-              bubble.textContent = hits[(Math.random()*hits.length)|0];
+              bubble.textContent = line;
               stageNow.appendChild(bubble);
               setTimeout(() => bubble.remove(), 2000);
+              // Voice the opponent monster's reaction in their voice
+              if (opponent.monster && opponent.monster.id) SND.playBossLine(opponent.monster.id, line);
             }, 1100);
           }
         }
@@ -750,14 +753,17 @@ window.Game = (() => {
       // (both sit near the top of the stage and would otherwise overlap).
       const hits = S.boss.hits || [];
       if (hits.length) {
+        const line = hits[(Math.random()*hits.length)|0];
         setTimeout(() => {
           const stageNow = document.querySelector(".stage");
           if (!stageNow) return;
           const bubble = document.createElement("div");
           bubble.className = "hit-bubble pop";
-          bubble.textContent = hits[(Math.random()*hits.length)|0];
+          bubble.textContent = line;
           stageNow.appendChild(bubble);
           setTimeout(() => bubble.remove(), 2000);
+          // Voice the reaction
+          if (S.boss && S.boss.id) SND.playBossLine(S.boss.id, line);
         }, 1100);
       }
     }

@@ -747,9 +747,16 @@ window.UI = (() => {
     // Loop the boss's theme song while the kid reads the backstory. The render
     // is reached as a result of a user tap, so iOS audio gesture is satisfied.
     SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 600 });
-    tap($("intro-go"), () => { SND.stopTheme(400); onContinue(); });
+    // Boss says their catchphrase on entrance, then reads their backstory aloud
+    // (~6-8s). Both fall back silently if the audio file isn't present.
+    if (boss.catchphrase) SND.playBossLine(boss.id, boss.catchphrase);
+    if (boss.backstory) {
+      const oneLine = boss.backstory.replace(/\n+/g, ' ');
+      setTimeout(() => SND.playBossLine(boss.id, oneLine), 1800);
+    }
+    tap($("intro-go"), () => { SND.stopBossVoice(); SND.stopTheme(400); onContinue(); });
     if (onCycle) {
-      tap($("intro-cycle"), () => { SND.stopTheme(200); onCycle(); });
+      tap($("intro-cycle"), () => { SND.stopBossVoice(); SND.stopTheme(200); onCycle(); });
     }
   }
 
@@ -757,6 +764,9 @@ window.UI = (() => {
   function showSlingshot(boss, partName, onFire) {
     SND.unlock();
     const taunt = pickRand(JP.slingshot_taunts || ["うってみろよ！"]);
+    // Boss voices the heckle — only attempt when we know which boss is talking
+    // (PvP path passes the opponent monster, so this still works there too).
+    if (boss && boss.id) SND.playBossLine(boss.id, taunt);
     const modal = document.createElement("div");
     modal.className = "sling-modal";
     modal.innerHTML = `
@@ -928,6 +938,8 @@ window.UI = (() => {
           <div class="boss-anim-svg-wrap"></div>
           <div class="boss-anim-bubble">${escapeHTML(phrase)}</div>
         </div>`;
+      // Boss voices the charge phrase as the bubble pops in
+      if (boss && boss.id) SND.playBossLine(boss.id, phrase);
       const svgWrap = overlay.querySelector(".boss-anim-svg-wrap");
       svgWrap.innerHTML = Monsters.renderBossSVG(boss);
       // Charge: scale up + glow shake
@@ -1028,6 +1040,9 @@ window.UI = (() => {
         ],
         { duration: 450, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
       );
+      // Dramatic attack-name shout — the build script tunes these clips with
+      // higher intonation/volume so they sound shouted, not spoken.
+      if (boss && boss.id && attack && attack.name) SND.playBossLine(boss.id, attack.name);
     }, 4800);
 
     // ----- End: clean up + callback -----
@@ -1211,6 +1226,8 @@ window.UI = (() => {
     SND.sfxBoss();
     // Restart theme at a random offset to ramp up the energy.
     if (boss && boss.id) SND.playThemeSnippet(boss.id, 2400, 0.55);
+    // Boss roars the rage phrase
+    if (boss && boss.id) SND.playBossLine(boss.id, phrase);
     overlay.querySelector(".rage-content").animate(
       [
         { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
@@ -1899,6 +1916,8 @@ window.UI = (() => {
     // Boss taunt bubble — contextual line picked by game.js based on HP/combo/etc.
     const tauntText = extras && extras.taunt;
     if (tauntText) {
+      // Voice the taunt as the bubble pops in
+      if (boss && boss.id) SND.playBossLine(boss.id, tauntText);
       const stage = s.querySelector(".stage");
       if (stage) {
         const bubble = document.createElement("div");
@@ -2142,10 +2161,11 @@ window.UI = (() => {
     show("boss");
     const s = $("screen-boss"); s.innerHTML = "";
     s.appendChild(el(buildHeader(boss, players, null)));
+    const headerLine = pickRand([boss.catchphrase, ...((boss.attacks && boss.attacks.length) ? boss.attacks : JP.boss_atk_words).map(a=>a.name)]);
     s.appendChild(el(`
       <div class="center" style="width:100%;">
         <h2>${JP.boss_turn(boss.name_jp)} 👹</h2>
-        <div class="boss-bubble" style="position:static;display:inline-block;margin:12px;">${pickRand([boss.catchphrase, ...((boss.attacks && boss.attacks.length) ? boss.attacks : JP.boss_atk_words).map(a=>a.name)])}</div>
+        <div class="boss-bubble" style="position:static;display:inline-block;margin:12px;">${headerLine}</div>
         <div id="log" style="font-size:18px; margin: 12px auto; line-height:1.6; max-width:600px; max-height: 30vh; overflow-y: auto;"></div>
         <button class="btn huge cool" id="cont">${JP.next}</button>
       </div>`));
@@ -2155,7 +2175,9 @@ window.UI = (() => {
       logEl.appendChild(p);
     });
     SND.sfxBoss();
-    tap($("cont"), () => onContinue());
+    // Voice the header line so the boss-turn screen has audible presence
+    if (boss && boss.id && headerLine) SND.playBossLine(boss.id, headerLine);
+    tap($("cont"), () => { SND.stopBossVoice(); onContinue(); });
   }
 
   // -------- VICTORY / DEFEAT --------
@@ -2416,6 +2438,10 @@ window.UI = (() => {
           <p>🕵️ <b>うらぎりモード（4人〜）:</b> ひとりだけ スパイ！ばれずに みんなを まけさせよう。みんなは スパイを あてるか カイジュウを たおせば しょうり！</p>
           <p style="text-align:center; font-weight:900; color: var(--accent);">たのしんで〜！ 🎉</p>
         </div>
+        <div style="font-size:12px; color:#aaa; margin-top:14px; line-height:1.5; text-align:center;">
+          ボスの こえ: VOICEVOX 提供<br>
+          ずんだもん／春日部つむぎ／玄野武宏／冥鳴ひまり／白上虎太郎／青山龍星
+        </div>
         <button class="btn huge cool" id="back-rules" style="margin-top:18px;">${JP.back}</button>
       </div>`));
     tap($("back-rules"), () => onBack());
@@ -2478,7 +2504,13 @@ window.UI = (() => {
         <button class="btn huge cool" id="cmp-back2" style="margin-top:18px;">${JP.back}</button>
       </div>`));
     SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 600 });
-    tap($("cmp-back2"), () => { SND.stopTheme(400); onBack(); });
+    // Voice the catchphrase + backstory so the compendium entry feels alive.
+    if (boss.catchphrase) SND.playBossLine(boss.id, boss.catchphrase);
+    if (boss.backstory) {
+      const oneLine = boss.backstory.replace(/\n+/g, ' ');
+      setTimeout(() => SND.playBossLine(boss.id, oneLine), 1800);
+    }
+    tap($("cmp-back2"), () => { SND.stopBossVoice(); SND.stopTheme(400); onBack(); });
   }
 
   return { renderTitle, renderSetup, renderPass, renderRole, renderWager, renderQuestion,
