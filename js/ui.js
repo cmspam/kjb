@@ -2207,6 +2207,19 @@ window.UI = (() => {
     const winnerMonster = mode === "pvp" && winner && winner.monster
       ? `<div style="height:200px; max-width:340px; margin: 8px auto;">${Monsters.renderBossSVG(winner.monster)}</div>
          <div style="color:var(--accent); font-size:18px; font-weight:900;">${escapeHTML(winner.monster.name_jp)}</div>` : "";
+    // PvP: the champion monster's evil goal is now reality
+    let endingHTML = "";
+    if (mode === "pvp" && winner && winner.monster && window.Endings && Endings.exists(winner.monster.id)) {
+      const e = Endings.render(winner.monster.id);
+      if (e) {
+        endingHTML = `
+          <div style="background:#000; border:3px solid var(--accent); border-radius:14px; padding:6px; margin: 14px auto; max-width: 760px;">
+            <div style="font-size:14px; letter-spacing:4px; color:var(--accent); padding:6px;">★ THIS IS THE WORLD NOW ★</div>
+            <div style="line-height:0;">${e.svg}</div>
+            <div style="font-size:18px; font-weight:900; color:#fff; padding:10px 6px;">${escapeHTML(e.captionJp)}</div>
+          </div>`;
+      }
+    }
     // Card-unlock banner — first time this boss has been defeated.
     let unlockBanner = "";
     if (unlockedCardId && Cards.byId) {
@@ -2230,6 +2243,7 @@ window.UI = (() => {
         <div style="font-size:100px;" class="bob">🏆</div>
         ${winnerMonster}
         <div style="font-size:22px;color:var(--good);">${mode==='pvp'?'チャンピオン！':JP.victory_sub}</div>
+        ${endingHTML}
         ${unlockBanner}
         <div style="margin-top:18px;">
           ${players.map(p => `<div>${p.avatar?p.avatar+' ':''}${p.name}${p.dead?' 💀':''} ${p.role==='spy'?'🕵️':''}${p.bestCombo>=3?` 🔥 さいこう ×${p.bestCombo}`:''}</div>`).join("")}
@@ -2255,10 +2269,25 @@ window.UI = (() => {
     SND.sfxDefeat();
     let title = JP.defeat;
     if (jinro && spyWins) title = JP.spy_wins;
+    // Boss-victory ending picture: dystopian scene depicting the boss's evil
+    // goal achieved (built from their backstory ambition).
+    let endingHTML = "";
+    if (boss && boss.id && window.Endings && Endings.exists(boss.id)) {
+      const e = Endings.render(boss.id);
+      if (e) {
+        endingHTML = `
+          <div style="background:#000; border:3px solid var(--bad); border-radius:14px; padding:6px; margin: 14px auto; max-width: 760px;">
+            <div style="font-size:14px; letter-spacing:4px; color:var(--bad); padding:6px;">★ EVIL ENDING ★ ${escapeHTML(boss.name_jp||"")}</div>
+            <div style="line-height:0;">${e.svg}</div>
+            <div style="font-size:18px; font-weight:900; color:#fff; padding:10px 6px;">${escapeHTML(e.captionJp)}</div>
+          </div>`;
+      }
+    }
     s.appendChild(el(`
-      <div class="center" style="margin-top:8vh;">
+      <div class="center" style="margin-top:4vh;">
         <h1 class="shake">${title} 💀</h1>
-        <div style="font-size:120px;">😵</div>
+        ${endingHTML}
+        <div style="font-size:60px;">😵</div>
         <div style="font-size:22px;color:var(--bad);">${JP.defeat_sub}</div>
         <div style="margin-top:24px;">
           ${players.map(p => `<div>${p.avatar?p.avatar+' ':''}${p.name}: HP ${p.hp} ${p.role==='spy'?'🕵️':''}${p.bestCombo>=3?` 🔥 さいこう ×${p.bestCombo}`:''}</div>`).join("")}

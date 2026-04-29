@@ -1,0 +1,6 @@
+# Voice synthesis pipeline working files (engine binaries, zips, logs).
+# The shell scripts and node script ARE committed — they're tiny and useful
+# for re-running. Their downloads/extracts go in work/ and aren't.
+tools/voicegen/work/
+tools/voicegen/build*.log
+tools/voicegen/.installed_pkgs
