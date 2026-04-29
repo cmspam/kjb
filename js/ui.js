@@ -133,6 +133,7 @@ window.UI = (() => {
           <button class="btn huge hot" id="btn-start">${JP.start} ⚔️</button>
           <div class="row" style="margin-top:8px;">
             <button class="btn ghost" id="btn-rules">あそびかた ❓</button>
+            <button class="btn ghost" id="btn-compendium">📖 ずかん${(window.Progress&&Progress.totalDefeated())?` (${Progress.totalDefeated()}/6)`:''}</button>
             <button class="btn ghost" id="btn-settings">せってい ⚙️</button>
           </div>
           <div class="subtle" style="margin-top: 10px;">タップで おとが でます 🔊</div>
@@ -153,6 +154,10 @@ window.UI = (() => {
       tap($("btn-rules"), () => {
         try { SND.unlock(); } catch(e) {}
         showRules(() => renderTitle({onStart}));
+      });
+      tap($("btn-compendium"), () => {
+        try { SND.unlock(); } catch(e) {}
+        showCompendium(() => renderTitle({onStart}));
       });
       tap($("btn-settings"), () => {
         try { SND.unlock(); } catch(e) {}
@@ -1878,7 +1883,7 @@ window.UI = (() => {
       </div>`;
   }
 
-  function renderVictory({ players, jinro, spyWins, mode, winner, boss, stats }, onAgain, onTitle) {
+  function renderVictory({ players, jinro, spyWins, mode, winner, boss, stats, firstDefeat, unlockedCardId }, onAgain, onTitle) {
     show("victory");
     const s = $("screen-victory"); s.innerHTML = "";
     SND.sfxVictory();
@@ -1889,6 +1894,22 @@ window.UI = (() => {
     const winnerMonster = mode === "pvp" && winner && winner.monster
       ? `<div style="height:200px; max-width:340px; margin: 8px auto;">${Monsters.renderBossSVG(winner.monster)}</div>
          <div style="color:var(--accent); font-size:18px; font-weight:900;">${escapeHTML(winner.monster.name_jp)}</div>` : "";
+    // Card-unlock banner — first time this boss has been defeated.
+    let unlockBanner = "";
+    if (unlockedCardId && Cards.byId) {
+      const c = Cards.byId(unlockedCardId);
+      if (c) unlockBanner = `
+        <div style="background: linear-gradient(135deg, var(--accent), #ff8800); color:#2a1500; border-radius:14px; padding:14px 18px; margin: 14px auto; max-width: 520px; box-shadow: var(--shadow); font-weight:900;">
+          <div style="font-size:14px; letter-spacing:4px;">🎁 NEW CARD UNLOCKED!</div>
+          <div style="font-size:24px; margin-top:4px;">${c.icon} ${escapeHTML(c.name_jp)}</div>
+          <div style="font-size:14px; font-weight:700; opacity:.85;">${escapeHTML(c.text_jp)}</div>
+        </div>`;
+    } else if (firstDefeat && boss && boss.name_jp) {
+      unlockBanner = `
+        <div style="background: var(--card); color:#fff; border:2px solid var(--accent); border-radius:14px; padding:10px 14px; margin: 12px auto; max-width: 520px;">
+          📖 ずかんに <b>${escapeHTML(boss.name_jp)}</b> を ろくおん！
+        </div>`;
+    }
     s.appendChild(el(`
       <div class="center" style="margin-top:6vh; position:relative;">
         <div class="confetti-layer" id="vc-confetti" style="position:absolute; inset:0;"></div>
@@ -1896,6 +1917,7 @@ window.UI = (() => {
         <div style="font-size:100px;" class="bob">🏆</div>
         ${winnerMonster}
         <div style="font-size:22px;color:var(--good);">${mode==='pvp'?'チャンピオン！':JP.victory_sub}</div>
+        ${unlockBanner}
         <div style="margin-top:18px;">
           ${players.map(p => `<div>${p.avatar?p.avatar+' ':''}${p.name}${p.dead?' 💀':''} ${p.role==='spy'?'🕵️':''}${p.bestCombo>=3?` 🔥 さいこう ×${p.bestCombo}`:''}</div>`).join("")}
         </div>
@@ -2031,6 +2053,66 @@ window.UI = (() => {
     tap($("back-rules"), () => onBack());
   }
 
+  // -------- COMPENDIUM (📖 ずかん) --------
+  // Grid of all 6 bosses. Defeated bosses show full art + name + tap-for-details.
+  // Undefeated bosses are silhouetted with "?".
+  function showCompendium(onBack) {
+    show("title");
+    const s = $("screen-title"); s.innerHTML = "";
+    const factories = Monsters.listFactories();
+    const total = factories.length;
+    const defeatedCount = (window.Progress && Progress.totalDefeated()) || 0;
+    s.appendChild(el(`
+      <div class="center" style="max-width: 760px; margin: 18px auto; padding: 0 12px;">
+        <h2>📖 カイジュウ ずかん</h2>
+        <div class="subtle" style="margin-bottom:8px;">${defeatedCount} / ${total} たおした</div>
+        <div id="cmp-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;"></div>
+        <button class="btn huge cool" id="cmp-back" style="margin-top:18px;">${JP.back}</button>
+      </div>`));
+    const grid = $("cmp-grid");
+    factories.forEach((factory) => {
+      const sample = factory();
+      const defeated = window.Progress && Progress.isDefeated(sample.id);
+      const tile = el(`
+        <button class="part-btn" style="padding:8px;${defeated?'border-color:var(--accent);':'opacity:.7;'}">
+          <div style="height:130px; ${defeated?'':'filter: brightness(0) opacity(0.55);'}">${Monsters.renderBossSVG(sample)}</div>
+          <div class="pn" style="font-size:14px;color:${defeated?'var(--accent)':'#888'};">
+            ${defeated ? escapeHTML(sample.name_jp) : "？？？"}
+          </div>
+          <div class="pe" style="font-size:11px;">
+            ${defeated ? "タップで しょうかい" : "🔒 まだ"}
+          </div>
+        </button>`);
+      if (defeated) {
+        tap(tile, () => showCompendiumEntry(sample, () => showCompendium(onBack)));
+      }
+      grid.appendChild(tile);
+    });
+    tap($("cmp-back"), () => { SND.stopTheme(300); onBack(); });
+  }
+
+  // Detail screen for a single defeated boss (read-only version of the boss
+  // intro). Shows backstory + plays theme on loop while open.
+  function showCompendiumEntry(boss, onBack) {
+    show("title");
+    const s = $("screen-title"); s.innerHTML = "";
+    const story = furigana(boss.backstory || "");
+    s.appendChild(el(`
+      <div class="center" style="max-width: 720px; margin: 12px auto; padding: 0 12px;">
+        <div class="subtle" style="color:var(--accent); letter-spacing:4px;">★ ずかん ★</div>
+        <h2 style="margin: 4px 0; color: var(--accent);">${escapeHTML(boss.name_jp)}</h2>
+        <div class="subtle" style="font-size: 13px; opacity: .7;">${escapeHTML(boss.name_en||"")}</div>
+        <div class="stage" style="height:240px; max-width:520px; margin: 8px auto;">${Monsters.renderBossSVG(boss)}</div>
+        <div style="background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow); text-align:left; max-width:520px; margin: 0 auto; line-height: 2.2;">
+          <div style="font-size:14px; color:var(--accent); font-weight:900; margin-bottom:6px;">▶ ストーリー</div>
+          <div style="font-size:16px; white-space: pre-line;">${story}</div>
+        </div>
+        <button class="btn huge cool" id="cmp-back2" style="margin-top:18px;">${JP.back}</button>
+      </div>`));
+    SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 600 });
+    tap($("cmp-back2"), () => { SND.stopTheme(400); onBack(); });
+  }
+
   return { renderTitle, renderSetup, renderPass, renderRole, renderWager, renderQuestion,
            renderResult, renderAction, renderTargetPicker, renderBoss, renderVictory,
            renderDefeat, renderVote, renderDefenseQ, toast, show, showRules, tap,
@@ -2039,5 +2121,6 @@ window.UI = (() => {
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
            renderBossIntro, showSlingshot, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, showRareEventIntro,
-           showRoundIntro, showRageIntro, showKO, spawnConfetti };
+           showRoundIntro, showRageIntro, showKO, spawnConfetti,
+           showCompendium };
 })();

@@ -60,6 +60,53 @@ window.Cards = (() => {
   // next deck build (acceptable since locale switches require a reload anyway).
   const POOL = POOL_BASE.map(withFlavor);
 
+  // ---- Card unlocks via boss defeats ----
+  // Always-available "starter" cards: damage, basic shield, energy, escape,
+  // hint, basic draw. Everything else is unlocked by defeating a specific boss.
+  const ALWAYS_UNLOCKED = new Set([
+    "fart_bomb", "mega_punch", "unko_shield",
+    "energy", "draw_two", "escape", "hint", "reveal",
+  ]);
+  // Each boss defeat unlocks one card. Mapping picked for thematic flavor:
+  //   tako (8-legged)         → spread     (multi-target tongue)
+  //   unko (poop bomb)        → team_shield (smelly cloud protects all)
+  //   tral (operatic singer)  → combo       (chain attacks)
+  //   pamp (fluffy plushie)   → heal        (a soft hug heals)
+  //   parfait (sweet treat)   → team_heal   (sweets to share)
+  //   anpan (new-face hero)   → reroll      (try again, like a fresh face)
+  const BOSS_UNLOCKS = {
+    tako: "spread",
+    unko: "team_shield",
+    tral: "combo",
+    pamp: "heal",
+    parfait: "team_heal",
+    anpan: "reroll",
+  };
+
+  function loadUnlocked() {
+    try { return JSON.parse(localStorage.getItem("kjb_unlocked_cards") || "[]"); }
+    catch(_) { return []; }
+  }
+  function saveUnlocked(arr) {
+    try { localStorage.setItem("kjb_unlocked_cards", JSON.stringify(arr)); } catch(_) {}
+  }
+  function isUnlocked(id) {
+    if (ALWAYS_UNLOCKED.has(id)) return true;
+    return loadUnlocked().includes(id);
+  }
+  // Returns the newly-unlocked card id if this boss defeat unlocked something
+  // for the first time; null otherwise.
+  function unlockCardForBoss(bossId) {
+    const cardId = BOSS_UNLOCKS[bossId];
+    if (!cardId || ALWAYS_UNLOCKED.has(cardId)) return null;
+    const have = loadUnlocked();
+    if (have.includes(cardId)) return null;
+    have.push(cardId);
+    saveUnlocked(have);
+    return cardId;
+  }
+  function getBossUnlockMap() { return Object.assign({}, BOSS_UNLOCKS); }
+
   // Build the deck: more copies of cheap cards
   function buildDeck(jinroMode) {
     const deck = [];
@@ -69,6 +116,7 @@ window.Cards = (() => {
       reveal: jinroMode ? 3 : 0, escape: 3, hint: 4, reroll: 0
     };
     for (const c of POOL_BASE) {
+      if (!isUnlocked(c.id)) continue; // locked until the right boss is defeated
       const n = counts[c.id] || 0;
       for (let i = 0; i < n; i++) deck.push(withFlavor(c));
     }
@@ -81,5 +129,6 @@ window.Cards = (() => {
   }
   function byId(id) { return withFlavor(POOL_BASE.find(c => c.id === id)); }
 
-  return { POOL, buildDeck, byId, C };
+  return { POOL, buildDeck, byId, C,
+           isUnlocked, unlockCardForBoss, getBossUnlockMap };
 })();

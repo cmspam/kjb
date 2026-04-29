@@ -966,6 +966,7 @@ window.Game = (() => {
   function doVictory(opts={}) {
     if (S.mode === "pvp" && opts.winner) {
       // PvP K.O. is shown per-opponent at the kill moment by the attack flow.
+      // PvP doesn't unlock cards — those are tied to defeating campaign bosses.
       UI.renderVictory({
         players: S.players, mode: "pvp", winner: opts.winner,
         stats: S.battleStats,
@@ -980,11 +981,20 @@ window.Game = (() => {
       UI.showKO(S.boss, () => doVictory(opts));
       return;
     }
+    // Persistent progress: mark this boss as defeated and unlock its tied card
+    // on first defeat. The victory screen will show the unlock banner.
+    let unlockedCardId = null;
+    let firstDefeat = false;
+    if (S.boss && S.boss.id) {
+      firstDefeat = Progress.recordDefeat(S.boss.id);
+      if (firstDefeat) unlockedCardId = Cards.unlockCardForBoss(S.boss.id);
+    }
     let spyWins = false;
     if (S.jinro) spyWins = false;
     UI.renderVictory({
       players: S.players, jinro: S.jinro, spyWins, boss: S.boss,
       stats: S.battleStats,
+      firstDefeat, unlockedCardId,
     }, () => location.reload(), () => location.reload());
   }
   function doDefeat() {
