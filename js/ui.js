@@ -54,6 +54,12 @@ window.UI = (() => {
       el.classList.toggle("hidden", n !== name);
       if (n !== name) el.innerHTML = "";
     });
+    // iOS Safari sometimes defers/drops the visibility commit when a screen
+    // flip happens inside a touch handler. Reading offsetHeight forces a
+    // synchronous layout flush so the new screen is actually committed before
+    // the caller starts painting content into it.
+    const target = $("screen-"+name);
+    if (target) void target.offsetHeight;
     if (!THEME_SCREENS.has(name)) {
       if (SND && SND.stopTheme) SND.stopTheme(300);
       // Leaving the action phase ends the PvP turn — reset the auto-start
@@ -288,7 +294,12 @@ window.UI = (() => {
       if (pvpBtn && !pvpDisabled) tap(pvpBtn, () => { mode = "pvp"; paint(); });
       tap($("btn-start"), () => {
         try { SND.unlock(); SND.sfxPop(); } catch(e) {}
-        onStart({ count, mode });
+        // Yield one frame before tearing down 12 screens and rebuilding setup.
+        // Works around an iOS Safari quirk where a synchronous display-flip
+        // inside a touch handler — combined with the first SND.unlock() call
+        // stalling the renderer briefly — occasionally produces a blank screen
+        // until reload. The frame gap lets iOS commit the current paint first.
+        requestAnimationFrame(() => onStart({ count, mode }));
       });
       tap($("btn-rules"), () => {
         try { SND.unlock(); } catch(e) {}
