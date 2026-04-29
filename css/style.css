@@ -513,6 +513,13 @@ rt {
   font-size: 260px; z-index: 3;
   pointer-events: none;
 }
+.boss-anim-bang.boss-anim-miss {
+  font-size: 88px; font-weight: 900;
+  color: #7ff0a0; letter-spacing: 4px;
+  text-shadow: 0 6px 0 #000, 0 0 24px #7ff0a0;
+  -webkit-text-stroke: 2px #000;
+  z-index: 4;
+}
 .boss-anim-name {
   position: absolute; bottom: 14%; left: 50%; transform: translateX(-50%) scale(0);
   text-align: center; z-index: 4;
@@ -531,6 +538,7 @@ rt {
   .boss-warn-text > div:nth-child(2) { font-size: 40px !important; }
   .boss-anim-emoji { font-size: 150px; }
   .boss-anim-bang { font-size: 190px; }
+  .boss-anim-bang.boss-anim-miss { font-size: 64px; }
   .boss-anim-name .atk-name { font-size: 26px; }
   .boss-anim-name .atk-target { font-size: 18px; }
   .boss-anim-bubble { font-size: 18px; padding: 10px 16px; }

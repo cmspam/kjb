@@ -616,6 +616,7 @@ window.UI = (() => {
     );
 
     // ----- Stage 1: boss charges with phrase -----
+    // Bumped from 1200 → 1700 so the WARNING text gets a real beat to read.
     setTimeout(() => {
       overlay.innerHTML = `
         <div class="boss-anim-stage">
@@ -642,9 +643,10 @@ window.UI = (() => {
         ],
         { duration: 350, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
       );
-    }, 1200);
+    }, 1700);
 
     // ----- Stage 2: emoji burst -----
+    // Bumped to 3400 so the boss's catchphrase gets ~1.7s of reading time.
     setTimeout(() => {
       const burst = document.createElement("div");
       burst.className = "boss-anim-emoji";
@@ -657,32 +659,61 @@ window.UI = (() => {
         ],
         { duration: 500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
       );
-    }, 2300);
+    }, 3400);
 
-    // ----- Stage 3: bang -----
+    // ----- Stage 3: bang (hit) or whoosh+MISS (miss) -----
     setTimeout(() => {
-      const bang = document.createElement("div");
-      bang.className = "boss-anim-bang";
-      bang.textContent = "💥";
-      overlay.appendChild(bang);
-      bang.animate(
-        [
-          { transform: "translate(-50%,-50%) scale(0) rotate(-15deg)", opacity: 1 },
-          { transform: "translate(-50%,-50%) scale(2.2) rotate(15deg)", opacity: 1, offset: 0.6 },
-          { transform: "translate(-50%,-50%) scale(1.6) rotate(0)", opacity: 0 }
-        ],
-        { duration: 500, easing: "ease-out", fill: "forwards" }
-      );
-      SND.sfxHit();
-    }, 3000);
+      if (missed) {
+        // Whoosh: emoji streaks across screen instead of crashing into target.
+        const whoosh = document.createElement("div");
+        whoosh.className = "boss-anim-bang";
+        whoosh.textContent = "💨";
+        overlay.appendChild(whoosh);
+        whoosh.animate(
+          [
+            { transform: "translate(-150%,-50%) scale(1.2) rotate(-10deg)", opacity: 0 },
+            { transform: "translate(-50%,-50%) scale(1.6) rotate(0)", opacity: 1, offset: 0.5 },
+            { transform: "translate(80%,-50%) scale(1.2) rotate(20deg)", opacity: 0 }
+          ],
+          { duration: 500, easing: "ease-out", fill: "forwards" }
+        );
+        const miss = document.createElement("div");
+        miss.className = "boss-anim-bang boss-anim-miss";
+        miss.textContent = "はずれ！";
+        overlay.appendChild(miss);
+        miss.animate(
+          [
+            { transform: "translate(-50%,-50%) scale(0) rotate(-20deg)", opacity: 0 },
+            { transform: "translate(-50%,-50%) scale(1.3) rotate(8deg)", opacity: 1, offset: 0.55 },
+            { transform: "translate(-50%,-50%) scale(1) rotate(0)", opacity: 1 }
+          ],
+          { duration: 500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+        );
+        SND.sfxPop();
+      } else {
+        const bang = document.createElement("div");
+        bang.className = "boss-anim-bang";
+        bang.textContent = "💥";
+        overlay.appendChild(bang);
+        bang.animate(
+          [
+            { transform: "translate(-50%,-50%) scale(0) rotate(-15deg)", opacity: 1 },
+            { transform: "translate(-50%,-50%) scale(2.2) rotate(15deg)", opacity: 1, offset: 0.6 },
+            { transform: "translate(-50%,-50%) scale(1.6) rotate(0)", opacity: 0 }
+          ],
+          { duration: 500, easing: "ease-out", fill: "forwards" }
+        );
+        SND.sfxHit();
+      }
+    }, 4300);
 
-    // ----- Stage 4: attack name + damage reveal -----
+    // ----- Stage 4: attack name + damage / miss reveal -----
     setTimeout(() => {
       const name = document.createElement("div");
       name.className = "boss-anim-name";
       name.innerHTML = `
         <div class="atk-name">${escapeHTML(attack.name)}</div>
-        <div class="atk-target">${missed ? `${escapeHTML(targetName)} に はずれた！` : `→ ${escapeHTML(targetName)} に <b>${dmg}</b> ダメージ！`}</div>`;
+        <div class="atk-target" style="${missed?'color:#7ff0a0;':''}">${missed ? `→ ${escapeHTML(targetName)} は かわした！ ✨` : `→ ${escapeHTML(targetName)} に <b>${dmg}</b> ダメージ！`}</div>`;
       overlay.appendChild(name);
       name.animate(
         [
@@ -692,10 +723,11 @@ window.UI = (() => {
         ],
         { duration: 450, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
       );
-    }, 3400);
+    }, 4800);
 
     // ----- End: clean up + callback -----
-    setTimeout(() => { overlay.remove(); onDone(); }, 4600);
+    // 7200 - 4800 = 2400ms to read the attack name + damage/miss text before close.
+    setTimeout(() => { overlay.remove(); onDone(); }, 7200);
   }
 
   // -------- RARE EVENT HYPE INTRO --------

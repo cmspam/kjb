@@ -375,9 +375,9 @@ window.Game = (() => {
       drawCard(p);
       // Skip the result screen on correct — too many taps. Toast + go to action.
       const cheer = pickRand(JP.correct_cheer || ["ナイス〜！"]);
-      UI.toast(`✨ ${cheer} ⚡+${stars} ⚔️${stars} 🎴+1`, 1300);
+      UI.toast(`✨ ${cheer} ⚡+${stars} ⚔️${stars} 🎴+1`, 1800);
       SND.sfxCorrect();
-      setTimeout(() => goAction(), 950);
+      setTimeout(() => goAction(), 1500);
     } else {
       const t = S.currentQuestion?.ptype;
       if (t) p.misses[t] = (p.misses[t] || 0) + 1;
@@ -426,7 +426,9 @@ window.Game = (() => {
   function doAttack(p, target) {
     if (p.attackPower <= 0) { UI.toast("こうげきパワーが ないよ！"); return goAction(); }
     let dmg = p.attackPower + S.pendingDamageBonus;
-    const mult = Monsters.damageMultiplier(S.boss);
+    // In PvP S.boss is null — apply weak-spot multiplier against the opponent's monster instead.
+    const damageMonster = target.kind === "pvp-part" ? target.targetPlayer.monster : S.boss;
+    const mult = damageMonster ? Monsters.damageMultiplier(damageMonster) : 1;
     dmg = Math.round(dmg * mult);
     if (S.doubleNextAttack) { dmg *= 2; S.doubleNextAttack = false; }
 
@@ -452,17 +454,17 @@ window.Game = (() => {
           const num = document.createElement("div");
           num.className = "dmg-num"; num.textContent = "-" + dmg;
           stage.appendChild(num);
-          setTimeout(() => num.remove(), 1200);
+          setTimeout(() => num.remove(), 1800);
           const hits = opponent.monster.hits || [];
           if (hits.length) {
             const bubble = document.createElement("div");
             bubble.className = "hit-bubble pop";
             bubble.textContent = hits[(Math.random()*hits.length)|0];
             stage.appendChild(bubble);
-            setTimeout(() => bubble.remove(), 1400);
+            setTimeout(() => bubble.remove(), 2400);
           }
         }
-        UI.toast(`${p.name} → ${opponent.name} の ${part.name_jp} に ${dmg} ダメージ！`, 1400);
+        UI.toast(`${p.name} → ${opponent.name} の ${part.name_jp} に ${dmg} ダメージ！`, 1800);
         S.log.push(`${p.name} → ${opponent.name}.${part.name_jp}: ${dmg}`);
         if (part.hp === 0) {
           S.log.push(`${opponent.name} の ${part.name_jp} を こわした！`);
@@ -474,14 +476,14 @@ window.Game = (() => {
         const oppCore = opponent.monster.parts.find(x => x.effect === "win");
         if (oppCore && oppCore.hp <= 0) {
           opponent.dead = true;
-          UI.toast(JP.pvp_eliminated(opponent.name), 1800);
+          UI.toast(JP.pvp_eliminated(opponent.name), 2000);
         }
         const winner = checkPvpWinner();
         if (winner) {
-          setTimeout(() => doVictory({ winner }), 1500);
+          setTimeout(() => doVictory({ winner }), 2000);
           return;
         }
-        setTimeout(() => endTurn(), 1400);
+        setTimeout(() => endTurn(), 2200);
       };
       if (SND.getSlingshot && SND.getSlingshot()) {
         UI.showSlingshot(opponent.monster, `${opponent.name} ${part.name_jp}`, fire);
@@ -548,7 +550,7 @@ window.Game = (() => {
       const num = document.createElement("div");
       num.className = "dmg-num"; num.textContent = "-" + dmg;
       stage.appendChild(num);
-      setTimeout(() => num.remove(), 1200);
+      setTimeout(() => num.remove(), 1800);
       // Boss reaction speech bubble
       const hits = S.boss.hits || [];
       if (hits.length) {
@@ -556,10 +558,10 @@ window.Game = (() => {
         bubble.className = "hit-bubble pop";
         bubble.textContent = hits[(Math.random()*hits.length)|0];
         stage.appendChild(bubble);
-        setTimeout(() => bubble.remove(), 1400);
+        setTimeout(() => bubble.remove(), 2400);
       }
     }
-    UI.toast(JP.hit_part(p.name, part.name_jp, dmg), 1100);
+    UI.toast(JP.hit_part(p.name, part.name_jp, dmg), 1800);
     p.attackPower = 0;
     S.pendingDamageBonus = 0;
     S.log.push(`${p.name} → ${part.name_jp}: ${dmg} ダメージ！`);
@@ -571,8 +573,8 @@ window.Game = (() => {
     // Check win
     const core = S.boss.parts.find(x => x.effect === "win");
     if (core && core.hp <= 0) { return doVictory(); }
-    // Show boss reaction bubble briefly, then auto-end turn (no extra screen tap needed).
-    setTimeout(() => endTurn(), 1400);
+    // Hold the boss's reaction bubble long enough for kids to actually read it before the next screen.
+    setTimeout(() => endTurn(), 2200);
   }
 
   function endTurn() {
@@ -757,7 +759,7 @@ window.Game = (() => {
         target.skipBossAtk = false; continue;
       }
       if (Math.random() < mods.missChance) {
-        lines.push(`${target.name} に ${pickRand(bossAttacks).name} … はずれ〜！`);
+        queue.push({ target, dmg: 0, missed: true });
         continue;
       }
       if (target.shield) {
@@ -779,10 +781,11 @@ window.Game = (() => {
   //   • Plain: apply damage immediately
   function processBossAttack(queue, idx, lines) {
     if (idx >= queue.length) return finishBossTurn(lines);
-    const { target, dmg } = queue[idx];
+    const { target, dmg, missed } = queue[idx];
     if (target.dead) return processBossAttack(queue, idx+1, lines);
 
-    if (S.hardMode) {
+    // Hard-mode defensive Q only fires for hits (a miss already misses).
+    if (!missed && S.hardMode) {
       const q = Questions.pick(target.level || S.level, 1, { misses: target.misses, seenIds: target.seenIds });
       if (q) {
         target.seenIds.push(q.id);
@@ -804,13 +807,17 @@ window.Game = (() => {
 
     const atk = pickRand((S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words);
     const apply = () => {
-      target.hp = Math.max(0, target.hp - dmg);
-      lines.push(`${target.name} に ${atk.name} → ${dmg} ダメージ！`);
-      if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…💀`); }
+      if (missed) {
+        lines.push(`${target.name} に ${atk.name} … はずれ〜！ 💨`);
+      } else {
+        target.hp = Math.max(0, target.hp - dmg);
+        lines.push(`${target.name} に ${atk.name} → ${dmg} ダメージ！`);
+        if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…💀`); }
+      }
       processBossAttack(queue, idx+1, lines);
     };
     if (SND.getBossAnim && SND.getBossAnim()) {
-      UI.showBossAttackAnim(S.boss, atk, target.name, dmg, false, apply);
+      UI.showBossAttackAnim(S.boss, atk, target.name, dmg, !!missed, apply);
     } else {
       apply();
     }
