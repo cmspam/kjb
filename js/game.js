@@ -411,11 +411,24 @@ window.Game = (() => {
       }
       if (Questions.recordAnswer) Questions.recordAnswer(q.id, !!correct);
     }
+    if (!correct) S.pronounceTarget = null; // no bonus for wrong-answer turns
     if (correct) {
       const stars = S.currentWager;
       p.energy += stars;
       p.attackPower = stars;
       drawCard(p);
+      // Pronunciation challenge: if the answer is a single short English word
+      // and SpeechRecognition is available, offer a "say it" bonus button on
+      // the action screen. Filtered to short English words so we don't ask
+      // kids to pronounce a full grammar sentence.
+      S.pronounceTarget = null;
+      if (q && q.options && q.answer != null && SND.isSpeechSupported && SND.isSpeechSupported()) {
+        const w = String(q.options[q.answer] || "").trim();
+        // Only offer for short English-looking phrases (no Japanese chars, ≤20 chars).
+        if (w && w.length <= 20 && /^[ -~]+$/.test(w)) {
+          S.pronounceTarget = w;
+        }
+      }
       // Combo: streak of consecutive correct answers. Bonus damage at 3+,
       // bonus card draw at 5+. Resets on a wrong answer.
       p.combo = (p.combo || 0) + 1;
@@ -447,18 +460,31 @@ window.Game = (() => {
   // -------- ACTION (combined: attack + cards on one screen) --------
   function goAction() {
     const p = currentPlayer();
+    // The pronunciation-challenge handler runs the speech modal, applies a +2
+    // attackPower bonus on success, and clears the target either way (one shot).
+    const onSpeak = (result) => {
+      if (result && result.ok) {
+        p.attackPower = (p.attackPower || 0) + 2;
+        UI.toast("⭐ +2 ボーナス！", 1300);
+      }
+      S.pronounceTarget = null;
+      goAction();
+    };
+    const extras = { pronounceTarget: S.pronounceTarget, onSpeak };
     if (S.mode === "pvp") {
       UI.renderPvpAction(p, S.players,
         (opp) => goPvpPickPart(p, opp),
         (card, idx) => playCardInAction(p, card, idx),
-        () => endTurn()
+        () => endTurn(),
+        extras
       );
       return;
     }
     UI.renderAction(p, S.boss, S.players,
       (target) => doAttack(p, target),
       (card, idx) => playCardInAction(p, card, idx),
-      () => endTurn()
+      () => endTurn(),
+      extras
     );
   }
 
@@ -688,6 +714,7 @@ window.Game = (() => {
   }
 
   function endTurn() {
+    S.pronounceTarget = null; // bonus is one-shot per turn
     // Discard unspent attackPower; leftover energy stays (banked for cards next turn)
     currentPlayer().attackPower = 0;
     S.currentIdx++;

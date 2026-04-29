@@ -88,6 +88,47 @@ window.UI = (() => {
     toastTimer = setTimeout(() => t.classList.remove("show"), ms);
   }
 
+  // -------- SPEECH CHALLENGE (pronunciation) --------
+  // Shows a modal asking the kid to pronounce `word`, calls SND.recognizeOnce,
+  // displays the result for a beat, then calls onDone(result). On unsupported
+  // browsers, immediately calls onDone with ok:false and no UI flash so the
+  // caller can suppress the bonus button before this runs.
+  function runSpeechChallenge(word, onDone) {
+    const overlay = document.createElement("div");
+    overlay.className = "speech-overlay";
+    overlay.innerHTML = `
+      <div class="speech-card">
+        <div class="speech-prompt">🎤 マイクで…</div>
+        <div class="speech-word">「${escapeHTML(word)}」</div>
+        <div class="speech-status" id="sp-status">きいてるよ…</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const status = overlay.querySelector("#sp-status");
+    overlay.querySelector(".speech-card").animate(
+      [
+        { transform: "scale(0.6) translateY(20px)", opacity: 0 },
+        { transform: "scale(1) translateY(0)", opacity: 1 }
+      ],
+      { duration: 250, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    SND.recognizeOnce(word, { timeoutMs: 5000 }).then(result => {
+      if (result.ok) {
+        status.textContent = "✨ ナイス はつおん！ +2 ダメ";
+        status.style.color = "#4ade80";
+      } else if (result.reason === "timeout" || result.reason === "no-speech") {
+        status.textContent = "🤔 きこえなかった…";
+        status.style.color = "#fde0c0";
+      } else if (result.reason === "not-allowed" || result.reason === "service-not-allowed") {
+        status.textContent = "🎤 マイクの ゆるしを ON に してね";
+        status.style.color = "#fde0c0";
+      } else {
+        status.textContent = "😅 もういちど！";
+        status.style.color = "#fde0c0";
+      }
+      setTimeout(() => { overlay.remove(); if (onDone) onDone(result); }, 1300);
+    });
+  }
+
   // Custom confirm modal — used in place of native confirm() because iOS Safari
   // sometimes silently suppresses confirm() called from inside touch handlers.
   function confirmModal(msg, onYes, onNo) {
@@ -1624,16 +1665,21 @@ window.UI = (() => {
   // If hasAtk: show boss parts as direct attack targets + cards + end-turn link.
   // If no hasAtk: just cards + end-turn (after a wrong answer).
   // onAttack(target) is called with the same {kind, part/target} shape the old picker used.
-  function renderAction(player, boss, players, onAttack, onCard, onEnd) {
+  function renderAction(player, boss, players, onAttack, onCard, onEnd, extras) {
     show("action");
     const s = $("screen-action"); s.innerHTML = "";
     s.appendChild(el(buildHeader(boss, players, player)));
     const hasAtk = player.attackPower > 0;
     const isSpy = player.role === "spy";
+    const ptarget = extras && extras.pronounceTarget;
+    const speakHTML = (ptarget && SND.isSpeechSupported && SND.isSpeechSupported())
+      ? `<button class="btn cool" id="speak-bonus" style="font-size:14px; min-height:44px; min-width:0; padding: 8px 14px; margin: 8px 0;">🎤 「${escapeHTML(ptarget)}」 を いって +2 ボーナス！</button>`
+      : ``;
     s.appendChild(el(`
       <div class="center" style="width:100%;">
         ${hasAtk ? `
           <h3>⚔️ こうげきパワー ${player.attackPower} ／ ⚡ ${player.energy}</h3>
+          ${speakHTML}
           <div class="subtle">こうげきしたい パーツを タップ！</div>
           <div class="parts-pick" id="parts"></div>
           ${isSpy ? `
@@ -1649,6 +1695,10 @@ window.UI = (() => {
         <button class="btn ${hasAtk?'ghost':'huge cool'}" id="end" style="margin-top:14px;${hasAtk?'font-size:14px;':''}">${JP.action_end} →</button>
       </div>
     `));
+    const sb = $("speak-bonus");
+    if (sb) tap(sb, () => {
+      runSpeechChallenge(ptarget, (result) => { if (extras && extras.onSpeak) extras.onSpeak(result); });
+    });
     if (hasAtk) {
       const partsEl = $("parts");
       boss.parts.forEach(p => {
@@ -1698,12 +1748,16 @@ window.UI = (() => {
   // (e.g., after canceling out of the target picker).
   let pvpThemePlayerId = null;
 
-  function renderPvpAction(player, players, onPickOpponent, onCard, onEnd) {
+  function renderPvpAction(player, players, onPickOpponent, onCard, onEnd, extras) {
     show("action");
     const s = $("screen-action"); s.innerHTML = "";
     const hasAtk = player.attackPower > 0;
     const themePlaying = SND.isThemePlaying ? SND.isThemePlaying() : false;
     const isNewTurn = pvpThemePlayerId !== player.id;
+    const ptarget = extras && extras.pronounceTarget;
+    const speakHTML = (ptarget && SND.isSpeechSupported && SND.isSpeechSupported())
+      ? `<button class="btn cool" id="speak-bonus" style="font-size:14px; min-height:44px; min-width:0; padding: 8px 14px; margin: 8px 0;">🎤 「${escapeHTML(ptarget)}」 を いって +2 ボーナス！</button>`
+      : ``;
     s.appendChild(el(`
       <div class="center" style="width:100%; position:relative;">
         <button id="pvp-music" class="btn ghost" title="テーマソング ON/OFF"
@@ -1711,12 +1765,17 @@ window.UI = (() => {
           ${themePlaying ? '🎵' : '🔇'}
         </button>
         <h3 style="margin:6px 0;">${hasAtk?`⚔️ こうげきパワー ${player.attackPower}`:'こうげき できない'} ／ ⚡ ${player.energy}</h3>
+        ${speakHTML}
         <div class="subtle">${hasAtk?'こうげきする モンスターを タップ！':'カードを つかうか ターンを おわってね'}</div>
         <div id="pvp-field" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 10px 0; max-width: 760px; width:100%;"></div>
         <h3 style="margin-top:14px; font-size:18px;">カード</h3>
         <div id="hand-area"></div>
         <button class="btn ${hasAtk?'ghost':'huge cool'}" id="end" style="margin-top:14px;${hasAtk?'font-size:14px;':''}">${JP.action_end} →</button>
       </div>`));
+    const sb = $("speak-bonus");
+    if (sb) tap(sb, () => {
+      runSpeechChallenge(ptarget, (result) => { if (extras && extras.onSpeak) extras.onSpeak(result); });
+    });
     // Start the active player's monster theme on loop on the first render of
     // their turn. On subsequent re-renders (e.g., after canceling out of the
     // target picker) we respect a prior manual mute — the kid sees 🔇 and can
@@ -2126,5 +2185,5 @@ window.UI = (() => {
            renderBossIntro, showSlingshot, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, showRareEventIntro,
            showRoundIntro, showRageIntro, showKO, spawnConfetti,
-           showCompendium };
+           showCompendium, runSpeechChallenge };
 })();

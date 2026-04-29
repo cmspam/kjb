@@ -352,6 +352,24 @@ h3 { font-size: 28px; margin: 4px 0; }
 #exit-btn.hidden { display:none; }
 #exit-btn:active { transform: scale(0.9); }
 
+/* Speech-recognition challenge overlay */
+.speech-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 1700;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.speech-card {
+  background: var(--card); color: #fff;
+  border: 3px solid var(--cool); border-radius: 18px;
+  padding: 24px 28px; box-shadow: var(--shadow);
+  max-width: 420px; width: 100%; text-align: center;
+}
+.speech-prompt { font-size: 18px; color: var(--cool); letter-spacing: 4px; font-weight: 900; }
+.speech-word { font-size: 44px; font-weight: 900; color: var(--accent); margin: 12px 0 16px; text-shadow: 0 4px 0 #000; }
+.speech-status { font-size: 22px; font-weight: 900; min-height: 30px; }
+
 /* Custom confirm modal (replaces native confirm() which is unreliable on iOS Safari) */
 .confirm-overlay {
   position: fixed; inset: 0;

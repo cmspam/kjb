@@ -221,9 +221,60 @@ window.SND = (() => {
     else a.addEventListener("loadedmetadata", start, { once: true });
   }
 
+  // ---------- SPEECH RECOGNITION (pronunciation challenges) ----------
+  // Uses the Web Speech API for free in-browser pronunciation scoring. Supported
+  // on iOS Safari ≥14.5 and modern Chrome/Edge. Falls back to "unsupported" on
+  // browsers without it; callers should hide the feature when isSpeechSupported() is false.
+  const SR_CTOR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function isSpeechSupported() { return !!SR_CTOR; }
+
+  // Listen for one utterance and return whether the kid said `targetWord`.
+  // Resolves with { ok, reason?, alts?, matched? }. Never rejects.
+  function recognizeOnce(targetWord, opts={}) {
+    return new Promise(resolve => {
+      if (!SR_CTOR) return resolve({ ok: false, reason: "unsupported" });
+      let r;
+      try { r = new SR_CTOR(); } catch(_) { return resolve({ ok: false, reason: "init_failed" }); }
+      r.lang = opts.lang || "en-US";
+      r.maxAlternatives = 5;
+      r.interimResults = false;
+      r.continuous = false;
+      let done = false;
+      const cleanup = () => { try { r.onresult = r.onerror = r.onend = null; } catch(_){} };
+      const finish = (result) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        cleanup();
+        try { r.stop(); } catch(_){}
+        resolve(result);
+      };
+      const timer = setTimeout(() => finish({ ok: false, reason: "timeout" }), opts.timeoutMs || 5000);
+      r.onresult = (e) => {
+        const target = (targetWord||"").toLowerCase().trim();
+        const tWords = target.split(/\s+/);
+        const alts = [];
+        const list = e.results && e.results[0];
+        if (list) for (let i = 0; i < list.length; i++) {
+          alts.push({ transcript: (list[i].transcript||"").toLowerCase().trim(), conf: list[i].confidence });
+        }
+        const matched = alts.find(a => {
+          if (a.transcript === target) return true;
+          const ws = a.transcript.split(/\s+/);
+          return tWords.every(t => ws.includes(t));
+        });
+        finish({ ok: !!matched, alts, matched });
+      };
+      r.onerror = (e) => finish({ ok: false, reason: (e && e.error) || "error" });
+      r.onend = () => { /* finish() handles termination */ };
+      try { r.start(); } catch(e) { finish({ ok: false, reason: "start_failed" }); }
+    });
+  }
+
   return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat, sfxPop, sfxFart,
            setMuted, isMuted, setVoice, listVoices,
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
            getThemes, setThemes,
-           playTheme, playThemeSnippet, stopTheme, isThemePlaying };
+           playTheme, playThemeSnippet, stopTheme, isThemePlaying,
+           isSpeechSupported, recognizeOnce };
 })();
