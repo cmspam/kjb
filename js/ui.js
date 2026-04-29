@@ -98,7 +98,13 @@ window.UI = (() => {
   //   "じゅんびちゅう…" while waiting for the mic permission
   //   "🎤 きいてるよ！" once recognizeOnce.onListening() fires (mic actually capturing)
   //   final result message after recognition resolves.
-  const MAX_SPEECH_ATTEMPTS = 3;
+  const MAX_SPEECH_ATTEMPTS = 4;
+  // Premature-failure window: if a recognition resolves with no match within
+  // this many ms of the mic actually going live, it's almost certainly the
+  // recognizer giving up on the first ambient-noise sample before the kid
+  // had time to speak. We silently retry once in that case.
+  const PREMATURE_FAILURE_MS = 1500;
+
   function runSpeechChallenge(word, onDone) {
     const overlay = document.createElement("div");
     overlay.className = "speech-overlay";
@@ -107,16 +113,18 @@ window.UI = (() => {
         <div class="speech-prompt">🎤 マイクで…</div>
         <div class="speech-word">「${escapeHTML(word)}」</div>
         <div class="speech-status" id="sp-status">じゅんびちゅう…</div>
+        <div class="speech-heard" id="sp-heard" style="font-size:13px;color:#aaa;margin-top:6px;min-height:18px;"></div>
         <div class="speech-attempts" id="sp-attempts" style="font-size:13px;color:#aaa;margin-top:4px;"></div>
         <div id="sp-buttons" style="display:none; gap:10px; justify-content:center; margin-top:14px; flex-wrap:wrap;">
-          <button class="btn good" id="sp-retry">🔄 もういちど</button>
+          <button class="btn good" id="sp-retry">🔄 もういちど！</button>
           <button class="btn ghost" id="sp-skip">スキップ</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
-    const status   = overlay.querySelector("#sp-status");
+    const status     = overlay.querySelector("#sp-status");
+    const heardEl    = overlay.querySelector("#sp-heard");
     const attemptsEl = overlay.querySelector("#sp-attempts");
-    const buttons  = overlay.querySelector("#sp-buttons");
+    const buttons    = overlay.querySelector("#sp-buttons");
     overlay.querySelector(".speech-card").animate(
       [
         { transform: "scale(0.6) translateY(20px)", opacity: 0 },
@@ -125,8 +133,9 @@ window.UI = (() => {
       { duration: 250, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
     );
 
-    let attempts  = 0;
+    let attempts   = 0;
     let lastResult = null;
+    let usedAutoRetry = false; // silent auto-retry only fires once per modal
 
     const close = (result) => {
       overlay.remove();
@@ -140,25 +149,46 @@ window.UI = (() => {
       hideRetry();
       status.textContent = "じゅんびちゅう…";
       status.style.color = "#fff";
+      heardEl.textContent = "";
       attemptsEl.textContent = `(${attempts} / ${MAX_SPEECH_ATTEMPTS} かいめ)`;
+
+      let listeningStartTime = 0;
 
       SND.recognizeOnce(word, {
         startupTimeoutMs: 15000,
         timeoutMs: 6000,
         onListening: () => {
-          status.textContent = "🎤 きいてるよ！";
+          listeningStartTime = Date.now();
+          status.textContent = "🎤 はなしてね！";
           status.style.color = "#7ff0a0";
         },
       }).then((result) => {
         lastResult = result;
+
         if (result.ok) {
           status.textContent = "✨ ナイス はつおん！ +2 ダメ";
           status.style.color = "#4ade80";
+          heardEl.textContent = "";
           attemptsEl.textContent = "";
           setTimeout(() => close(result), 1300);
           return;
         }
-        // failure — message + maybe retry
+
+        // Auto-retry once if the recognizer fired before the kid could speak.
+        // This is the "immediate fail right after granting mic" case — the
+        // recognizer gave up on the first ambient-noise sample.
+        const tooQuick = listeningStartTime && (Date.now() - listeningStartTime) < PREMATURE_FAILURE_MS;
+        const retryableReason = (result.reason === "no-speech" || result.reason === "timeout" || result.reason == null);
+        if (!usedAutoRetry && tooQuick && retryableReason && attempts < MAX_SPEECH_ATTEMPTS) {
+          usedAutoRetry = true;
+          status.textContent = "もういちど…";
+          status.style.color = "#fde0c0";
+          attempts--; // don't burn the kid's manual try on the recognizer's hiccup
+          setTimeout(() => attempt(), 250);
+          return;
+        }
+
+        // Failure UI
         let msg;
         switch (result.reason) {
           case "timeout":
@@ -168,11 +198,14 @@ window.UI = (() => {
           case "service-not-allowed": msg = "🎤 マイクの ゆるしを ON に してね"; break;
           case "unsupported":
           case "init_failed":       msg = "🤷 この ブラウザは つかえない"; break;
-          default:                  msg = "😅 ちがう…"; break;
+          default:                  msg = "😅 ちがう ことばに きこえた"; break;
         }
         status.textContent = msg;
         status.style.color = "#fde0c0";
-        // No retry on permission-denied / unsupported — pointless
+        // Educational + debugging: show the top alternative the recognizer heard
+        const heard = result.alts && result.alts[0] && result.alts[0].transcript;
+        heardEl.textContent = heard ? `わたしには「${heard}」と きこえた` : "";
+
         const canRetry = attempts < MAX_SPEECH_ATTEMPTS &&
                          result.reason !== "not-allowed" &&
                          result.reason !== "service-not-allowed" &&
@@ -182,7 +215,7 @@ window.UI = (() => {
           showRetry();
         } else {
           attemptsEl.textContent = "";
-          setTimeout(() => close(result), 1500);
+          setTimeout(() => close(result), 1800);
         }
       });
     }
