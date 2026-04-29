@@ -14,6 +14,7 @@ window.SND = (() => {
     if (muted) {
       try { stopTheme(0); } catch(_){}
       try { stopBossVoice(); } catch(_){}
+      try { if (_enCurrent && !_enCurrent.paused) _enCurrent.pause(); } catch(_){}
       try { speechSynthesis.cancel(); } catch(_){}
     }
   }
@@ -66,8 +67,61 @@ window.SND = (() => {
     speechSynthesis.onvoiceschanged = refreshVoices;
   }
 
+  // Pre-rendered English audio manifest — loaded at startup. If the requested
+  // English text's djb2 hash is in the manifest, we play assets/audio/en/<hash>.opus
+  // instead of going through the Web Speech API. Manifest is just { hash: 1, ... }.
+  let _enManifest = null;
+  let _enCurrent  = null;
+  (function loadEnManifest() {
+    try {
+      fetch("assets/audio/en/manifest.json")
+        .then(r => r.ok ? r.json() : null)
+        .then(j => { if (j && typeof j === "object") _enManifest = j; })
+        .catch(() => {});
+    } catch(_) {}
+  })();
+  function _hashFor(s) {
+    // djb2, identical to the build script and the boss-line hasher
+    let h = 5381 | 0;
+    const str = String(s);
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+    return ((h >>> 0).toString(16)).padStart(8, '0');
+  }
+
   function speak(text, opts = {}) {
     if (muted) return;
+    if (!text) return;
+    // EN path: try the pre-rendered Opus first if we have it manifest-listed.
+    // Falls through to the Web Speech path if the file isn't baked.
+    if (opts.lang !== "ja") {
+      const trimmed = String(text).trim();
+      const hash = _hashFor(trimmed);
+      const cached = _enManifest && _enManifest[hash];
+      if (cached) {
+        try {
+          if (_enCurrent && !_enCurrent.paused) _enCurrent.pause();
+        } catch(_){}
+        const a = new Audio("assets/audio/en/" + hash + ".opus");
+        a.preload = "auto";
+        // opts.rate maps to playbackRate (Web Audio doesn't preserve pitch by
+        // default, but at 0.5–2.0 Chrome/Safari preserve pitch automatically
+        // for Audio elements).
+        if (opts.rate != null)   a.playbackRate = Math.max(0.5, Math.min(2.0, opts.rate));
+        if (opts.volume != null) a.volume = Math.max(0, Math.min(1, opts.volume));
+        _enCurrent = a;
+        const p = a.play();
+        if (p && p.catch) p.catch(() => {
+          // Audio failed (codec / network) — fall back to Web Speech.
+          _speakViaTTS(text, opts);
+        });
+        return;
+      }
+      // No cached version — fall through to Web Speech.
+    }
+    _speakViaTTS(text, opts);
+  }
+
+  function _speakViaTTS(text, opts) {
     if (typeof speechSynthesis === "undefined") return;
     if (opts.cancel !== false) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
@@ -157,6 +211,15 @@ window.SND = (() => {
   // pause never fired and A kept playing indefinitely under B). With a Map keyed
   // by the audio element, each fade lives its own life.
   const audioFadeRAF = new WeakMap();
+  // Token bumped on every play/stop call. Stale play() promise resolutions
+  // check the token before applying their fade-in — if a newer call has
+  // superseded them, they no-op. Fixes rapid-switch races where the third
+  // boss's theme would silently lose to a stale fade from a prior call.
+  let _themeToken = 0;
+  // Cancellable timeout for snippet stops. Without this, an orphan
+  // setTimeout(stopTheme, ...) from a prior playThemeSnippet would fire
+  // mid-way through a newer theme and pause it.
+  let _snippetTimeout = null;
 
   function getThemeAudio(bossId) {
     if (!themeCache[bossId]) {
@@ -185,10 +248,12 @@ window.SND = (() => {
   }
 
   function stopTheme(fadeMs = 250) {
+    _themeToken++; // any pending play() resolutions become stale
+    if (_snippetTimeout) { clearTimeout(_snippetTimeout); _snippetTimeout = null; }
     const a = currentTheme;
     currentTheme = null;
     if (!a) return;
-    if (fadeMs <= 0) { a.pause(); a.volume = 0; return; }
+    if (fadeMs <= 0) { try { a.pause(); a.volume = 0; } catch(_){} return; }
     fadeTo(a, 0, fadeMs, () => { try { a.pause(); } catch(_){} });
   }
   function isThemePlaying() { return !!currentTheme && !currentTheme.paused; }
@@ -260,43 +325,73 @@ window.SND = (() => {
 
   function playTheme(bossId, opts = {}) {
     if (muted || !getThemes()) return null;
+    if (_snippetTimeout) { clearTimeout(_snippetTimeout); _snippetTimeout = null; }
+    const myToken = ++_themeToken;
     const loop    = !!opts.loop;
     const target  = (opts.volume ?? 0.55);
     const fadeIn  = (opts.fadeIn  ?? 250);
     const startAt = (opts.startAt ?? 0);
-    // Stop any previous theme first
-    if (currentTheme && currentTheme !== themeCache[bossId]) stopTheme(150);
+
     const a = getThemeAudio(bossId);
+
+    // Fade out + pause any *other* theme. For the same element we just reuse
+    // it; pausing then re-playing the same element rapidly is what tripped iOS
+    // before, so we leave it alone if it's already the target.
+    if (currentTheme && currentTheme !== a) {
+      const old = currentTheme;
+      fadeTo(old, 0, 150, () => { try { old.pause(); } catch(_){} });
+    }
+    currentTheme = a;
+
     a.loop = loop;
     a.volume = 0;
     try {
-      // currentTime can throw on some browsers if metadata not yet loaded; guard.
-      if (!Number.isNaN(a.duration) && Number.isFinite(a.duration)) {
+      if (Number.isFinite(a.duration) && a.duration > 0) {
         a.currentTime = Math.max(0, Math.min(Math.max(0, a.duration - 0.1), startAt));
       } else {
         a.currentTime = startAt;
       }
     } catch(_) {}
-    const p = a.play();
-    if (p && p.catch) p.catch(() => {}); // iOS gesture-blocked: silently no-op
-    currentTheme = a;
-    fadeTo(a, target, fadeIn);
+
+    let p;
+    try { p = a.play(); } catch(_) { return a; }
+    // iOS / Chrome may reject play() if pause() interrupted a prior pending
+    // play. We swallow the rejection AND don't fade-in a stale call. The
+    // fade-in only happens once the play promise actually resolves AND we're
+    // still the live token (no newer playTheme/stopTheme has superseded us).
+    if (p && p.then) {
+      p.then(() => {
+        if (myToken === _themeToken && currentTheme === a) {
+          fadeTo(a, target, fadeIn);
+        }
+      }).catch(() => {
+        // Play was aborted — likely superseded by a newer call. No-op.
+      });
+    } else {
+      // Older browsers: play() returns void. Fade in immediately.
+      fadeTo(a, target, fadeIn);
+    }
     return a;
   }
 
   function playThemeSnippet(bossId, durationMs = 4000, volume = 0.5) {
     if (muted || !getThemes()) return;
+    // Cancel any prior pending snippet stop — without this, the old one would
+    // fire mid-way through this snippet and silently kill it.
+    if (_snippetTimeout) { clearTimeout(_snippetTimeout); _snippetTimeout = null; }
     const a = getThemeAudio(bossId);
     const start = () => {
       const dur = (Number.isFinite(a.duration) && a.duration > 1) ? a.duration : 30;
-      // Pick a random window inside the song that fits the snippet length.
       const snip = durationMs / 1000;
       const maxStart = Math.max(0, dur - snip - 0.3);
       const startAt = Math.random() * maxStart;
       playTheme(bossId, { startAt, volume, fadeIn: 200 });
-      // Fade out and stop a bit before the requested duration ends so the
-      // tail of the snippet is the fade, not a hard cut.
-      setTimeout(() => stopTheme(350), Math.max(0, durationMs - 350));
+      // Schedule the fade-out tail. Stored in _snippetTimeout so a subsequent
+      // playTheme/stopTheme/playThemeSnippet can cancel it.
+      _snippetTimeout = setTimeout(() => {
+        _snippetTimeout = null;
+        stopTheme(350);
+      }, Math.max(0, durationMs - 350));
     };
     if (a.readyState >= 1 /*HAVE_METADATA*/) start();
     else a.addEventListener("loadedmetadata", start, { once: true });
