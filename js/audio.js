@@ -399,6 +399,83 @@ window.SND = (() => {
     else a.addEventListener("loadedmetadata", start, { once: true });
   }
 
+  // ---------- SPEECH MATCHING HELPERS ----------
+  // Normalize a transcript or target for comparison: lowercase, strip
+  // apostrophes ("it's" → "its" — Chrome's transcript sometimes drops the
+  // apostrophe), other punctuation → space, collapse whitespace. This is what
+  // makes "On thursday?" match "on thursday" and "It's next week!" match
+  // "it's next week".
+  function normalizeForMatch(s) {
+    return String(s || "").toLowerCase()
+      .replace(/'/g, "")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  // Soundex — classic phonetic hash. Same-sounding words → same code:
+  // read/red/reed → R300, see/sea → S000, blue/blew → B400, to/two/too → T000,
+  // here/hear → H600, no/know → N000, by/buy/bye → B000, etc. Doesn't catch
+  // every homophone (e.g. way vs weigh disagree because of the silent G), so
+  // we layer an explicit table on top for the cases soundex gets wrong.
+  function soundex(word) {
+    word = String(word || "").toUpperCase().replace(/[^A-Z]/g, "");
+    if (!word) return "";
+    const map = { B:1,F:1,P:1,V:1, C:2,G:2,J:2,K:2,Q:2,S:2,X:2,Z:2,
+                  D:3,T:3, L:4, M:5,N:5, R:6 };
+    let out = word[0];
+    let prev = map[word[0]] || "";
+    for (let i = 1; i < word.length && out.length < 4; i++) {
+      const c = word[i];
+      const code = map[c] || "";
+      if (code && code !== prev) out += code;
+      if (c !== "H" && c !== "W") prev = code;
+    }
+    return (out + "000").slice(0, 4);
+  }
+  // Homophone exceptions soundex misses. Bidirectional pairs.
+  const HOMOPHONE_PAIRS = [
+    ["way", "weigh"],
+    ["one", "won"],
+    ["ate", "eight"],
+    ["our", "hour"],
+    ["write", "right"], ["write", "rite"], ["right", "rite"],
+    ["new", "knew"],
+    ["night", "knight"],
+    ["wear", "where"], ["ware", "wear"], ["ware", "where"],
+    ["which", "witch"],
+    ["whole", "hole"],
+    ["meet", "meat"],
+    ["week", "weak"],
+    ["plane", "plain"],
+    ["pair", "pear"], ["pair", "pare"], ["pear", "pare"],
+    ["sun", "son"],
+    ["flower", "flour"],
+    ["male", "mail"],
+    ["sale", "sail"],
+    ["tail", "tale"],
+    ["bare", "bear"],
+    ["eye", "i"],
+    ["sea", "c"],
+    ["be", "bee"], ["be", "b"],
+    ["are", "r"],
+    ["you", "u"],
+  ];
+  const HOMOPHONES = (() => {
+    const m = {};
+    for (const [a, b] of HOMOPHONE_PAIRS) {
+      (m[a] = m[a] || new Set()).add(b);
+      (m[b] = m[b] || new Set()).add(a);
+    }
+    return m;
+  })();
+  function wordsAreEquivalent(a, b) {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    if (HOMOPHONES[a] && HOMOPHONES[a].has(b)) return true;
+    const sa = soundex(a);
+    return !!sa && sa === soundex(b);
+  }
+
   // ---------- SPEECH RECOGNITION (pronunciation challenges) ----------
   // Uses the Web Speech API for free in-browser pronunciation scoring. Supported
   // on iOS Safari ≥14.5 and modern Chrome/Edge. Falls back to "unsupported" on
@@ -540,8 +617,8 @@ window.SND = (() => {
       const MIN_VOICE_DURATION_MS = 300;
       let r = null;
 
-      const target  = (targetWord || "").toLowerCase().trim();
-      const tWords  = target.split(/\s+/);
+      const target  = normalizeForMatch(targetWord);
+      const tWords  = target.split(/\s+/).filter(Boolean);
       function fullTranscript() {
         return (accumulatedFinal + " " + currentInterim).trim();
       }
@@ -554,12 +631,16 @@ window.SND = (() => {
           });
           return;
         }
-        const candidates = bestAlts.length ? bestAlts : [{ transcript: t.toLowerCase() }];
+        const candidates = bestAlts.length ? bestAlts : [{ transcript: t }];
         const matched = candidates.find(a => {
-          if (a.transcript === target) return true;
-          // word-bag match — kid says "it's next week please" → matches "it's next week"
-          const ws = a.transcript.split(/\s+/);
-          return tWords.every(t => ws.includes(t));
+          const at = normalizeForMatch(a.transcript);
+          if (at === target) return true;
+          // Word-bag match: every target word has SOME equivalent word in the
+          // transcript. Equivalence is exact OR homophone OR same soundex code,
+          // so "read" matches a transcript of "red", "On thursday?" matches
+          // "on thursday", "it's next week please" matches "it's next week".
+          const ws = at.split(/\s+/).filter(Boolean);
+          return tWords.every(tw => ws.some(w => wordsAreEquivalent(w, tw)));
         });
         finish({
           ok: !!matched,

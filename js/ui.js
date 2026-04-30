@@ -3,40 +3,86 @@ window.UI = (() => {
   const SCREENS = ["title","setup","pass","role","wager","question","result","action","boss","victory","defeat","vote"];
   function $(id) { return document.getElementById(id); }
 
-  // iOS-resilient tap handler.
+  // iOS-resilient tap handler. Three problems we have to solve at once:
   //
-  // Why this is so finicky: when an <input> is focused on iPhone Safari and the
-  // user taps a button, iOS interprets the first tap as a "dismiss keyboard"
-  // gesture. Depending on layout/position-fixed/timing it can:
-  //   - skip touchend on the button entirely,
-  //   - fire touchend but suppress the synthetic click,
-  //   - consume the user-activation if you call e.preventDefault() in touchend
-  //     (which then makes any later confirm()/alert() silently fail).
+  // (1) Keyboard-dismiss path. When an <input> is focused on iPhone Safari and
+  //     the user taps a button, iOS interprets the first tap as a "dismiss
+  //     keyboard" gesture. Depending on layout/timing it can skip touchend on
+  //     the button entirely, fire touchend but suppress the synthetic click, or
+  //     consume user-activation if we call e.preventDefault() in touchend
+  //     (which then breaks any later confirm()/alert()). So: NEVER preventDefault,
+  //     and accept either pointerup OR click as a valid activation signal.
   //
-  // The robust fix: use Pointer Events as the primary signal (they fire even
-  // through the keyboard-dismiss path), keep `click` as a fallback for cases
-  // where pointerup doesn't reach us, blur the focused input as early as
-  // possible (pointerdown/touchstart) so the keyboard-dismiss animation can
-  // start before we try to activate, and DON'T call preventDefault — that's
-  // what was consuming user-activation and breaking confirm() on the exit btn.
-  // A short debounce stops pointerup+click from double-firing on the same gesture.
+  // (2) Phantom synthetic click after a screen change. iOS schedules `click`
+  //     ~50–300ms after pointerup. If the original button gets removed in the
+  //     pointerup handler (e.g. title→setup transition), the deferred click
+  //     fires on whatever button now occupies that screen position. Without
+  //     guarding, a single tap on "Start" activates the top button on the next
+  //     screen too — the user sees the second screen flash by skipped, the
+  //     player's turn skipped, etc.
+  //
+  //     Fix: a *cross-element* timer. Once any tap()-handled button activates,
+  //     subsequent click events on any other button are ignored for ~500ms.
+  //     Real pointer events on a different button still work — they go through
+  //     the per-button armed flow, not the click fallback.
+  //
+  // (3) Slipped finger. pointerdown on A, finger drags to B, pointerup on B.
+  //     iOS may then fire a synthetic click on B as a "best-guess" target.
+  //     We never want this to count, because the user's intent was to tap A
+  //     (and they aborted by sliding off). Fix: per-element `armed` flag —
+  //     pointerup only fires the handler if pointerdown happened on the same
+  //     element. The click fallback also rejects when the most recent
+  //     pointerdown was elsewhere.
+  //
+  // The `pointerFired` flag prevents pointerup+click double-fire on the same
+  // button (the original use case the previous version handled). Same-button
+  // re-tap (after the gesture completes) re-arms via the next pointerdown.
+  let lastTapFireTime = 0;
+  let lastPointerDownEl = null;
+  let lastPointerDownTime = 0;
+  const PHANTOM_CLICK_WINDOW_MS = 500;
   function tap(el, handler) {
     if (!el) return;
-    let lastFire = 0;
+    let armed = false;
+    let pointerFired = false;
     function safeBlur() {
       const a = document.activeElement;
       if (a && a !== el && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && a.blur) a.blur();
     }
-    function fire(e) {
-      const now = Date.now();
-      if (now - lastFire < 450) return; // prevent pointerup+click double-fire
-      lastFire = now;
+    function onPointerDown() {
+      safeBlur();
+      armed = true;
+      pointerFired = false;
+      lastPointerDownEl = el;
+      lastPointerDownTime = Date.now();
+    }
+    function onPointerUp(e) {
+      if (!armed) return;       // pointerdown was elsewhere — slipped finger, reject
+      armed = false;
+      pointerFired = true;
+      lastTapFireTime = Date.now();
       handler(e);
     }
-    el.addEventListener("pointerdown", safeBlur, { passive: true });
-    el.addEventListener("touchstart", safeBlur, { passive: true });
-    el.addEventListener("pointerup", fire);
-    el.addEventListener("click", fire);
+    function onPointerCancel() { armed = false; }
+    function onClick(e) {
+      // pointerup already fired the handler for this exact gesture
+      if (pointerFired) { pointerFired = false; return; }
+      const now = Date.now();
+      // Phantom click after a recent fire on any button — suppress
+      if (now - lastTapFireTime < PHANTOM_CLICK_WINDOW_MS) return;
+      // Slipped-finger best-guess click — pointerdown was on a different element
+      if (lastPointerDownEl && lastPointerDownEl !== el &&
+          now - lastPointerDownTime < 1000) return;
+      // Genuine click without prior pointerup (iOS keyboard-dismiss suppressed
+      // touchend, or assistive-tech click) — activate.
+      lastTapFireTime = now;
+      handler(e);
+    }
+    el.addEventListener("pointerdown",   onPointerDown,   { passive: true });
+    el.addEventListener("touchstart",    safeBlur,        { passive: true });
+    el.addEventListener("pointerup",     onPointerUp);
+    el.addEventListener("pointercancel", onPointerCancel);
+    el.addEventListener("click",         onClick);
   }
   // Screens where boss-theme music is allowed to keep playing across a render
   // (the screens that explicitly start a theme manage their own stop). For all
@@ -877,6 +923,10 @@ window.UI = (() => {
     const svg = modal.querySelector("#sling-svg");
     let dragging = false;
     let pulledY = 310;
+    // Once fire() runs, the modal is on its way out (900ms cleanup timer).
+    // A second pointerdown→drag→release inside that window must not fire
+    // a second projectile / call onFire() twice. This flag locks it down.
+    let fired = false;
     function setY(y) {
       pulledY = Math.max(310, Math.min(440, y));
       pouchG.setAttribute("transform", `translate(0, ${pulledY - 310})`);
@@ -888,6 +938,7 @@ window.UI = (() => {
       return ((clientY - r.top) / r.height) * 500;
     }
     function onDown(e) {
+      if (fired) return;
       dragging = true;
       e.preventDefault();
       // Hide the hint as soon as the player starts touching the slingshot.
@@ -895,13 +946,13 @@ window.UI = (() => {
       if (hint) hint.style.display = "none";
     }
     function onMove(e) {
-      if (!dragging) return;
+      if (!dragging || fired) return;
       const cy = e.clientY ?? (e.touches && e.touches[0] && e.touches[0].clientY);
       if (cy == null) return;
       setY(svgY(cy));
     }
     function onUp() {
-      if (!dragging) return;
+      if (!dragging || fired) return;
       dragging = false;
       const pull = pulledY - 310;
       if (pull < 25) { setY(310); return; }
@@ -919,6 +970,8 @@ window.UI = (() => {
     let tapStart = 0;
     modal.addEventListener("touchstart", () => { tapStart = Date.now(); }, { passive: true });
     function fire() {
+      if (fired) return;
+      fired = true;
       pouchG.style.transition = "transform 0.18s cubic-bezier(.18,.89,.32,1.28)";
       pouchG.setAttribute("transform", "translate(0, -20)");
       bandL.setAttribute("y2", "260");
