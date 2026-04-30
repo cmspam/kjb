@@ -400,17 +400,100 @@ window.SND = (() => {
   }
 
   // ---------- SPEECH MATCHING HELPERS ----------
-  // Normalize a transcript or target for comparison: lowercase, strip
-  // apostrophes ("it's" → "its" — Chrome's transcript sometimes drops the
-  // apostrophe), other punctuation → space, collapse whitespace. This is what
-  // makes "On thursday?" match "on thursday" and "It's next week!" match
+  // Normalize a transcript or target for comparison: lowercase, expand
+  // currency symbols to spoken-word equivalents (Google's SR formats prices
+  // as "¥500" but the question target says "500 yen"), strip commas inside
+  // numbers ("200,000" → "200000" so it stays one number), strip apostrophes
+  // ("it's" → "its" — Chrome's transcript sometimes drops the apostrophe),
+  // other punctuation → space, collapse whitespace. This is what makes
+  // "On thursday?" match "on thursday" and "It's next week!" match
   // "it's next week".
   function normalizeForMatch(s) {
     return String(s || "").toLowerCase()
+      .replace(/¥/g, " yen ")
+      .replace(/\$/g, " dollar ")
+      .replace(/€/g, " euro ")
+      .replace(/£/g, " pound ")
+      .replace(/(\d),(?=\d)/g, "$1")
       .replace(/'/g, "")
       .replace(/[^a-z0-9\s]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
+  }
+  // Word-form number lookup. Used both as a final-token value AND as a
+  // building block in multi-word numbers ("five hundred" → 500, "fifteen
+  // hundred" → 1500, "one thousand five hundred" → 1500, "two hundred
+  // thousand" → 200000).
+  const NUM_WORD = {
+    zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9,
+    ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15,
+    sixteen:16, seventeen:17, eighteen:18, nineteen:19,
+    twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90,
+    hundred:100, thousand:1000, million:1000000,
+  };
+  // Resolve a word to its numeric value, accepting common homophones the kid
+  // might pronounce — "won"→1, "ate"→8, "to"/"too"→2, "for"/"fore"→4. Looks
+  // ONLY at NUM_WORD and the explicit homophone table (no soundex fallback,
+  // because too many common words like "the"→T000 collide with the soundex
+  // of "two"→T000 and would false-tokenize as numbers).
+  function lookupNumberWord(w) {
+    if (!w) return null;
+    if (Object.prototype.hasOwnProperty.call(NUM_WORD, w)) return NUM_WORD[w];
+    if (HOMOPHONES[w]) {
+      for (const h of HOMOPHONES[w]) {
+        if (Object.prototype.hasOwnProperty.call(NUM_WORD, h)) return NUM_WORD[h];
+      }
+    }
+    return null;
+  }
+  // Greedy multi-word number parse starting at words[start]. Returns
+  // { value, end } or null. Handles "five", "twenty five", "five hundred",
+  // "fifteen hundred", "one thousand five hundred", "two hundred thousand".
+  function parseNumberWords(words, start) {
+    let i = start, total = 0, current = 0, any = false;
+    while (i < words.length) {
+      const v = lookupNumberWord(words[i]);
+      if (v == null) break;
+      any = true;
+      if (v === 100) {
+        current = (current || 1) * 100;
+      } else if (v === 1000 || v === 1000000) {
+        current = (current || 1) * v;
+        total += current;
+        current = 0;
+      } else {
+        current += v;
+      }
+      i++;
+    }
+    if (!any) return null;
+    return { value: total + current, end: i };
+  }
+  // Walk the words of `s`, pulling out every numeric value (digit form like
+  // "1500" or "200000" — already comma-stripped by normalize — and word form
+  // like "fifteen hundred"). Returns parallel arrays so callers can do both
+  // a number-set check AND a remaining-words check.
+  function tokenizeForMatch(s) {
+    const words = String(s || "").split(/\s+/).filter(Boolean);
+    const nonNumberWords = [];
+    const numbers = [];
+    let i = 0;
+    while (i < words.length) {
+      const w = words[i];
+      if (/^\d+$/.test(w)) {
+        const n = parseInt(w, 10);
+        if (!isNaN(n)) { numbers.push(n); i++; continue; }
+      }
+      const parsed = parseNumberWords(words, i);
+      if (parsed && parsed.end > i) {
+        numbers.push(parsed.value);
+        i = parsed.end;
+        continue;
+      }
+      nonNumberWords.push(w);
+      i++;
+    }
+    return { nonNumberWords, numbers };
   }
   // Soundex — classic phonetic hash. Same-sounding words → same code:
   // read/red/reed → R300, see/sea → S000, blue/blew → B400, to/two/too → T000,
@@ -432,11 +515,17 @@ window.SND = (() => {
     }
     return (out + "000").slice(0, 4);
   }
-  // Homophone exceptions soundex misses. Bidirectional pairs.
+  // Homophone exceptions soundex misses. Bidirectional pairs. Number-form
+  // homophones (to/too/two, for/fore/four, etc.) are listed here too so
+  // lookupNumberWord can resolve them — soundex-equivalence isn't safe to
+  // use for that lookup because common words like "the" share a soundex
+  // code with "two" and would false-tokenize.
   const HOMOPHONE_PAIRS = [
     ["way", "weigh"],
     ["one", "won"],
     ["ate", "eight"],
+    ["to", "two"], ["too", "two"], ["to", "too"],
+    ["for", "four"], ["fore", "four"], ["for", "fore"],
     ["our", "hour"],
     ["write", "right"], ["write", "rite"], ["right", "rite"],
     ["new", "knew"],
@@ -617,8 +706,8 @@ window.SND = (() => {
       const MIN_VOICE_DURATION_MS = 300;
       let r = null;
 
-      const target  = normalizeForMatch(targetWord);
-      const tWords  = target.split(/\s+/).filter(Boolean);
+      const target = normalizeForMatch(targetWord);
+      const targetTok = tokenizeForMatch(target);
       function fullTranscript() {
         return (accumulatedFinal + " " + currentInterim).trim();
       }
@@ -635,12 +724,20 @@ window.SND = (() => {
         const matched = candidates.find(a => {
           const at = normalizeForMatch(a.transcript);
           if (at === target) return true;
-          // Word-bag match: every target word has SOME equivalent word in the
-          // transcript. Equivalence is exact OR homophone OR same soundex code,
-          // so "read" matches a transcript of "red", "On thursday?" matches
-          // "on thursday", "it's next week please" matches "it's next week".
-          const ws = at.split(/\s+/).filter(Boolean);
-          return tWords.every(tw => ws.some(w => wordsAreEquivalent(w, tw)));
+          const tok = tokenizeForMatch(at);
+          // Numbers: every target number must appear in transcript. Digit form
+          // and spelled-out form are both extracted to integers, so "1500 yen"
+          // matches "fifteen hundred yen" and "¥500" matches "500 yen".
+          const transNums = new Set(tok.numbers);
+          for (const n of targetTok.numbers) {
+            if (!transNums.has(n)) return false;
+          }
+          // Non-number words: every target word has SOME equivalent in the
+          // transcript. Equivalence is exact OR homophone OR same soundex
+          // code, so "read" matches "red", "On thursday?" matches "on
+          // thursday", "it's next week please" matches "it's next week".
+          return targetTok.nonNumberWords.every(tw =>
+            tok.nonNumberWords.some(w => wordsAreEquivalent(w, tw)));
         });
         finish({
           ok: !!matched,
