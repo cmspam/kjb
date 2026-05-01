@@ -544,6 +544,53 @@ h3 { font-size: 28px; margin: 4px 0; }
   display: flex; flex-direction: column; justify-content: center; gap: 4px;
   font-family: inherit;
 }
+/* Match scorecard — broadcast-style stat block on the post-battle recap
+   (N1). Big numbers, label tags, sportscentre vibes. */
+.match-scorecard {
+  background: linear-gradient(135deg, #1a1428, #2a1a3a);
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin: 14px auto;
+  max-width: 560px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.scorecard-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: 4px;
+  margin-bottom: 8px;
+}
+.scorecard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.scorecard-stat {
+  background: rgba(0,0,0,0.4);
+  border-radius: 10px;
+  padding: 8px 6px;
+}
+.scorecard-stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #aaa;
+  letter-spacing: 2px;
+}
+.scorecard-stat-val {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--accent);
+  line-height: 1;
+  margin: 4px 0;
+}
+.scorecard-stat-by {
+  font-size: 12px;
+  color: #ddd;
+}
+
 /* CINEMATIC DEFEAT — multi-stage opener (N4). Black-curtain bg, looming
    boss SVG centered, big headline + tagline. Shrinks to compact strip
    at top after stage 3 to make room for the recap content beneath. */

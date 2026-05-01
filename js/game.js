@@ -144,7 +144,11 @@ window.Game = (() => {
       // Per-battle stats for the end-of-fight recap. Stores the English answer
       // text of each question got right / wrong this battle so kids can see
       // what they learned.
-      battleStats: { right: [], wrong: [] },
+      // Per-battle scorecard inputs. right/wrong are word lists used for
+      // the recap word-pick view. biggestHit + biggestHitBy track the
+      // single largest damage event for the "BIGGEST HIT" highlight in
+      // the broadcast scorecard. startedAt drives the elapsed-time stat.
+      battleStats: { right: [], wrong: [], biggestHit: 0, biggestHitBy: null, startedAt: Date.now() },
     };
     // Deal starting hands (3 cards default)
     players.forEach(p => { for (let i = 0; i < STARTING_HAND; i++) drawCard(p); });
@@ -764,6 +768,10 @@ window.Game = (() => {
             if (i === 1) UI.toast(`🎯 アーマー つらぬき！`, 1100);
           }
           hitPart.hp = Math.max(0, hitPart.hp - hitDmg);
+          if (S.battleStats && hitDmg > (S.battleStats.biggestHit || 0)) {
+            S.battleStats.biggestHit = hitDmg;
+            S.battleStats.biggestHitBy = p ? p.name : null;
+          }
           SND.sfxHit();
           const stage = document.querySelector(".stage");
           if (stage) {
@@ -923,6 +931,11 @@ window.Game = (() => {
 
   function applyPartHit(p, part, dmg) {
     part.hp = Math.max(0, part.hp - dmg);
+    // Track the biggest single hit for the post-battle scorecard.
+    if (S.battleStats && dmg > (S.battleStats.biggestHit || 0)) {
+      S.battleStats.biggestHit = dmg;
+      S.battleStats.biggestHitBy = p ? p.name : null;
+    }
     SND.sfxHit();
     const stage = document.querySelector(".stage");
     if (stage) {

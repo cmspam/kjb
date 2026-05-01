@@ -2682,16 +2682,31 @@ window.UI = (() => {
     const dedupe = (arr) => Array.from(new Set((arr||[]).filter(Boolean)));
     const right = dedupe(stats.right);
     const wrong = dedupe(stats.wrong);
-    if (!right.length && !wrong.length) return "";
+    const totalAns = (stats.right || []).length + (stats.wrong || []).length;
+    const accuracyPct = totalAns > 0 ? Math.round(((stats.right||[]).length / totalAns) * 100) : 0;
+    const elapsedSec = stats.startedAt ? Math.max(0, Math.round((Date.now() - stats.startedAt) / 1000)) : 0;
+    const elapsedTxt = elapsedSec >= 60 ? `${Math.floor(elapsedSec/60)}:${String(elapsedSec%60).padStart(2,'0')}` : `${elapsedSec}s`;
+    // Broadcast scorecard — TV-style stat block at the top of the recap.
+    const scorecard = (totalAns > 0 || stats.biggestHit > 0) ? `
+      <div class="match-scorecard">
+        <div class="scorecard-title">📺 MATCH STATS</div>
+        <div class="scorecard-grid">
+          ${stats.biggestHit > 0 ? `<div class="scorecard-stat"><div class="scorecard-stat-label">BIGGEST HIT</div><div class="scorecard-stat-val">${stats.biggestHit}<span style="font-size:14px;"> dmg</span></div>${stats.biggestHitBy ? `<div class="scorecard-stat-by">${escapeHTML(stats.biggestHitBy)}</div>` : ''}</div>` : ''}
+          ${totalAns > 0 ? `<div class="scorecard-stat"><div class="scorecard-stat-label">ACCURACY</div><div class="scorecard-stat-val">${accuracyPct}<span style="font-size:14px;">%</span></div><div class="scorecard-stat-by">${(stats.right||[]).length}/${totalAns} もんだい</div></div>` : ''}
+          ${elapsedSec > 0 ? `<div class="scorecard-stat"><div class="scorecard-stat-label">TIME</div><div class="scorecard-stat-val">${elapsedTxt}</div></div>` : ''}
+        </div>
+      </div>` : "";
+    if (!right.length && !wrong.length && !scorecard) return "";
     const cap = (arr, n=8) => arr.length > n ? arr.slice(0, n).concat([`+${arr.length-n}`]) : arr;
     const rightLine = right.length ? `<div style="margin:6px 0;"><span style="color:var(--good); font-weight:900;">🎯 おぼえた:</span> ${cap(right).map(escapeHTML).join(", ")}</div>` : "";
     const wrongLine = wrong.length ? `<div style="margin:6px 0;"><span style="color:var(--bad); font-weight:900;">🔁 ふくしゅう:</span> ${cap(wrong).map(escapeHTML).join(", ")}</div>` : "";
     return `
-      <div style="background:var(--card); border-radius:12px; padding:12px 14px; margin: 14px auto; max-width: 520px; font-size: 16px; text-align:left; line-height:1.6;">
+      ${scorecard}
+      ${(rightLine || wrongLine) ? `<div style="background:var(--card); border-radius:12px; padding:12px 14px; margin: 14px auto; max-width: 520px; font-size: 16px; text-align:left; line-height:1.6;">
         <div style="font-size:14px; color:var(--accent); font-weight:900; margin-bottom:4px;">▶ きょうの ことば</div>
         ${rightLine}
         ${wrongLine}
-      </div>`;
+      </div>` : ''}`;
   }
 
   function renderVictory({ players, jinro, spyWins, mode, winner, boss, stats, firstDefeat, unlockedCardId }, onAgain, onTitle) {
