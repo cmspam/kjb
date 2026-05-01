@@ -1370,12 +1370,12 @@ window.UI = (() => {
         if (typeof onConnect === "function") onConnect();
         modal.style.transition = "opacity 0.45s ease";
         modal.style.opacity = "0";
-      }, 380);
+      }, 600);
       setTimeout(() => {
         document.removeEventListener("touchmove", blockScroll);
         modal.remove();
         if (typeof onFire === "function") onFire();
-      }, 900);
+      }, 1120);
     }
   }
 

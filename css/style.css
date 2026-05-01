@@ -1602,7 +1602,7 @@ rt {
   perspective: 1200px;
   perspective-origin: 50% 30%;
 }
-.sling-modal.firing { animation: sling-shake 0.40s steps(10) both; }
+.sling-modal.firing { animation: sling-shake 0.65s steps(13) both; }
 @keyframes sling-shake {
   0%, 100% { transform: translate(0, 0); }
   10% { transform: translate(-3px, 1px); }
@@ -1653,9 +1653,9 @@ rt {
   transform: scale(0.45);
   transform-origin: center center;
   /* Hard ease-in — boss looks tiny for most of the flight, then explodes
-   * into the camera in the last ~80ms. Sells the bullet-cam acceleration. */
-  transition: transform 380ms cubic-bezier(.85,.05,.98,.35),
-              filter 380ms ease;
+   * into the camera in the last ~120ms. Sells the bullet-cam acceleration. */
+  transition: transform 600ms cubic-bezier(.85,.05,.98,.35),
+              filter 600ms ease;
   filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4));
   animation: bob 2.4s ease-in-out infinite;
 }
@@ -1697,27 +1697,31 @@ rt {
   z-index: 1499;
   opacity: 0;
   mix-blend-mode: screen;
-  animation: sling-speed .40s cubic-bezier(.6,.05,.9,.3) forwards;
+  animation: sling-speed .60s cubic-bezier(.6,.05,.9,.3) forwards;
 }
 @keyframes sling-speed {
   0%   { opacity: 0; transform: scale(0.5); }
   20%  { opacity: 1; }
   100% { opacity: 1; transform: scale(2.4); }
 }
-/* Foreground rock — riding in front of the camera. Slight wobble + drift
- * upward so it feels like we're hurtling alongside it, not tracking past. */
+/* Foreground rock — flies UP to the impact point (50% 30% — same focal
+ * point as the boss zoom and speed-line origin). Anchored at top: 30%,
+ * we offset it ~28vh below at start and animate translateY back to 0 so
+ * the rock physically arrives at the bang location at impact time.
+ * It also shrinks (perspective: rock is going away from us into the
+ * boss) and tumbles for visual interest. */
 .sling-proj {
-  position: fixed; left: 50%; top: auto; bottom: 8%;
-  transform: translate(-50%, 0) scale(1.6) rotate(0deg);
+  position: fixed; left: 50%; top: 30%; bottom: auto;
+  transform: translate(-50%, 28vh) scale(2.0) rotate(0deg);
   font-size: 80px;
   z-index: 1501;
   filter: drop-shadow(0 8px 16px rgba(0,0,0,.6));
-  animation: sling-rock-cam .42s cubic-bezier(.55,.05,.85,.4) both;
+  animation: sling-rock-cam .60s cubic-bezier(.5,.05,.85,.4) both;
 }
 @keyframes sling-rock-cam {
-  0%   { transform: translate(-50%,  20px) scale(1.0) rotate(0deg); }
-  35%  { transform: translate(-50%,  -8px) scale(1.7) rotate(-10deg); }
-  100% { transform: translate(-50%, -28px) scale(2.0) rotate(35deg); }
+  0%   { transform: translate(-50%, 28vh) scale(2.0) rotate(0deg); }
+  60%  { transform: translate(-50%,  8vh) scale(1.2) rotate(360deg); }
+  100% { transform: translate(-50%, -1vh) scale(0.55) rotate(720deg); }
 }
 /* Impact: white radial flash centered on the target. Brief (350ms) so it
  * hard-cuts the moment of impact without blanking the screen. */
