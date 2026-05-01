@@ -888,7 +888,47 @@ window.UI = (() => {
     }
   }
 
-  // -------- SLINGSHOT (interactive attack animation) --------
+  // -------- MONSTER ATTACK PICKER (PvP) --------
+  // Used in PvP after the kid taps an opponent: shows a row of buttons, one per
+  // attack from the kid's own monster, each labeled with type (Heavy / Quick /
+  // Wild / Pierce / Stun) and a one-line tagline. Tapping fires onPick(attack)
+  // — the caller then runs the attack-type resolver and the cinematic.
+  function showMonsterAttackPicker(attackerMonster, opponentName, onPick, onCancel) {
+    SND.unlock();
+    const overlay = document.createElement("div");
+    overlay.className = "attack-picker-overlay";
+    const attacks = (attackerMonster && attackerMonster.attacks) || [];
+    const itemsHTML = attacks.map((a, i) => {
+      const def = (window.Game && Game.attackTypeDef) ? Game.attackTypeDef(a.type) : { label: "", tagline: "" };
+      return `
+        <button class="attack-pick-btn" data-idx="${i}">
+          <div class="atk-pick-name">${escapeHTML(a.name)}</div>
+          <div class="atk-pick-type">${escapeHTML(def.label || "")}</div>
+          <div class="atk-pick-tag">${escapeHTML(def.tagline || "")}</div>
+        </button>`;
+    }).join("");
+    overlay.innerHTML = `
+      <div class="attack-picker-modal">
+        <div class="atk-picker-title">こうげきを えらぶ</div>
+        <div class="atk-picker-target">${escapeHTML(attackerMonster && attackerMonster.name_jp || "")} → ${escapeHTML(opponentName || "")}</div>
+        <div class="attack-picker-list">${itemsHTML}</div>
+        <button class="btn ghost atk-picker-cancel" id="atk-cancel" style="font-size:14px;min-height:40px;margin-top:10px;">${JP.cancel || "キャンセル"}</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelectorAll(".attack-pick-btn").forEach(btn => {
+      tap(btn, () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        overlay.remove();
+        if (typeof onPick === "function") onPick(attacks[idx]);
+      });
+    });
+    tap(overlay.querySelector("#atk-cancel"), () => {
+      overlay.remove();
+      if (typeof onCancel === "function") onCancel();
+    });
+  }
+
+  // -------- SLINGSHOT (interactive attack animation, hero mode) --------
   function showSlingshot(boss, partName, onFire) {
     SND.unlock();
     const taunt = pickRand(JP.slingshot_taunts || ["うってみろよ！"]);
@@ -1006,8 +1046,20 @@ window.UI = (() => {
   //   Stage 4 (1200ms) — attack name + damage reveal
   // Each stage uses Web Animations API on FRESH elements so animations always
   // replay (CSS class-based animations sometimes get cached across overlays).
-  function showBossAttackAnim(boss, attack, targetName, dmg, missed, onDone, missReason) {
+  function showBossAttackAnim(boss, attack, targetName, dmg, missed, onDone, missReason, opts={}) {
     SND.unlock();
+    // byPlayer = true for PvP: a player-controlled monster attacking another.
+    // Swaps the WARNING headline (no longer "enemy attack") and tightens the
+    // pacing so the kid doesn't sit through 7s of cinematic 5+ times per match.
+    const byPlayer = !!opts.byPlayer;
+    const typeLabel = opts.typeLabel || "";
+    // attackTypeBadge supplies the optional emoji-coded type readout under the
+    // attack name on the reveal stage ("💪 ヘビー" / "⚡ クイック" / etc.).
+    const attackerLabel = opts.attackerName || (boss && boss.name_jp) || "";
+    // Stage timings — compact (~5s) for player attacks, full (~7s) for boss.
+    const T = byPlayer
+      ? { charge: 700,  burst: 2300, bang: 3000, reveal: 3500, end: 5400 }
+      : { charge: 1700, burst: 3400, bang: 4300, reveal: 4800, end: 7200 };
     const phrase = pickRand(attack.phrases || [attack.name]);
     const m = (attack.name || "").match(/(\p{Extended_Pictographic}️?)\s*$/u);
     const emoji = m ? m[1] : "💥";
@@ -1030,16 +1082,27 @@ window.UI = (() => {
     overlay.className = "boss-anim-overlay";
     document.body.appendChild(overlay);
 
-    // ----- Stage 0: ENEMY ATTACK! warning -----
-    overlay.innerHTML = `
-      <div class="boss-warn-flash"></div>
-      <div class="boss-warn-text">
-        <div style="font-size: 18px; color: #ff8888; letter-spacing: 6px;">⚠ WARNING ⚠</div>
-        <div style="font-size: 56px; font-weight: 900; color: var(--bad); text-shadow: 0 6px 0 #000, 0 0 30px var(--bad); margin-top: 4px;">てきの こうげき！</div>
-        <div style="font-size: 22px; color: #fff; margin-top: 6px;">${escapeHTML(targetName)} ねらわれた！</div>
-      </div>`;
-    SND.sfxBoss();
-    if (SND.playSiren) SND.playSiren(1200);
+    // ----- Stage 0: warning headline -----
+    if (byPlayer) {
+      overlay.innerHTML = `
+        <div class="boss-warn-flash" style="background:rgba(255,204,68,0.18);"></div>
+        <div class="boss-warn-text">
+          <div style="font-size: 16px; color: var(--accent); letter-spacing: 4px;">⚔ ${escapeHTML(attackerLabel)} の こうげき ⚔</div>
+          <div style="font-size: 50px; font-weight: 900; color: var(--accent); text-shadow: 0 6px 0 #000, 0 0 30px var(--accent); margin-top: 4px;">${escapeHTML(typeLabel) || "アタック！"}</div>
+          <div style="font-size: 20px; color: #fff; margin-top: 6px;">→ ${escapeHTML(targetName)}</div>
+        </div>`;
+      SND.sfxBoss();
+    } else {
+      overlay.innerHTML = `
+        <div class="boss-warn-flash"></div>
+        <div class="boss-warn-text">
+          <div style="font-size: 18px; color: #ff8888; letter-spacing: 6px;">⚠ WARNING ⚠</div>
+          <div style="font-size: 56px; font-weight: 900; color: var(--bad); text-shadow: 0 6px 0 #000, 0 0 30px var(--bad); margin-top: 4px;">てきの こうげき！${typeLabel ? `<div style="font-size:24px;color:#ffcc44;margin-top:4px;letter-spacing:3px;">${escapeHTML(typeLabel)}</div>` : ""}</div>
+          <div style="font-size: 22px; color: #fff; margin-top: 6px;">${escapeHTML(targetName)} ねらわれた！</div>
+        </div>`;
+      SND.sfxBoss();
+      if (SND.playSiren) SND.playSiren(1200);
+    }
     // Keep translate(-50%, -50%) in every keyframe so the centering transform
     // isn't clobbered by the scale/rotate keyframes (the bug where it slid right).
     overlay.querySelector(".boss-warn-text").animate(
@@ -1065,8 +1128,8 @@ window.UI = (() => {
     // built-in tail fade, so the music ends right as we tear down the overlay.
     if (boss && boss.id) SND.playThemeSnippet(boss.id, 7100, 0.4);
 
-    // ----- Stage 1: boss charges with phrase -----
-    // Bumped from 1200 → 1700 so the WARNING text gets a real beat to read.
+    // ----- Stage 1: monster charges with phrase -----
+    // Compact path (byPlayer) at 700ms, full at 1700ms so the WARNING text gets a real beat to read.
     setTimeout(() => {
       overlay.innerHTML = `
         <div class="boss-anim-stage">
@@ -1095,10 +1158,9 @@ window.UI = (() => {
         ],
         { duration: 350, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
       );
-    }, 1700);
+    }, T.charge);
 
     // ----- Stage 2: emoji burst -----
-    // Bumped to 3400 so the boss's catchphrase gets ~1.7s of reading time.
     setTimeout(() => {
       const burst = document.createElement("div");
       burst.className = "boss-anim-emoji";
@@ -1111,7 +1173,7 @@ window.UI = (() => {
         ],
         { duration: 500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
       );
-    }, 3400);
+    }, T.burst);
 
     // ----- Stage 3: bang (hit) or whoosh+MISS (miss) -----
     setTimeout(() => {
@@ -1157,7 +1219,7 @@ window.UI = (() => {
         );
         SND.sfxHit();
       }
-    }, 4300);
+    }, T.bang);
 
     // ----- Stage 4: attack name + damage / miss reveal -----
     setTimeout(() => {
@@ -1178,11 +1240,11 @@ window.UI = (() => {
       // Dramatic attack-name shout — the build script tunes these clips with
       // higher intonation/volume so they sound shouted, not spoken.
       if (boss && boss.id && attack && attack.name) SND.playBossLine(boss.id, attack.name);
-    }, 4800);
+    }, T.reveal);
 
     // ----- End: clean up + callback -----
-    // 7200 - 4800 = 2400ms to read the attack name + damage/miss text before close.
-    setTimeout(() => { overlay.remove(); onDone(); }, 7200);
+    // ~1900-2400ms after reveal so kids can read the attack-name + damage text.
+    setTimeout(() => { overlay.remove(); onDone(); }, T.end);
   }
 
   // -------- RARE EVENT HYPE INTRO --------
@@ -2679,7 +2741,7 @@ window.UI = (() => {
            confirmModal,
            renderFairyEvent, renderBombEvent, renderThiefEvent,
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
-           renderBossIntro, showSlingshot, showBossAttackAnim,
+           renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, showRareEventIntro,
            showRoundIntro, showRageIntro, showKO, spawnConfetti,
            showCompendium, runSpeechChallenge,

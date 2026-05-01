@@ -502,6 +502,13 @@ window.Game = (() => {
       const stars = S.currentWager;
       p.energy += stars;
       p.attackPower = stars;
+      // Stun lingers from a previous opponent's stun-type attack: zero the
+      // attack power for this turn (cards still work, energy still flows).
+      if (p._stunnedNextTurn) {
+        p.attackPower = 0;
+        p._stunnedNextTurn = false;
+        UI.toast(`❄️ ${p.name} は スタン中… こうげき できない！`, 1500);
+      }
       drawCard(p);
       // Pronunciation challenge: if the answer is a single short English word
       // and SpeechRecognition is available, offer a "say it" bonus button on
@@ -557,7 +564,7 @@ window.Game = (() => {
     const extras = { pronounceTarget: S.pronounceTarget, onSpeak, taunt };
     if (S.mode === "pvp") {
       UI.renderPvpAction(p, S.players,
-        (opp) => goPvpPickPart(p, opp),
+        (opp) => goPvpPickAttack(p, opp),
         (card, idx) => playCardInAction(p, card, idx),
         () => endTurn(),
         extras
@@ -572,11 +579,34 @@ window.Game = (() => {
     );
   }
 
-  function goPvpPickPart(p, opponent) {
+  // PvP attack flow:
+  //   goPvpPickAttack    — kid picks which of THEIR monster's attacks to use
+  //   goPvpPickPart      — kid picks which part to hit (skipped for Wild)
+  //   doAttack pvp-part  — applies the chosen attack type's damage plan
+  function goPvpPickAttack(p, opponent) {
+    if (p.attackPower <= 0) {
+      UI.toast("こうげきパワーが ないよ！");
+      return goAction();
+    }
+    UI.showMonsterAttackPicker(p.monster, opponent.name,
+      (attack) => {
+        if (!attack) return goAction();
+        const def = attackTypeDef(attack.type);
+        if (def.randomTarget) {
+          // Wild: hits go to random parts at apply time, no part picker.
+          doAttack(p, { kind: "pvp-part", targetPlayer: opponent, part: null, attack });
+        } else {
+          goPvpPickPart(p, opponent, attack);
+        }
+      },
+      () => goAction()
+    );
+  }
+  function goPvpPickPart(p, opponent, attack) {
     UI.renderTargetPicker(p, opponent.monster, S.players,
       (target) => {
         if (target.kind === "boss-part") {
-          doAttack(p, { kind: "pvp-part", targetPlayer: opponent, part: target.part });
+          doAttack(p, { kind: "pvp-part", targetPlayer: opponent, part: target.part, attack });
         } else {
           // No spy options in PvP
           goAction();
@@ -653,72 +683,109 @@ window.Game = (() => {
     // PvP: target an opponent's monster part
     if (target.kind === "pvp-part") {
       const opponent = target.targetPlayer;
-      const part = target.part;
-      // Apply armor to core hits, scaled per-monster (no party-size division in PvP)
-      if (part.effect === "win") {
-        const armor = Monsters.coreArmor(opponent.monster);
-        const reduced = Math.max(1, dmg - armor);
-        if (armor > 0 && reduced < dmg) {
-          UI.toast(`コアの シールドが ${dmg - reduced} ダメージを ふせいだ！`, 1500);
+      const opMon = opponent.monster;
+      const attack = target.attack || null;
+      // Build the damage plan from the chosen attack's type. Untyped (legacy)
+      // callers fall back to BASIC = single hit ×1.0 — same behavior as before.
+      const baseDmg = dmg;
+      const plan = buildAttackPlan(attack ? attack.type : null, baseDmg);
+      const def  = plan.def;
+
+      // Apply each hit in plan.events sequentially. For Wild, each hit picks a
+      // fresh random alive part. For others, all hits land on the picked part.
+      // Damage numbers float per-hit so multi-hit attacks read as 3 small bites
+      // rather than one big chunk.
+      function applyHits(onAllHitsApplied) {
+        let i = 0;
+        function nextHit() {
+          if (i >= plan.events.length) { onAllHitsApplied(); return; }
+          const ev = plan.events[i++];
+          let hitPart = ev.randomTarget
+            ? (() => {
+                const alive = opMon.parts.filter(x => x.hp > 0);
+                if (!alive.length) return null;
+                return alive[(Math.random() * alive.length) | 0];
+              })()
+            : target.part;
+          if (!hitPart) { setTimeout(nextHit, 80); return; }
+          let hitDmg = ev.dmg;
+          if (hitPart.effect === "win" && !ev.ignoreArmor) {
+            const armor = Monsters.coreArmor(opMon);
+            const reduced = Math.max(1, hitDmg - armor);
+            if (armor > 0 && reduced < hitDmg && i === 1) {
+              UI.toast(`コアの シールドが ${hitDmg - reduced} ダメージを ふせいだ！`, 1200);
+            }
+            hitDmg = reduced;
+          } else if (hitPart.effect === "win" && ev.ignoreArmor) {
+            // Pierce: armor ignored. One-shot toast on the first piercing hit.
+            if (i === 1) UI.toast(`🎯 アーマー つらぬき！`, 1100);
+          }
+          hitPart.hp = Math.max(0, hitPart.hp - hitDmg);
+          SND.sfxHit();
+          const stage = document.querySelector(".stage");
+          if (stage) {
+            const tier = applyDamageTier(stage, hitDmg);
+            const num = document.createElement("div");
+            num.className = "dmg-num tier-" + tier; num.textContent = "-" + hitDmg;
+            // For multi-hit, jitter the position so numbers don't pile up.
+            if (plan.events.length > 1) {
+              num.style.left = (45 + Math.random() * 10) + "%";
+            }
+            stage.appendChild(num);
+            setTimeout(() => num.remove(), 1100);
+          }
+          S.log.push(`${p.name} → ${opponent.name}.${hitPart.name_jp}: ${hitDmg}${ev.ignoreArmor ? ' (pierce)' : ''}`);
+          if (hitPart.hp === 0) {
+            S.log.push(`${opponent.name} の ${hitPart.name_jp} を こわした！`);
+            SND.sfxPop();
+          }
+          // 220ms gap between hits — feels like a beat without dragging.
+          setTimeout(nextHit, 220);
         }
-        dmg = reduced;
+        nextHit();
       }
-      const fire = () => {
-        part.hp = Math.max(0, part.hp - dmg);
-        SND.sfxHit();
-        const stage = document.querySelector(".stage");
-        if (stage) {
-          const tier = applyDamageTier(stage, dmg);
-          const num = document.createElement("div");
-          num.className = "dmg-num tier-" + tier; num.textContent = "-" + dmg;
-          stage.appendChild(num);
-          setTimeout(() => num.remove(), 1100);
-          // Hold the monster's reaction until the damage number has floated up and out
-          // (otherwise the dmg-num overlays the speech bubble at the same y-band).
-          const hits = opponent.monster.hits || [];
-          if (hits.length) {
-            const line = hits[(Math.random()*hits.length)|0];
-            setTimeout(() => {
-              const stageNow = document.querySelector(".stage");
-              if (!stageNow) return;
+
+      function finishTurn() {
+        // Hit reaction voice — opponent monster yelps after the dust settles.
+        const hits = opMon.hits || [];
+        if (hits.length) {
+          const line = hits[(Math.random()*hits.length)|0];
+          setTimeout(() => {
+            const stageNow = document.querySelector(".stage");
+            if (stageNow) {
               const bubble = document.createElement("div");
               bubble.className = "hit-bubble pop";
               bubble.textContent = line;
               stageNow.appendChild(bubble);
               setTimeout(() => bubble.remove(), 2000);
-              // Voice the opponent monster's reaction in their voice
-              if (opponent.monster && opponent.monster.id) SND.playBossLine(opponent.monster.id, line);
-            }, 1100);
-          }
+            }
+            if (opMon.id) SND.playBossLine(opMon.id, line);
+          }, 200);
         }
-        UI.toast(`${p.name} → ${opponent.name} の ${part.name_jp} に ${dmg} ダメージ！`, 1800);
-        S.log.push(`${p.name} → ${opponent.name}.${part.name_jp}: ${dmg}`);
-        if (part.hp === 0) {
-          S.log.push(`${opponent.name} の ${part.name_jp} を こわした！`);
-          SND.sfxPop();
+        // Stun: opponent loses next turn's attack power.
+        if (def.stun) {
+          opponent._stunnedNextTurn = true;
+          UI.toast(`❄️ ${opponent.name} は つぎの ターン スタン！`, 1700);
         }
+        UI.toast(`${p.name} → ${opponent.name} に ${plan.totalDmg} ダメージ！${def.label?` (${def.label})`:''}`, 1800);
         p.attackPower = 0;
         S.pendingDamageBonus = 0;
-        // If opponent's core is destroyed, they're eliminated — show K.O. cinematic.
-        const oppCore = opponent.monster.parts.find(x => x.effect === "win");
+        const oppCore = opMon.parts.find(x => x.effect === "win");
         if (oppCore && oppCore.hp <= 0) {
           opponent.dead = true;
           UI.toast(JP.pvp_eliminated(opponent.name), 2000);
-          UI.showKO(opponent.monster, () => {
+          UI.showKO(opMon, () => {
             const winner = checkPvpWinner();
             if (winner) doVictory({ winner });
             else endTurn();
           });
           return;
         }
-        // Cliffhanger on opponent's monster (core at 1 HP) — same one-shot pattern as hero mode.
-        const opMon = opponent.monster;
         if (!opMon._cliffShown && oppCore && oppCore.hp === 1) {
           opMon._cliffShown = true;
           setTimeout(() => UI.showCliffhanger(opMon, () => endTurn()), 1300);
           return;
         }
-        // Rage activation on the opponent's monster — independent per monster in PvP.
         if (!opMon.raged && oppCore && oppCore.hp > 0 && oppCore.hp <= oppCore.maxHP * 0.25) {
           opMon.raged = true;
           UI.toast(`😡 ${opMon.name_jp} は ぶちぎれた！`, 2000);
@@ -726,17 +793,30 @@ window.Game = (() => {
           return;
         }
         const winner = checkPvpWinner();
-        if (winner) {
-          setTimeout(() => doVictory({ winner }), 3200);
-          return;
-        }
-        // Bubble appears at +1100ms with ~2000ms life; hold endTurn so kids can read it.
-        setTimeout(() => endTurn(), 3200);
-      };
-      if (SND.getSlingshot && SND.getSlingshot()) {
-        UI.showSlingshot(opponent.monster, `${opponent.name} ${part.name_jp}`, fire);
+        if (winner) { setTimeout(() => doVictory({ winner }), 3000); return; }
+        setTimeout(() => endTurn(), 3000);
+      }
+
+      // If we have an attack object, run the dramatic monster-vs-monster
+      // cinematic before applying hits. If not (legacy untyped callers, e.g.
+      // a card with hard-coded damage), fall back to the slingshot path so
+      // existing flows keep working.
+      if (attack) {
+        const partLabel = target.part ? `${opponent.name} ${target.part.name_jp}` : opponent.name;
+        UI.showBossAttackAnim(
+          p.monster, attack, partLabel, plan.totalDmg, false,
+          () => applyHits(finishTurn),
+          null,
+          { byPlayer: true, attackerName: p.monster.name_jp, typeLabel: def.label }
+        );
       } else {
-        fire();
+        // Untyped fallback — single hit, slingshot animation if enabled.
+        const fire = () => applyHits(finishTurn);
+        if (SND.getSlingshot && SND.getSlingshot() && target.part) {
+          UI.showSlingshot(opMon, `${opponent.name} ${target.part.name_jp}`, fire);
+        } else {
+          fire();
+        }
       }
       return;
     }
