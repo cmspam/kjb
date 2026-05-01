@@ -250,12 +250,27 @@ window.Game = (() => {
     });
   }
 
+  // Snapshot HP / part HP at the start of a jinro round so finishBossTurn can
+  // show aggregate deltas ("team -12, boss -28") in the recap. Used only when
+  // S.jinro is true; null otherwise.
+  function snapshotRoundHp() {
+    return {
+      players: S.players.map(p => ({ id: p.id, hp: p.hp })),
+      boss: S.boss ? S.boss.parts.map(part => ({ name: part.name_jp, hp: part.hp })) : null,
+    };
+  }
+
   function startRound() {
     S.voteUsedThisRound = false;
     S.players.forEach(p => { p.shield = false; p.skipBossAtk = false; p.attackPower = 0; });
     S.currentIdx = 0;
     S.pendingDamageBonus = 0;
     S.doubleNextAttack = false;
+    // Jinro stealth: hide everyone's HP / exact part HP during the round so
+    // teammates can't decode whether a teammate-tap was a buff or a sabotage
+    // by watching the HP delta. Cleared on finishBossTurn for the recap.
+    S.hpHiddenThisRound = !!S.jinro;
+    S.roundStartSnap = S.jinro ? snapshotRoundHp() : null;
     // PvP round 1: boxer-entrance face-off splash showing every kid's monster.
     // Replaces the generic round splash on the very first round of PvP.
     if (S.mode === "pvp" && S.round === 1) {
@@ -1281,6 +1296,24 @@ window.Game = (() => {
   }
 
   function finishBossTurn(lines) {
+    // Reveal HP for the recap (jinro mode hides during round).
+    S.hpHiddenThisRound = false;
+    if (S.roundStartSnap) {
+      const teamDmg = S.roundStartSnap.players.reduce((sum, snap) => {
+        const cur = S.players.find(p => p.id === snap.id);
+        return sum + Math.max(0, snap.hp - (cur ? cur.hp : 0));
+      }, 0);
+      const bossDmg = S.roundStartSnap.boss && S.boss
+        ? S.roundStartSnap.boss.reduce((sum, snap, i) => {
+            const part = S.boss.parts[i];
+            return sum + Math.max(0, snap.hp - (part ? part.hp : 0));
+          }, 0)
+        : 0;
+      if (teamDmg || bossDmg) {
+        lines.unshift(`📊 ラウンド ${S.round} まとめ: チーム −${teamDmg} HP / ボス −${bossDmg} HP`);
+      }
+      S.roundStartSnap = null;
+    }
     UI.renderBoss(S.boss, S.players, lines, () => {
       if (S.players.every(p => p.dead)) return doDefeat();
       if (S.jinro && !S.voteUsedThisRound) {
@@ -1367,5 +1400,8 @@ window.Game = (() => {
     ATTACK_TYPES,           // exposed so UI.renderMonsterAttackPicker can show labels
     attackTypeDef,
     buildAttackPlan,        // exposed for UI preview ("this would deal X damage")
+    // Jinro HP-hidden gate so UI renders "?" / part-tier labels during the
+    // round and exact numbers on the recap. Cheap getter — reads S.
+    isHpHidden: () => !!(S && S.hpHiddenThisRound),
   };
 })();

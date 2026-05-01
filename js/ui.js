@@ -2158,7 +2158,7 @@ window.UI = (() => {
         const icon = isCore ? "⭐ " : "";
         const node = el(`<button class="${cls}">
           <div class="pn">${icon}${p.name_jp}${isCore?' （よわてん）':''}</div>
-          <div class="ph">HP ${Math.max(0,p.hp)}/${p.maxHP}</div>
+          <div class="ph">${partHpDisplay(p)}</div>
           <div class="pe">${effLabel}</div>
         </button>`);
         if (!dead) tap(node, () => { SND.sfxPop(); onAttack({ kind: "boss-part", part: p }); });
@@ -2325,7 +2325,7 @@ window.UI = (() => {
       const icon = isCore ? "⭐ " : "";
       const node = el(`<button class="${cls}">
         <div class="pn">${icon}${p.name_jp}${isCore?' （よわてん）':''}</div>
-        <div class="ph">HP ${Math.max(0,p.hp)}/${p.maxHP}</div>
+        <div class="ph">${partHpDisplay(p)}</div>
         <div class="pe">${effLabel}</div>
       </button>`);
       if (!dead) tap(node, () => { SND.sfxPop(); onPick({ kind: "boss-part", part: p }); });
@@ -2345,6 +2345,23 @@ window.UI = (() => {
       });
     }
     tap($("cancel"), () => onCancel());
+  }
+
+  // Tiered text label for a part's HP — used in jinro mode during the round
+  // when exact numbers are hidden. Lets kids see "is this nearly broken?"
+  // without the precision a spy could exploit to track sabotage deltas.
+  function partTierLabel(part) {
+    if (!part) return "?";
+    if (part.hp <= 0) return "こわれた 💀";
+    const pct = part.hp / part.maxHP;
+    if (pct >= 0.75) return "げんき 💪";
+    if (pct >= 0.30) return "ヒビ ⚠️";
+    return "こわれそう 💥";
+  }
+  function partHpDisplay(part) {
+    const hidden = !!(window.Game && window.Game.isHpHidden && window.Game.isHpHidden());
+    if (hidden) return partTierLabel(part);
+    return `HP ${Math.max(0, part.hp)}/${part.maxHP}`;
   }
 
   function effectLabel(p) {
@@ -2543,6 +2560,9 @@ window.UI = (() => {
     // so we display the monster's CORE HP in its place — gives kids the same
     // "am I about to die?" glance value, but on the stat that actually matters.
     const isPvp = (players || []).some(p => p && p.monster);
+    // Jinro stealth: hide per-player HP during the round so the team can't
+    // diff-detect a sabotage. Revealed at boss-turn recap.
+    const hpHidden = !!(window.Game && window.Game.isHpHidden && window.Game.isHpHidden());
     const playerTiles = (players||[]).map(p => {
       if (isPvp && p.monster) {
         const core = p.monster.parts.find(x => x.effect === "win");
@@ -2558,10 +2578,11 @@ window.UI = (() => {
         </div>`;
       }
       const lowHp = !p.dead && p.maxHp && p.hp <= p.maxHp * 0.3;
+      const hpDisplay = (hpHidden && !p.dead) ? "❤️ ?" : `❤️ ${p.hp}`;
       return `
-      <div class="player ${currentPlayer && p.id===currentPlayer.id?'active':''} ${p.dead?'dead':''} ${lowHp?'low-hp':''}">
+      <div class="player ${currentPlayer && p.id===currentPlayer.id?'active':''} ${p.dead?'dead':''} ${(lowHp && !hpHidden)?'low-hp':''}">
         <div class="name">${p.avatar?p.avatar+' ':''}${escapeHTML(p.name)}</div>
-        <div class="hp ${p.hp<=5?'low':''}">❤️ ${p.hp}</div>
+        <div class="hp ${(!hpHidden && p.hp<=5)?'low':''}">${hpDisplay}</div>
         <div class="energy">⚡ ${p.energy} 🎴 ${p.hand?p.hand.length:0}${p.combo>=2?` 🔥×${p.combo}`:''}</div>
       </div>`;
     }).join("");
