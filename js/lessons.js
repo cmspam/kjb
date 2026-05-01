@@ -526,10 +526,11 @@ window.Lessons = (() => {
   // examples is [{en,jp}]; tip is a short memory hook.
 
   function vocabLesson(q) {
-    // Generic vocabulary lesson: list every option's meaning, point at the
-    // right one. Works for vocab_*, body_*, color_*, verb_*, sight*,
-    // ppl_*, subj_*, adj_*, time_*, day, month, num*, feel_*, etc.
-    const ans = correctAnswerOf(q);
+    // Generic vocabulary lesson: list every option's meaning so the kid
+    // can match the prompt to the right option themselves. We do NOT mark
+    // which option is correct — that would let impatient kids skip the
+    // lesson and just tap the tagged answer. Reading + matching the
+    // meaning IS the lesson.
     const items = [];
     const seen = new Set();
     if (Array.isArray(q.options)) {
@@ -538,33 +539,32 @@ window.Lessons = (() => {
         const key = o.toLowerCase();
         if (seen.has(key)) continue; seen.add(key);
         const jp = lookup(o);
-        if (jp) items.push({ en: o, jp, correct: o === ans });
+        if (jp) items.push({ en: o, jp });
       }
     }
-    // Audio target also surfaced — listening questions often have audio
-    // that doesn't appear in any option (the kid has to identify it).
+    // Audio target also surfaced for listening questions (the kid hears a
+    // word and needs to know its meaning to identify the correct option).
     if (q.audio && typeof q.audio === "string" && !seen.has(q.audio.toLowerCase())) {
       const jp = lookup(q.audio);
-      if (jp) items.unshift({ en: q.audio, jp, correct: false, audio: true });
+      if (jp) items.unshift({ en: q.audio, jp, audio: true });
     }
     return {
       intro: "ことばを ひとつずつ おぼえよう！",
       words: items,
       grammar: "",
       examples: [],
-      tip: "おなじ いみで ない こたえは えらばないようにね。"
+      tip: "ことばの いみを 読[よ]んで、こたえに あう ものを えらぼう。"
     };
   }
 
   function alphabetLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "アルファベットの もじ あて！",
       words: [],
       grammar:
         `英語[えいご]の アルファベットには、大文字[おおもじ] (A B C…) と 小文字[こもじ] (a b c…) が あるよ。\n` +
-        `音[おと]を きいて、おなじ もじを えらぼう。\n` +
-        `「${escapeHTML(ans||"")}」が せいかい。`,
+        `🔊の おとを よく きいて、おなじ もじを えらぼう。\n` +
+        `はやい ときは「もういっかい」を タップしてね。`,
       examples: [
         { en: "A apple", jp: "A は アップル の A" },
         { en: "B banana", jp: "B は バナナ の B" },
@@ -575,14 +575,13 @@ window.Lessons = (() => {
   }
 
   function phonicsLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "フォニックス！もじの 音[おと]！",
       words: [],
       grammar:
         `フォニックスは「もじが だす 音[おと]」を おぼえる ほうほうだよ。\n` +
         `たとえば B は 「ブッ」と 音[おと]が なる。 banana の はじめの 音[おと]だね。\n` +
-        `「${escapeHTML(ans||"")}」の もじを えらぼう。`,
+        `しつもんの 音[おと]を きいたら、その 音[おと]を だす もじを えらぼう。`,
       examples: [
         { en: "C → クッ (cat)", jp: "C は ねこ の はじめの 音[おと]" },
         { en: "S → スッ (sun)", jp: "S は たいよう の はじめの 音[おと]" },
@@ -593,15 +592,13 @@ window.Lessons = (() => {
   }
 
   function cvcLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "CVC ことば: 子音[しいん]+母音[ぼいん]+子音[しいん]！",
       words: [],
       grammar:
         `CVCは、子音[しいん] (C) + 母音[ぼいん] (V) + 子音[しいん] (C) の 3つの 音[おと]で できた ことば。\n` +
         `たとえば cat = C(ク)+A(ア)+T(トゥ) → 「キャット」。\n` +
-        `1つずつ 音[おと]を つなげて よんでみよう。\n` +
-        `せいかい: 「${escapeHTML(ans||"")}」`,
+        `1つずつ 音[おと]を つなげて よんでみよう。\n`,
       examples: [
         { en: "cat 🐱", jp: "C+A+T → ク・ア・トゥ → キャット (ねこ)" },
         { en: "dog 🐶", jp: "D+O+G → ドゥ・オ・グッ → ドッグ (いぬ)" },
@@ -612,7 +609,6 @@ window.Lessons = (() => {
   }
 
   function beLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "be どうし (am / is / are)",
       words: [
@@ -624,8 +620,7 @@ window.Lessons = (() => {
         `英語[えいご]の「です」は しゅご (だれが) で かわるよ。\n\n` +
         `• I → am  (I am Yuki. = わたしは ユキです)\n` +
         `• He / She / It → is  (She is happy. = かのじょは うれしい)\n` +
-        `• You / We / They → are  (They are friends. = かれらは ともだち)\n\n` +
-        `この 問題[もんだい]の こたえは「${escapeHTML(ans||"")}」だよ。`,
+        `• You / We / They → are  (They are friends. = かれらは ともだち)`,
       examples: [
         { en: "I am ten years old.", jp: "わたしは 10さい です。" },
         { en: "He is my dad.", jp: "かれは わたしの おとうさん です。" },
@@ -636,7 +631,6 @@ window.Lessons = (() => {
   }
 
   function pronLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "代名詞[だいめいし] (I / my / he / his...)",
       words: [
@@ -651,8 +645,7 @@ window.Lessons = (() => {
         `① しゅごの かたち (だれが する?)\n` +
         `   I (わたし), You (あなた), He (かれ), She (かのじょ), We (わたしたち), They (かれら)\n\n` +
         `② しょゆうの かたち (だれの?)\n` +
-        `   my (わたしの), your (あなたの), his (かれの), her (かのじょの)\n\n` +
-        `この 問題[もんだい]の こたえ:「${escapeHTML(ans||"")}」`,
+        `   my (わたしの), your (あなたの), his (かれの), her (かのじょの)`,
       examples: [
         { en: "I am Yuki. This is my pen.", jp: "わたしは ユキです。これは わたしの ペンです。" },
         { en: "He is tall. His bag is red.", jp: "かれは せが たかい。 かれの かばんは あかい。" },
@@ -662,7 +655,6 @@ window.Lessons = (() => {
   }
 
   function aanLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "a と an の つかいかた",
       words: [
@@ -674,8 +666,7 @@ window.Lessons = (() => {
         `• 母音[ぼいん] (a, e, i, o, u) で はじまる → an\n` +
         `   an apple, an egg, an orange, an umbrella, an elephant\n\n` +
         `• 子音[しいん] (それ いがい) で はじまる → a\n` +
-        `   a cat, a dog, a book, a pen\n\n` +
-        `この 問題[もんだい]の こたえ:「${escapeHTML(ans||"")}」`,
+        `   a cat, a dog, a book, a pen`,
       examples: [
         { en: "an apple, a banana", jp: "リンゴ (an) と バナナ (a)" },
         { en: "an egg, a dog", jp: "たまご (an) と いぬ (a)" },
@@ -685,7 +676,6 @@ window.Lessons = (() => {
   }
 
   function pluralLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "ふくすうけい (ふたつ いじょう)",
       words: [],
@@ -695,8 +685,7 @@ window.Lessons = (() => {
         `② -s, -x, -ch, -sh で おわる → -es  (bus → buses, box → boxes)\n` +
         `③ -y で おわる (子音[しいん]+y) → y を i に かえて -es  (baby → babies)\n` +
         `④ ふくすうけいが ぜんぜん ちがう (ふきそく):\n` +
-        `   child → children, foot → feet, tooth → teeth, mouse → mice, fish → fish\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `   child → children, foot → feet, tooth → teeth, mouse → mice, fish → fish\n\n`,
       examples: [
         { en: "one cat → two cats", jp: "ねこ 1ぴき → ねこ 2ひき" },
         { en: "one box → two boxes", jp: "はこ 1つ → はこ 2つ" },
@@ -707,7 +696,6 @@ window.Lessons = (() => {
   }
 
   function thisThatLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "this / that / these / those",
       words: [
@@ -720,8 +708,7 @@ window.Lessons = (() => {
         `近[ちか]い・遠[とお]い と、1つ・たくさん の くみあわせで えらぶよ:\n\n` +
         `         | 1つ    | たくさん\n` +
         `近[ちか]い | this  | these\n` +
-        `遠[とお]い | that  | those\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `遠[とお]い | that  | those\n\n`,
       examples: [
         { en: "This is my pen.", jp: "これは わたしの ペンです。 (ちかい・1つ)" },
         { en: "Those are her shoes.", jp: "あれらは かのじょの くつです。 (とおい・たくさん)" },
@@ -731,7 +718,6 @@ window.Lessons = (() => {
   }
 
   function presentLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "現在[げんざい]けい (いつもの こと)",
       words: [],
@@ -742,8 +728,7 @@ window.Lessons = (() => {
         `• He / She / It → どうしに -s を つける！\n` +
         `   She likes apples. (かのじょは リンゴが すき)\n` +
         `   He goes to school. (go → goes)\n` +
-        `   It has a tail. (have → has)\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `   It has a tail. (have → has)\n\n`,
       examples: [
         { en: "I play soccer.", jp: "わたしは サッカーを する。" },
         { en: "She plays soccer.", jp: "かのじょは サッカーを する。 (-s が つく)" },
@@ -754,7 +739,6 @@ window.Lessons = (() => {
   }
 
   function presContLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "現在[げんざい]しんこうけい (いま 〜している)",
       words: [],
@@ -763,8 +747,7 @@ window.Lessons = (() => {
         `• I am playing. (いま あそんでいる)\n` +
         `• She is reading. (いま よんでいる)\n` +
         `• They are eating. (いま たべている)\n\n` +
-        `be どうしは I→am, He/She/It→is, You/We/They→are。\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `be どうしは I→am, He/She/It→is, You/We/They→are。\n`,
       examples: [
         { en: "I am studying English now.", jp: "わたしは いま 英語[えいご]を べんきょう している。" },
         { en: "He is sleeping.", jp: "かれは ねている。" },
@@ -774,7 +757,6 @@ window.Lessons = (() => {
   }
 
   function pastLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "過去[かこ]けい (きのうの こと)",
       words: [
@@ -791,8 +773,7 @@ window.Lessons = (() => {
         `   come → came, take → took, get → got, run → ran,\n` +
         `   read → read (はつおんが「レッド」), write → wrote\n\n` +
         `③ be どうしの 過去[かこ]けい\n` +
-        `   I/he/she/it → was, you/we/they → were\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `   I/he/she/it → was, you/we/they → were\n\n`,
       examples: [
         { en: "I ate pizza yesterday.", jp: "きのう ピザを たべた。" },
         { en: "She went to school.", jp: "かのじょは 学校[がっこう]に いった。" },
@@ -803,15 +784,13 @@ window.Lessons = (() => {
   }
 
   function pastContLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "過去[かこ]しんこうけい (そのとき 〜していた)",
       words: [],
       grammar:
         `「そのとき、〜していた」 は was/were + -ing で あらわす。\n\n` +
         `• I was sleeping at 9pm. (9じに ねていた)\n` +
-        `• They were playing soccer. (サッカーを していた)\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• They were playing soccer. (サッカーを していた)\n\n`,
       examples: [
         { en: "I was watching TV.", jp: "わたしは テレビを みていた。" },
         { en: "She was studying.", jp: "かのじょは べんきょう していた。" },
@@ -821,7 +800,6 @@ window.Lessons = (() => {
   }
 
   function futureLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "未来[みらい]けい (あした の こと)",
       words: [
@@ -835,8 +813,7 @@ window.Lessons = (() => {
         `• She will visit Kyoto. (きょうとに いく)\n` +
         `• We will be friends. (わたしたちは ともだちに なる)\n\n` +
         `しゅごが なんでも will の かたちは いっしょ。\n` +
-        `「will not」は「won't」と みじかく いえる。\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `「will not」は「won't」と みじかく いえる。\n\n`,
       examples: [
         { en: "It will rain tomorrow.", jp: "あした あめが ふる。" },
         { en: "I will help you.", jp: "あなたを てつだう。" },
@@ -846,7 +823,6 @@ window.Lessons = (() => {
   }
 
   function canLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "can / can't (できる / できない)",
       words: [
@@ -859,8 +835,7 @@ window.Lessons = (() => {
         `• A fish can't walk. (さかなは あるけない)\n` +
         `• Can you sing? — Yes, I can. (うたえる？ はい、うたえる。)\n\n` +
         `can / can't の あとは どうしの げんけい！\n` +
-        `しゅごで かたちが かわらない (he can も she can も いっしょ)。\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `しゅごで かたちが かわらない (he can も she can も いっしょ)。\n\n`,
       examples: [
         { en: "Birds can fly.", jp: "とりは とべる。" },
         { en: "I can't read kanji.", jp: "わたしは かんじを よめない。" },
@@ -870,7 +845,6 @@ window.Lessons = (() => {
   }
 
   function shouldLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "should / shouldn't (したほうがいい)",
       words: [
@@ -881,8 +855,7 @@ window.Lessons = (() => {
         `「〜したほうが いい」「〜しないほうが いい」を いう ときに つかうよ。\n\n` +
         `• You should eat vegetables. (やさいを たべたほうが いい)\n` +
         `• You shouldn't run inside. (なかで はしらないほうが いい)\n\n` +
-        `should / shouldn't の あとも どうしの げんけい！\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `should / shouldn't の あとも どうしの げんけい！\n\n`,
       examples: [
         { en: "You should help your mom.", jp: "ママを てつだったほうが いい。" },
         { en: "We shouldn't be late.", jp: "おくれないほうが いい。" },
@@ -892,7 +865,6 @@ window.Lessons = (() => {
   }
 
   function wantLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "want to / wants to / don't want to",
       words: [
@@ -906,8 +878,7 @@ window.Lessons = (() => {
         `• I want to eat ice cream. (アイスを たべたい)\n` +
         `• She wants to play. (かのじょは あそびたい — -s に きをつけて！)\n` +
         `• I don't want to go. (いきたくない)\n` +
-        `• He doesn't want to study. (かれは べんきょう したくない)\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• He doesn't want to study. (かれは べんきょう したくない)\n\n`,
       examples: [
         { en: "I want to be a doctor.", jp: "いしゃに なりたい。" },
         { en: "He doesn't want to eat.", jp: "かれは たべたくない。" },
@@ -917,7 +888,6 @@ window.Lessons = (() => {
   }
 
   function prepLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "前置詞[ぜんちし] (in / on / under など)",
       words: [
@@ -933,8 +903,7 @@ window.Lessons = (() => {
         `• in = なかに  (in the box, in the sky)\n` +
         `• on = うえに、ふれている  (on the desk, on the wall)\n` +
         `• under = したに  (under the chair)\n` +
-        `• next to = となりに  (next to the dog)\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• next to = となりに  (next to the dog)\n\n`,
       examples: [
         { en: "The cat is in the box.", jp: "ねこは はこの なかに いる。" },
         { en: "The book is on the desk.", jp: "ほんは つくえの うえ。" },
@@ -945,7 +914,6 @@ window.Lessons = (() => {
   }
 
   function whLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "WH しつもん (なに・だれ・どこ・いつ・なぜ・どう)",
       words: [
@@ -967,8 +935,7 @@ window.Lessons = (() => {
         `• Why → りゆう        (Why are you sad?)\n` +
         `• How → ほうほう・じょうたい  (How are you? — Fine.)\n` +
         `• How many → かず     (How many cats? — Three.)\n` +
-        `• How old → とし      (How old are you? — Ten.)\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• How old → とし      (How old are you? — Ten.)\n\n`,
       examples: [
         { en: "What color is it?", jp: "なにいろ？" },
         { en: "Where is the bag?", jp: "かばんは どこ？" },
@@ -978,7 +945,6 @@ window.Lessons = (() => {
   }
 
   function qaLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "しつもんと こたえ",
       words: wordList(wordsFromQuestion(q)),
@@ -989,8 +955,7 @@ window.Lessons = (() => {
         `• Where do you live? — In 〜.\n` +
         `• Do you 〜? — Yes, I do. / No, I don't.\n` +
         `• Can you 〜? — Yes, I can. / No, I can't.\n\n` +
-        `しつもんの ことばに あう こたえを えらぼう。\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `しつもんの ことばに あう こたえを えらぼう。\n`,
       examples: [
         { en: "Do you like pizza? — Yes, I do.", jp: "ピザ すき? — うん、すき。" },
         { en: "What time is it? — It's 3 o'clock.", jp: "なんじ? — 3じ。" },
@@ -1000,7 +965,6 @@ window.Lessons = (() => {
   }
 
   function thereIsLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "there is / there are (〜が ある)",
       words: [
@@ -1012,8 +976,7 @@ window.Lessons = (() => {
         `• 1つ なら there is\n` +
         `   There is a cat in the box.\n` +
         `• たくさん なら there are\n` +
-        `   There are three cats.\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `   There are three cats.\n\n`,
       examples: [
         { en: "There is a book on the desk.", jp: "つくえに ほんが ある。" },
         { en: "There are many people.", jp: "ひとが たくさん いる。" },
@@ -1023,7 +986,6 @@ window.Lessons = (() => {
   }
 
   function compareLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "比較[ひかく] (くらべる)",
       words: [],
@@ -1033,8 +995,7 @@ window.Lessons = (() => {
         `② -y で おわる → y を i に かえて -er  (happy → happier)\n` +
         `③ 長[なが]い ことば → more 〜 than  (more beautiful than)\n` +
         `④ いちばん 〜 → the -est / the most 〜\n` +
-        `   tall → the tallest, beautiful → the most beautiful\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `   tall → the tallest, beautiful → the most beautiful\n\n`,
       examples: [
         { en: "I am taller than my brother.", jp: "おとうとより せが たかい。" },
         { en: "She is the tallest in class.", jp: "クラスで いちばん せが たかい。" },
@@ -1044,7 +1005,6 @@ window.Lessons = (() => {
   }
 
   function freqLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "ひんどの ふくし (always / often / sometimes…)",
       words: [
@@ -1060,8 +1020,7 @@ window.Lessons = (() => {
         `ふつう be どうしの あとに、または いっぱんどうしの まえに おくよ。\n\n` +
         `• I am always happy.\n` +
         `• She often plays tennis.\n` +
-        `• They never eat fish.\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• They never eat fish.\n\n`,
       examples: [
         { en: "I sometimes go to the park.", jp: "ときどき こうえんに いく。" },
       ],
@@ -1070,7 +1029,6 @@ window.Lessons = (() => {
   }
 
   function modalLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "ほじょどうし (must / may / might / could…)",
       words: [
@@ -1087,8 +1045,7 @@ window.Lessons = (() => {
         `• might = もしかしたら 〜かもしれない\n` +
         `• could = 〜できた / 〜できそう (can の かこ・ていねい)\n` +
         `• would = 〜だろう / Would you 〜? (おねがい)\n\n` +
-        `これらの あとは いつも 動詞[どうし]の げんけい!\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `これらの あとは いつも 動詞[どうし]の げんけい!\n`,
       examples: [
         { en: "You must wash your hands.", jp: "てを あらわなければ ならない。" },
         { en: "It might rain.", jp: "あめが ふるかも しれない。" },
@@ -1098,7 +1055,6 @@ window.Lessons = (() => {
   }
 
   function tprepLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "じかんの 前置詞[ぜんちし] (at / in / on)",
       words: [
@@ -1110,8 +1066,7 @@ window.Lessons = (() => {
         `じかんを いう ときの えらびかた:\n\n` +
         `• at + じこく     (at 3 o'clock, at noon)\n` +
         `• on + ようび・ひ  (on Monday, on May 5)\n` +
-        `• in + つき・とし・きせつ  (in May, in 2026, in summer)\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• in + つき・とし・きせつ  (in May, in 2026, in summer)\n\n`,
       examples: [
         { en: "School starts at 8.", jp: "学校[がっこう]は 8じに はじまる。" },
         { en: "I was born in May.", jp: "5がつに うまれた。" },
@@ -1122,7 +1077,6 @@ window.Lessons = (() => {
   }
 
   function condLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "if / when (もし 〜なら)",
       words: [
@@ -1134,8 +1088,7 @@ window.Lessons = (() => {
         `• If it rains, I will stay home. (もし あめなら、いえに いる)\n\n` +
         `たいせつな ルール: if の あとは みらいの ことでも 現在[げんざい]けい!\n` +
         `× If it will rain ✗\n` +
-        `○ If it rains ✓\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `○ If it rains ✓\n\n`,
       examples: [
         { en: "If you study, you will pass.", jp: "べんきょう すれば うかる。" },
         { en: "When I see her, I will tell her.", jp: "あったら つたえる。" },
@@ -1145,7 +1098,6 @@ window.Lessons = (() => {
   }
 
   function conjLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "せつぞくし (and / but / or / so / because)",
       words: [
@@ -1159,8 +1111,7 @@ window.Lessons = (() => {
         `• but (でも) — はんたいの こと\n` +
         `• or (または) — どちらか\n` +
         `• so (だから) — けっか\n` +
-        `• because (なぜなら) — りゆう\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• because (なぜなら) — りゆう\n\n`,
       examples: [
         { en: "I like cats and dogs.", jp: "ねこと いぬが すき。" },
         { en: "I'm tired, so I'll sleep.", jp: "つかれたから、ねる。" },
@@ -1171,7 +1122,6 @@ window.Lessons = (() => {
   }
 
   function quantLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "りょうの ことば (some / any / many / much)",
       words: [
@@ -1184,8 +1134,7 @@ window.Lessons = (() => {
         `• some — こうていぶん で「いくつかの」  (I have some apples.)\n` +
         `• any — ぎもんぶん や ひていぶん で  (Do you have any?)\n` +
         `• many — かぞえられる ものに  (many books, many cats)\n` +
-        `• much — かぞえられない ものに  (much water, much time)\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• much — かぞえられない ものに  (much water, much time)\n\n`,
       examples: [
         { en: "I have some money.", jp: "おかねを すこし もっている。" },
         { en: "Do you have any pets?", jp: "ペットを なにか かっている？" },
@@ -1195,7 +1144,6 @@ window.Lessons = (() => {
   }
 
   function tagQLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "ふかしつもん (〜だね？)",
       words: [],
@@ -1205,8 +1153,7 @@ window.Lessons = (() => {
         `ぶんが マイナスなら → タグは プラス\n\n` +
         `• You're a student, aren't you?\n` +
         `• She isn't your sister, is she?\n` +
-        `• You can swim, can't you?\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• You can swim, can't you?\n\n`,
       examples: [
         { en: "It's hot, isn't it?", jp: "あついね？" },
       ],
@@ -1215,15 +1162,13 @@ window.Lessons = (() => {
   }
 
   function svAgreeLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "しゅご・どうし いっち",
       words: [],
       grammar:
         `しゅごの しゅるいで どうしの かたちが きまるよ:\n\n` +
         `• I / You / We / They → どうしの げんけい\n` +
-        `• He / She / It → どうしに -s\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• He / She / It → どうしに -s\n\n`,
       examples: [
         { en: "He plays soccer.", jp: "かれは サッカーを する。 (-s)" },
         { en: "We play soccer.", jp: "わたしたちは サッカーを する。" },
@@ -1233,7 +1178,6 @@ window.Lessons = (() => {
   }
 
   function infgerLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "to不定詞[ふていし] と 動名詞[どうめいし] (-ing)",
       words: [],
@@ -1246,8 +1190,7 @@ window.Lessons = (() => {
         `動詞[どうし]に よって どちらが くるか きまる。\n` +
         `• want / hope / decide → to + げんけい\n` +
         `• enjoy / finish / stop → -ing\n` +
-        `• like / love → どちらでも OK\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• like / love → どちらでも OK\n\n`,
       examples: [
         { en: "I want to play.", jp: "あそびたい。 (want → to)" },
         { en: "I enjoy reading.", jp: "よむのが たのしい。 (enjoy → -ing)" },
@@ -1257,7 +1200,6 @@ window.Lessons = (() => {
   }
 
   function perfectLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "現在[げんざい]かんりょうけい (have + 過去[かこ]ぶんし)",
       words: [],
@@ -1267,8 +1209,7 @@ window.Lessons = (() => {
         `   eat → eaten, see → seen, go → gone, do → done, be → been\n\n` +
         `• I have eaten sushi. (おすしを たべたことがある)\n` +
         `• She has lived in Tokyo. (とうきょうに すんでいる)\n\n` +
-        `He / She / It → has、 それ いがい → have。\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `He / She / It → has、 それ いがい → have。\n\n`,
       examples: [
         { en: "I have been to America.", jp: "アメリカに いったことがある。" },
         { en: "He has finished his homework.", jp: "かれは しゅくだいを おえた。" },
@@ -1315,7 +1256,6 @@ window.Lessons = (() => {
   }
 
   function idiomLesson(q) {
-    const ans = correctAnswerOf(q);
     return {
       intro: "イディオム (きまり ことば)",
       words: wordList(wordsFromQuestion(q)),
@@ -1325,8 +1265,7 @@ window.Lessons = (() => {
         `• look forward to 〜 = たのしみに している\n` +
         `• be good at 〜 = 〜が とくい\n` +
         `• take care of 〜 = せわを する\n` +
-        `• run out of 〜 = なくなる\n\n` +
-        `せいかい:「${escapeHTML(ans||"")}」`,
+        `• run out of 〜 = なくなる\n\n`,
       examples: [],
       tip: "イディオムは ぶんかい せず ぜんたいで おぼえる！"
     };
@@ -1444,12 +1383,11 @@ window.Lessons = (() => {
   function renderWordList(items) {
     if (!items || !items.length) return "";
     const rows = items.map(it => `
-      <li class="lesson-word ${it.correct ? 'is-correct' : ''}">
+      <li class="lesson-word">
         <span class="lw-en">${escapeHTML(it.en)}</span>
         <span class="lw-arrow">→</span>
         <span class="lw-jp">${furi(it.jp)}</span>
-        ${it.correct ? '<span class="lw-tag">✔ せいかい</span>' : ''}
-        ${it.audio ? '<span class="lw-tag">🔊 きこえた</span>' : ''}
+        ${it.audio ? '<span class="lw-tag">🔊 きいた おと</span>' : ''}
       </li>`).join("");
     return `<ul class="lesson-words">${rows}</ul>`;
   }
@@ -1482,25 +1420,20 @@ window.Lessons = (() => {
   // For any grammar lesson that already has a curated `words` list (e.g.
   // pastLesson surfaces yesterday/last night), append per-option meanings
   // afterward so the kid can see what each multiple-choice option means.
-  // Skip if the curated list and the option set are obviously the same.
+  // We deliberately do NOT flag which one is correct — the kid has to
+  // apply the rule + the meanings to figure it out.
   function augmentWithOptionWords(lesson, q) {
     if (!lesson || !Array.isArray(q.options)) return lesson;
     const seen = new Set((lesson.words || []).map(w => w.en.toLowerCase()));
-    const ans = correctAnswerOf(q);
     for (const o of q.options) {
       if (typeof o !== "string") continue;
       if (!/^[a-zA-Z]/.test(o.trim())) continue;
       const key = o.toLowerCase();
-      if (seen.has(key)) {
-        // Already in curated list — but mark correct if not yet
-        const existing = lesson.words.find(w => w.en.toLowerCase() === key);
-        if (existing && o === ans) existing.correct = true;
-        continue;
-      }
+      if (seen.has(key)) continue;
       const jp = lookup(o);
       if (!jp) continue;
       seen.add(key);
-      (lesson.words = lesson.words || []).push({ en: o, jp, correct: o === ans });
+      (lesson.words = lesson.words || []).push({ en: o, jp });
     }
     return lesson;
   }
@@ -1508,14 +1441,12 @@ window.Lessons = (() => {
   function buildHTML(question) {
     let lesson = dispatch(question);
     lesson = augmentWithOptionWords(lesson, question);
-    const ans = correctAnswerOf(question);
     return `
       <div class="lesson-card">
         <div class="lesson-head">
           <div class="lesson-icon">💡</div>
           <div class="lesson-title">${furi(escapeHTML(lesson.intro || "ヒント！"))}</div>
         </div>
-        ${ans ? `<div class="lesson-answer">★ ${furi("正解[せいかい]")}: <b>${escapeHTML(ans)}</b></div>` : ''}
         ${lesson.words && lesson.words.length ? `
           <div class="lesson-section">
             <div class="lesson-section-title">📖 ${furi("ことば")}</div>
