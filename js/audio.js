@@ -208,6 +208,11 @@ window.SND = (() => {
   // silently so the game keeps working if the browser blocks playback.
   const themeCache = {};
   let currentTheme = null;
+  // Metadata about the currently-playing theme so callers (the speech-mic flow,
+  // chiefly) can snapshot and later restore the same playback state. Cleared
+  // when stopTheme() runs so we don't accidentally resume a theme that was
+  // intentionally killed.
+  let _themeMeta = null; // { bossId, volume, loop }
   // Per-audio fade tracking. Earlier we shared a single fadeRAF, but that meant
   // crossfading from boss A → boss B canceled A's fade-out RAF (so A's onDone
   // pause never fired and A kept playing indefinitely under B). With a Map keyed
@@ -254,6 +259,7 @@ window.SND = (() => {
     if (_snippetTimeout) { clearTimeout(_snippetTimeout); _snippetTimeout = null; }
     const a = currentTheme;
     currentTheme = null;
+    _themeMeta = null;
     if (!a) return;
     if (fadeMs <= 0) { try { a.pause(); a.volume = 0; } catch(_){} return; }
     fadeTo(a, 0, fadeMs, () => { try { a.pause(); } catch(_){} });
@@ -344,6 +350,7 @@ window.SND = (() => {
       fadeTo(old, 0, 150, () => { try { old.pause(); } catch(_){} });
     }
     currentTheme = a;
+    _themeMeta = { bossId, volume: target, loop };
 
     a.loop = loop;
     a.volume = 0;
@@ -645,6 +652,12 @@ window.SND = (() => {
       return Math.sqrt(sum / buf.length);
     }
 
+    // Pause any background theme — its bleed through speakers can confuse VAD
+    // calibration and trip phantom voice activity. Snapshot the playback state
+    // so we can restore it after the mic flow completes.
+    const themeToResume = _themeMeta ? { ..._themeMeta } : null;
+    if (themeToResume) stopTheme(0);
+
     let cleaned = false;
     function cleanup() {
       if (cleaned) return;
@@ -652,6 +665,17 @@ window.SND = (() => {
       try { source.disconnect(); } catch(_) {}
       try { ac.close(); } catch(_) {}
       try { stream.getTracks().forEach(t => t.stop()); } catch(_) {}
+      if (themeToResume) {
+        // Brief delay so the SpeechRecognition session's tail processing
+        // settles before we slam the speaker back on.
+        setTimeout(() => {
+          playTheme(themeToResume.bossId, {
+            loop:   themeToResume.loop,
+            volume: themeToResume.volume,
+            fadeIn: 200,
+          });
+        }, 120);
+      }
     }
 
     // ---- 3. Calibrate ambient ----
