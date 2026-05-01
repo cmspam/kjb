@@ -1403,6 +1403,41 @@ window.UI = (() => {
   // -------- ROUND ANNOUNCEMENT --------
   // Boxing-card style "ROUND N" splash. Round 5+ gets extra flair so long
   // battles feel like the stakes are climbing.
+  // -------- SPEECH BONUS SPLASH --------
+  // Big star burst when the kid nails the speech challenge — much more
+  // satisfying than the previous 1300ms toast for what's the hardest
+  // interaction in the game (kid has to physically speak English).
+  function showSpeechBonusSplash(word, onDone) {
+    SND.unlock();
+    const overlay = document.createElement("div");
+    overlay.className = "round-intro-overlay";
+    overlay.innerHTML = `
+      <div class="round-flash" style="background:rgba(0,0,0,0);"></div>
+      <div class="round-content">
+        <div class="round-label" style="color:#ffcc00; font-size: 64px;">⭐ PERFECT! ⭐</div>
+        <div class="round-sub" style="color:#fff;">「${escapeHTML(word||'')}」 ✨ +2 ボーナス！</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxVictory();
+    overlay.querySelector(".round-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.25) rotate(8deg)", opacity: 1, offset: 0.55 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1 }
+      ],
+      { duration: 480, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".round-flash").animate(
+      [
+        { background: "rgba(255, 204, 0, 0)" },
+        { background: "rgba(255, 204, 0, 0.45)", offset: 0.4 },
+        { background: "rgba(255, 204, 0, 0)" }
+      ],
+      { duration: 700, iterations: 1 }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 1300);
+  }
+
   // -------- COMBO TIER SPLASH --------
   // Brief banner when a kid hits combo 3 / 5 / 7 / 10 — turns a "+1 dmg
   // bonus" toast into a real moment. Reuses round-intro-overlay styling
@@ -2718,9 +2753,32 @@ window.UI = (() => {
         <div class="energy">⚡ ${p.energy} 🎴 ${p.hand?p.hand.length:0}${p.combo>=2?` 🔥×${p.combo}`:''}</div>
       </div>`;
     }).join("");
+    // Boss core HP bar (hero mode). Mirrors the PvP per-tile core bar so
+    // kids have one constant "is the boss about to die?" glance signal,
+    // independent of the parts grid. Hidden if hpHidden (jinro round) —
+    // shows a tier label instead.
+    let bossCoreBar = "";
+    if (boss && boss.parts) {
+      const core = boss.parts.find(x => x.effect === "win");
+      if (core) {
+        const ch = Math.max(0, core.hp), cm = core.maxHP || 1;
+        const pct = cm > 0 ? Math.round((ch / cm) * 100) : 0;
+        const cls = pct <= 20 ? 'crit' : pct <= 50 ? 'warn' : 'ok';
+        const text = hpHidden ? partTierLabel(core) : `${ch}/${cm}`;
+        bossCoreBar = `
+          <div class="core-bar-row" style="margin: 4px 8px;">
+            <div class="core-bar-label">💎 ${escapeHTML(boss.name_jp || "ボス")}</div>
+            <div class="core-bar-track">
+              <div class="core-bar-fill ${cls}" style="width:${hpHidden?100:pct}%; ${hpHidden?'opacity:0.5;':''}"></div>
+              <div class="core-bar-text">${text}</div>
+            </div>
+          </div>`;
+      }
+    }
     return `
       <div class="header-wrap">
         <div class="round-banner">${boss ? `${boss.name_jp}${boss.raged?' 😡':''}` : ""}</div>
+        ${bossCoreBar}
         <div class="stage${ragedClass}">${svg}</div>
         <div class="boss-name">${boss ? boss.name_jp : ""}</div>
         <div class="players">${playerTiles}</div>
@@ -2924,7 +2982,7 @@ window.UI = (() => {
            renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
            showRoundIntro, showRageIntro, showKO, spawnConfetti,
-           showComboSplash, showFirstBloodSplash, showPartDestroyedSplash,
+           showComboSplash, showFirstBloodSplash, showPartDestroyedSplash, showSpeechBonusSplash,
            showCompendium, runSpeechChallenge,
            menuModal, showPvpFaceoff, showCliffhanger };
 })();

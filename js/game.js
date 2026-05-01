@@ -595,7 +595,8 @@ window.Game = (() => {
     const onSpeak = (result) => {
       if (result && result.ok) {
         p.attackPower = (p.attackPower || 0) + 2;
-        UI.toast("⭐ +2 ボーナス！", 1300);
+        if (UI.showSpeechBonusSplash) UI.showSpeechBonusSplash(S.pronounceTarget);
+        else UI.toast("⭐ +2 ボーナス！", 1300);
       }
       S.pronounceTarget = null;
       goAction();
