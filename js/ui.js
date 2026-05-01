@@ -313,7 +313,9 @@ window.UI = (() => {
         <div class="center" style="margin-top: 3vh;">
           <h1 class="pop">${JP.title}</h1>
           <div class="title-en bob">${JP.titleEn}</div>
-          <div style="font-size: 56px; margin: 8px 0;" class="bob">🐙💩👾🦑</div>
+          <div class="kaiju-row" style="font-size: 56px; margin: 8px 0;">
+            <span class="kaiju-emoji" style="animation-delay: 0.0s;">🐙</span><span class="kaiju-emoji" style="animation-delay: 0.4s;">💩</span><span class="kaiju-emoji" style="animation-delay: 0.8s;">👾</span><span class="kaiju-emoji" style="animation-delay: 1.2s;">🦑</span>
+          </div>
           <div class="subtle" style="margin-top: 4px;">なんにん で あそぶ？</div>
           <div class="row" id="t-count-row" style="margin: 6px 0 10px;"></div>
           <div class="subtle">${JP.mode_label}</div>
@@ -1291,7 +1293,29 @@ window.UI = (() => {
 
     // ----- End: clean up + callback -----
     // ~1900-2400ms after reveal so kids can read the attack-name + damage text.
-    setTimeout(() => { overlay.remove(); onDone(); }, T.end);
+    const endTimer = setTimeout(() => { if (!finished) finish(); }, T.end);
+    let finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      try { clearTimeout(endTimer); } catch(_){}
+      try { overlay.remove(); } catch(_){}
+      onDone();
+    }
+    // Skip button — appears ~1300ms in (after the WARNING beat). Tapping it
+    // fast-forwards to onDone immediately. Repetition was the #1 audit
+    // complaint about boss attacks (4-player party = up to 12 cinematics
+    // per round). The skip lets kids take the cinematic for the first one
+    // and dismiss the rest.
+    setTimeout(() => {
+      if (finished) return;
+      const skipBtn = document.createElement("button");
+      skipBtn.className = "boss-anim-skip";
+      skipBtn.innerHTML = "スキップ ▶▶";
+      overlay.appendChild(skipBtn);
+      // Use the project's tap helper so iOS pointer/click are handled.
+      tap(skipBtn, finish);
+    }, byPlayer ? 900 : 1500);
   }
 
   // -------- RARE EVENT HYPE INTRO --------

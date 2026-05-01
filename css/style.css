@@ -331,6 +331,22 @@ h3 { font-size: 28px; margin: 4px 0; }
 
 @keyframes bob { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-8px);} }
 .bob { animation: bob 1.6s ease-in-out infinite; }
+/* Title screen kaiju row — each emoji bobs + wiggles + pulses on its own
+   stagger so the row feels alive instead of one homogeneous bob. */
+.kaiju-row { display: inline-block; }
+.kaiju-emoji {
+  display: inline-block;
+  margin: 0 4px;
+  animation: kaiju-dance 2.4s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+@keyframes kaiju-dance {
+  0%, 100% { transform: translateY(0)    rotate(0)    scale(1); }
+  20%      { transform: translateY(-10px) rotate(-6deg) scale(1.05); }
+  45%      { transform: translateY(-2px)  rotate(8deg)  scale(0.96); }
+  65%      { transform: translateY(-7px)  rotate(-4deg) scale(1.04); }
+  85%      { transform: translateY(-1px)  rotate(3deg)  scale(0.99); }
+}
 
 @keyframes flash {
   0%,100% { filter: none; }
@@ -528,6 +544,34 @@ h3 { font-size: 28px; margin: 4px 0; }
   display: flex; flex-direction: column; justify-content: center; gap: 4px;
   font-family: inherit;
 }
+/* Skip button overlaid on boss-attack cinematic (P6.2) — appears after
+   the WARNING beat so kids can dismiss repeated attacks. Bottom-right
+   corner, semi-transparent so it doesn't fight with the action. */
+.boss-anim-skip {
+  position: absolute;
+  right: 16px; bottom: 16px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 22px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  z-index: 10;
+  pointer-events: auto;
+  font-family: inherit;
+  animation: skip-fade-in .35s ease;
+}
+@keyframes skip-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.boss-anim-skip:hover, .boss-anim-skip:active {
+  background: rgba(0,0,0,0.85);
+  border-color: var(--accent);
+}
+
 .attack-pick-btn:hover, .attack-pick-btn:active {
   border-color: var(--accent);
   box-shadow: 0 0 18px rgba(255,204,0,0.4);
