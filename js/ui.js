@@ -933,15 +933,12 @@ window.UI = (() => {
     // Loop the boss's theme song while the kid reads the backstory. The render
     // is reached as a result of a user tap, so iOS audio gesture is satisfied.
     SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 600 });
-    // Boss says their catchphrase on entrance, then narrates a snippet of
-    // the backstory — the build pipeline ships per-line voice clips for the
-    // backstory (split on \n), so we voice the first paragraph for drama
-    // without dragging out the read-along.
+    // Boss says their catchphrase on entrance. Backstory is read silently
+    // (kid reads at their own pace under the looping theme music) — earlier
+    // attempts to voice a joined backstory paragraph 404'd because the
+    // build pipeline renders backstory lines individually, not as a joined
+    // block.
     if (boss.catchphrase) SND.playBossLine(boss.id, boss.catchphrase);
-    if (boss.backstory) {
-      const firstPara = String(boss.backstory).split(/\n\n|👹/)[0].split(/\n/).slice(0, 2).join(" ").trim();
-      if (firstPara) setTimeout(() => SND.playBossLine(boss.id, firstPara), 2400);
-    }
     tap($("intro-go"), () => { SND.stopBossVoice(); SND.stopTheme(400); onContinue(); });
     if (onCycle) {
       tap($("intro-cycle"), () => { SND.stopBossVoice(); SND.stopTheme(200); onCycle(); });
@@ -1503,7 +1500,11 @@ window.UI = (() => {
     SND.unlock();
     const overlay = document.createElement("div");
     overlay.className = "round-intro-overlay";
-    const phrase = pickRand((JP.boss_taunts && JP.boss_taunts.hurt) || ["まだまだ！", "つぎの すがた！"]);
+    // Use a hits-pool line for the phase-2 phrase — IS pre-rendered. The
+    // boss_taunts.hurt pool is locale-only and not voiced by the build.
+    const phrase = (boss && Array.isArray(boss.hits) && boss.hits.length)
+      ? boss.hits[(Math.random()*boss.hits.length)|0]
+      : "まだまだ！";
     overlay.innerHTML = `
       <div class="round-flash" style="background:rgba(255,80,200,0)"></div>
       <div class="round-content">
@@ -1513,7 +1514,7 @@ window.UI = (() => {
       </div>`;
     document.body.appendChild(overlay);
     SND.sfxBoss();
-    if (boss && boss.id) SND.playBossLine(boss.id, phrase);
+    if (boss && boss.id && boss.hits && boss.hits.length) SND.playBossLine(boss.id, phrase);
     // Brief duck so the phase-2 sting reads.
     if (SND.duckTheme) SND.duckTheme(1100, 0.30);
     overlay.querySelector(".round-content").animate(
@@ -2408,11 +2409,15 @@ window.UI = (() => {
         <button class="btn huge ${correct?'good':'ghost'}" id="cont">${JP.next}</button>
       </div>`));
     tap($("cont"), () => onContinue());
-    // Voice the boss's reaction line — the burn pool is text-only without
-    // this. Only on wrong answers; correct answers don't have a "boss
-    // suffers" voice line in the existing dataset (could add later).
-    if (!correct && boss && boss.id) {
-      setTimeout(() => SND.playBossLine(boss.id, cheer), 220);
+    // Voice a mocking reaction on wrong answers using a line from the
+    // boss's `hits` pool — that pool IS pre-rendered by the build
+    // pipeline, unlike the locale's wrong_burn / correct_cheer pools.
+    // (Tonally a "boss got hit" line is a stretch as a "kid got it
+    // wrong" reaction, but they're typically goofy / mocking-ish so it
+    // reads close enough.)
+    if (!correct && boss && boss.id && Array.isArray(boss.hits) && boss.hits.length) {
+      const line = boss.hits[(Math.random()*boss.hits.length)|0];
+      setTimeout(() => SND.playBossLine(boss.id, line), 220);
     }
     // Speak the correct answer on wrong-answer to help kids who can't read it yet.
     if (!correct && question && question.options && typeof question.answer === "number") {
@@ -2828,14 +2833,12 @@ window.UI = (() => {
     const themeId = (mode === "pvp" && winner && winner.monster) ? winner.monster.id
                   : (boss && boss.id) ? boss.id : null;
     if (themeId) SND.playTheme(themeId, { loop: true, volume: 0.55, fadeIn: 800 });
-    // Defeated boss says one last grumble — uses their "low HP" pool for
-    // dramatic last-words flavor. Hero-mode only — PvP champion already had
-    // their winning trash-talk during the K.O. cinematic.
-    if (mode !== "pvp" && boss && boss.id) {
-      const pool = (JP.boss_taunts && (JP.boss_taunts.desperate || JP.boss_taunts.low_hp)) || [];
-      if (pool.length) {
-        setTimeout(() => SND.playBossLine(boss.id, pool[(Math.random()*pool.length)|0]), 1100);
-      }
+    // Defeated boss says one last grumble — pulls from boss.hits (which
+    // IS pre-rendered). Hero-mode only — PvP champion already had their
+    // winning trash-talk during the K.O. cinematic.
+    if (mode !== "pvp" && boss && boss.id && Array.isArray(boss.hits) && boss.hits.length) {
+      const line = boss.hits[(Math.random()*boss.hits.length)|0];
+      setTimeout(() => SND.playBossLine(boss.id, line), 1100);
     }
     tap($("again"), () => { SND.stopTheme(400); onAgain(); });
     tap($("title"), () => { SND.stopTheme(400); onTitle(); });
@@ -2875,11 +2878,11 @@ window.UI = (() => {
       <div class="defeat-tagline" id="def-tagline" style="opacity:0;">— TOKYO HAS FALLEN —</div>
     `;
     s.appendChild(cinematic);
-    // Stage 0: instant ROAR + sfx + voice
-    if (boss && boss.id) {
-      const pool = (JP.boss_taunts && JP.boss_taunts.raged) || [];
-      const line = pool.length ? pool[(Math.random()*pool.length)|0] : boss.catchphrase;
-      if (line) setTimeout(() => SND.playBossLine(boss.id, line), 320);
+    // Stage 0: instant ROAR + sfx + voice. Use catchphrase (always
+    // pre-rendered) — boss_taunts pool entries 404 because the build
+    // pipeline doesn't render those.
+    if (boss && boss.id && boss.catchphrase) {
+      setTimeout(() => SND.playBossLine(boss.id, boss.catchphrase), 320);
     }
     // Stage 1 — looming boss
     setTimeout(() => {
