@@ -410,8 +410,37 @@ h3 { font-size: 28px; margin: 4px 0; }
 @keyframes pop { 0% { transform: scale(0); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
 .pop { animation: pop .35s ease; }
 
-@keyframes bob { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-8px);} }
-.bob { animation: bob 1.6s ease-in-out infinite; }
+/* Enhanced bob — adds rotation + scale variation so each boss part feels
+   alive instead of mechanically bobbing. Per-part animation-delay (set
+   inline by the SVG draw fns) staggers them so the boss doesn't move as
+   one rigid block. */
+@keyframes bob {
+  0%, 100% { transform: translateY(0)    rotate(0)      scale(1); }
+  25%      { transform: translateY(-5px) rotate(-1.5deg) scale(1.02); }
+  50%      { transform: translateY(-8px) rotate(0)      scale(1); }
+  75%      { transform: translateY(-4px) rotate(1.5deg)  scale(1.02); }
+}
+.bob { animation: bob 1.8s ease-in-out infinite; }
+/* Occasional twitch — fires every ~7s on .part elements regardless of
+   bob. Adds a "this thing is alive" pulse without reading as
+   distracting. Combined with bob's stagger, parts feel individually
+   animated. */
+@keyframes part-twitch {
+  0%, 88%, 100% { filter: none; }
+  91%           { transform: scale(1.04); filter: brightness(1.15); }
+  93%           { transform: scale(0.97); }
+  95%           { transform: scale(1.02); }
+  97%           { transform: scale(1); }
+}
+g.part {
+  animation: part-twitch 7s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+g.part.bob {
+  /* Compose bob over twitch — both run independently */
+  animation: bob 1.8s ease-in-out infinite, part-twitch 7s ease-in-out infinite;
+}
 /* Title screen kaiju row — each emoji bobs + wiggles + pulses on its own
    stagger so the row feels alive instead of one homogeneous bob. */
 .kaiju-row { display: inline-block; }
