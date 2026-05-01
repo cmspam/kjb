@@ -2232,6 +2232,13 @@ window.UI = (() => {
       pvpThemePlayerId = player.id;
       SND.playTheme(player.monster.id, { loop: true, volume: 0.4, fadeIn: 500 });
       const b = $("pvp-music"); if (b) b.textContent = '🎵';
+      // Catchphrase voice + brief toast — the monster "announces" itself when
+      // the turn starts. No blocking overlay (would add 1.5s × players × rounds
+      // of dead time per match), just audio + a passing toast.
+      if (player.monster.catchphrase) {
+        setTimeout(() => SND.playBossLine(player.monster.id, player.monster.catchphrase), 320);
+      }
+      toast(`🎤 ${player.monster.name_jp} のターン！`, 1600);
     }
     tap($("pvp-music"), () => {
       if (SND.isThemePlaying()) {
