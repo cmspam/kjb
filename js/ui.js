@@ -924,6 +924,45 @@ window.UI = (() => {
     });
   }
 
+  // -------- CARD-PLAY FLOURISH --------
+  // When a kid plays a card, briefly hero it onto the screen — big card,
+  // glow + scale punch, name + effect read-out, then dissolves into
+  // particles. Non-blocking; the card's gameplay effect continues
+  // applying in parallel. ~900ms total. Cosmetic only.
+  function showCardPlay(card) {
+    if (!card) return;
+    const overlay = document.createElement("div");
+    overlay.className = "card-play-overlay";
+    overlay.innerHTML = `
+      <div class="card-play-glow"></div>
+      <div class="card-play-card">
+        <div class="cp-icon">${card.icon || "🎴"}</div>
+        <div class="cp-name">${escapeHTML(card.name_jp || card.id || "")}</div>
+        <div class="cp-text">${escapeHTML(card.text_jp || "")}</div>
+        <div class="cp-cost">⚡${card.cost == null ? "?" : card.cost}</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxCard();
+    overlay.querySelector(".card-play-card").animate(
+      [
+        { transform: "translate(-50%, 50%) scale(0.2) rotate(-10deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.05) rotate(2deg)", opacity: 1, offset: 0.45 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)",       opacity: 1, offset: 0.7  },
+        { transform: "translate(-50%, -150%) scale(0.4) rotate(20deg)", opacity: 0 }
+      ],
+      { duration: 900, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".card-play-glow").animate(
+      [
+        { opacity: 0 },
+        { opacity: 0.7, offset: 0.45 },
+        { opacity: 0 }
+      ],
+      { duration: 900, fill: "forwards" }
+    );
+    setTimeout(() => { try { overlay.remove(); } catch(_){} }, 950);
+  }
+
   // -------- MATCH TITLE CARD (N6) --------
   // TV-broadcast pre-fight splash: "TONIGHT'S MAIN EVENT" headline, boss
   // vs player(s), brief 1.8s flash. Fires before renderBossIntro so the
@@ -3382,7 +3421,7 @@ window.UI = (() => {
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
            renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
-           showMatchTitleCard, renderBossPickerMap,
+           showMatchTitleCard, renderBossPickerMap, showCardPlay,
            showRoundIntro, showRageIntro, showPhase2Intro, showKO, showFightStinger, spawnConfetti,
            showComboSplash, showFirstBloodSplash, showPartDestroyedSplash, showSpeechBonusSplash,
            showCompendium, runSpeechChallenge,

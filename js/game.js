@@ -1034,6 +1034,8 @@ window.Game = (() => {
   function playCardBeforeQuestion(p, card, idx, redrawCb) {
     try {
       if (p.energy < card.cost) return;
+      // Card-play flourish — non-blocking visual hero of the card.
+      if (UI.showCardPlay) UI.showCardPlay(card);
       p.energy -= card.cost;
       p.hand.splice(idx, 1);
       discardOrSink(card);
@@ -1062,6 +1064,8 @@ window.Game = (() => {
   function playCardInAction(p, card, idx) {
     try {
       if (p.energy < card.cost) return;
+      // Card-play flourish — non-blocking visual hero of the card.
+      if (UI.showCardPlay) UI.showCardPlay(card);
       const ef = card.effect;
       // ACCUSE card: gated to round ≥ 4 and not yet locked. One-shot per game
       // — locked after first play (right or wrong). Right = team wins +
