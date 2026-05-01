@@ -3023,10 +3023,9 @@ window.UI = (() => {
     }
     return `
       <div class="header-wrap">
-        <div class="round-banner">${boss ? `${boss.name_jp}${boss.raged?' 😡':''}` : ""}</div>
         ${bossCoreBar}
         <div class="stage${ragedClass}">${svg}</div>
-        <div class="boss-name">${boss ? boss.name_jp : ""}</div>
+        <div class="boss-name">${boss ? `${boss.name_jp}${boss.raged?' 😡':''}` : ""}</div>
         <div class="players">${playerTiles}</div>
       </div>
     `;
