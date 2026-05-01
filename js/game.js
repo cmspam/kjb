@@ -561,7 +561,7 @@ window.Game = (() => {
       goAction();
     };
     const taunt = (S.mode !== "pvp") ? pickBossTaunt(p) : null;
-    const extras = { pronounceTarget: S.pronounceTarget, onSpeak, taunt };
+    const extras = { pronounceTarget: S.pronounceTarget, onSpeak, taunt, jinro: !!S.jinro };
     if (S.mode === "pvp") {
       UI.renderPvpAction(p, S.players,
         (opp) => goPvpPickAttack(p, opp),
@@ -821,34 +821,38 @@ window.Game = (() => {
       return;
     }
 
-    // Spy sabotage paths
+    // Unified teammate-target action — same UI tile for all roles. Heroes
+    // who tap a teammate deliver a small support boost (+HP); spies sabotage
+    // (damage). The toast text is intentionally ambiguous so the team can't
+    // read role from a single action — coupled with hidden HP during round
+    // (P2.2), the kid can't easily decode whether they were buffed or hit.
     if (target.kind === "teammate") {
       const t = target.target;
-      t.hp = Math.max(0, t.hp - dmg);
-      SND.sfxHit();
-      UI.toast(`😈 ${p.name} が ${t.name} を こうげき！ ${dmg} ダメージ！`, 1800);
-      S.log.push(`${p.name} → ${t.name}: ${dmg} ダメージ (なかまを こうげき!)`);
-      if (t.hp === 0) { t.dead = true; S.log.push(`${t.name} は たおれた…`); }
+      const isSpy = p.role === "spy";
+      if (isSpy) {
+        t.hp = Math.max(0, t.hp - dmg);
+        SND.sfxHit();
+        S.log.push(`${p.name} → ${t.name}: ${dmg} ダメージ (うらぎり)`);
+        if (t.hp === 0) { t.dead = true; S.log.push(`${t.name} は たおれた…`); }
+      } else {
+        // Hero support: small +HP to teammate. Cost = same attack power
+        // (so the hero gives up their attack for this turn).
+        const heal = Math.min(t.maxHp - t.hp, p.attackPower + 1);
+        t.hp = Math.min(t.maxHp, t.hp + heal);
+        SND.sfxCard();
+        S.log.push(`${p.name} → ${t.name}: +${heal} サポート HP`);
+      }
+      // Neutral toast — same text regardless of role. With HP hidden during
+      // the round (P2.2), the kid can't tell from numbers which way it went.
+      UI.toast(`🌀 ${t.name} に なにか おこった！`, 1700);
       p.attackPower = 0;
       S.pendingDamageBonus = 0;
       if (S.players.every(x => x.dead)) return doDefeat();
       setTimeout(() => endTurn(), 1400);
       return;
     }
-    if (target.kind === "heal-boss") {
-      const heal = 5;
-      const aliveParts = S.boss.parts.filter(pp => pp.hp > 0 && pp.hp < pp.maxHP);
-      if (aliveParts.length) {
-        const r = aliveParts[(Math.random()*aliveParts.length)|0];
-        r.hp = Math.min(r.maxHP, r.hp + heal);
-      }
-      SND.sfxCard();
-      UI.toast(`😈 ${p.name} が ボスを かいふく！ +${heal} HP`, 1800);
-      S.log.push(`${p.name}: ボスを かいふく (なかまを うらぎる!)`);
-      p.attackPower = 0;
-      setTimeout(() => endTurn(), 1400);
-      return;
-    }
+    // heal-boss kind dropped — was a spy-only action that visually outed the
+    // spy (only spies had the button). May resurface as a card-only ability.
     // Normal attack on a boss part
     const part = target.part;
     // Armored core: damage reduced by intact non-core parts, scaled per party size.

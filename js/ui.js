@@ -2123,17 +2123,18 @@ window.UI = (() => {
         stage.appendChild(bubble);
       }
     }
+    // Jinro mode: teammates and boss parts share the SAME unified target
+    // grid so a spy's screen looks identical to a hero's screen. Tapping a
+    // teammate fires "support" for heroes (+HP boost) or "sabotage" for spies
+    // (damage) — game.js routes by role, the UI doesn't know which is which.
+    const showTeammates = !!(extras && extras.jinro) && hasAtk;
     s.appendChild(el(`
       <div class="center" style="width:100%;">
         ${hasAtk ? `
           <h3>⚔️ こうげきパワー ${player.attackPower} ／ ⚡ ${player.energy}</h3>
           ${speakHTML}
-          <div class="subtle">こうげきしたい パーツを タップ！</div>
+          <div class="subtle">${showTeammates ? "こうげき または サポート する あいてを タップ！" : "こうげきしたい パーツを タップ！"}</div>
           <div class="parts-pick" id="parts"></div>
-          ${isSpy ? `
-            <div class="subtle" style="margin-top:14px;color:#ff7799;font-weight:900;">🕵️ スパイの ひみつ オプション</div>
-            <div class="parts-pick" id="spy-targets"></div>
-          ` : ``}
         ` : `
           <h3>ターンを おわるよ</h3>
           <div class="subtle">⚡ ${player.energy}</div>
@@ -2163,24 +2164,19 @@ window.UI = (() => {
         if (!dead) tap(node, () => { SND.sfxPop(); onAttack({ kind: "boss-part", part: p }); });
         partsEl.appendChild(node);
       });
-      if (isSpy) {
-        const sp = $("spy-targets");
+      // Teammate tiles in the SAME grid (jinro mode only). Identical styling
+      // to part tiles — a spy can't visually distinguish their UI from a
+      // hero's. Hero tap = support (+HP), spy tap = sabotage. game.js routes.
+      if (showTeammates) {
         players.filter(pp => !pp.dead && pp.id !== player.id).forEach(teammate => {
-          const node = el(`<button class="part-btn" style="border-color:#ff7799;">
-            <div class="pn">😈 ${escapeHTML(teammate.name)}</div>
-            <div class="ph">HP ${teammate.hp}/${teammate.maxHp}</div>
-            <div class="pe" style="color:#ff7799;">なかまを こうげき！</div>
+          const node = el(`<button class="part-btn">
+            <div class="pn">${teammate.avatar?teammate.avatar+' ':''}${escapeHTML(teammate.name)}</div>
+            <div class="ph">なかま</div>
+            <div class="pe">サポート / ?</div>
           </button>`);
           tap(node, () => { SND.sfxPop(); onAttack({ kind: "teammate", target: teammate }); });
-          sp.appendChild(node);
+          partsEl.appendChild(node);
         });
-        const healBoss = el(`<button class="part-btn" style="border-color:#ff7799;">
-          <div class="pn">💚 ボスを かいふく</div>
-          <div class="ph">+5 ボスHP</div>
-          <div class="pe" style="color:#ff7799;">こっそり たすける</div>
-        </button>`);
-        tap(healBoss, () => { SND.sfxPop(); onAttack({ kind: "heal-boss" }); });
-        sp.appendChild(healBoss);
       }
     }
     tap($("end"), () => { SND.sfxPop(); onEnd(); });
@@ -2286,12 +2282,17 @@ window.UI = (() => {
   }
 
   // -------- TARGET PICKER --------
-  // If active player is a spy, also show teammate-attack and boss-heal sabotage options.
+  // Unified target grid: boss parts + (in jinro mode) teammates in the same
+  // grid for ALL roles. A spy's screen looks identical to a hero's. The
+  // action that fires on a teammate tap is routed by role in game.js
+  // (hero=support, spy=sabotage). Toasts are intentionally ambiguous.
   function renderTargetPicker(player, boss, players, onPick, onCancel) {
     show("action");
     const s = $("screen-action"); s.innerHTML = "";
     s.appendChild(el(buildHeader(boss, players, player)));
-    const isSpy = player.role === "spy";
+    // Jinro detection: any player has role "spy" → jinro mode is on.
+    // (PvP players don't get "spy" role, so this is false there.)
+    const jinroOn = (players || []).some(pp => pp.role === "spy");
     // Show a music toggle if a theme is currently playing (PvP turn music
     // started in renderPvpAction and persists into this screen). Hidden in
     // hero mode where no theme is running.
@@ -2302,10 +2303,6 @@ window.UI = (() => {
                 style="position:absolute; right:6px; top:0; padding:6px 10px; font-size:18px; min-height:0;">🎵</button>` : ``}
         <h3>${JP.pick_target}</h3>
         <div class="parts-pick" id="parts"></div>
-        ${isSpy ? `
-          <div class="subtle" style="margin-top:14px;color:#ff7799;font-weight:900;">🕵️ スパイの ひみつ オプション</div>
-          <div class="parts-pick" id="spy-targets"></div>
-        ` : ``}
         <button class="btn ghost" id="cancel">${JP.cancel}</button>
       </div>`));
     if (themePlaying) {
@@ -2334,24 +2331,18 @@ window.UI = (() => {
       if (!dead) tap(node, () => { SND.sfxPop(); onPick({ kind: "boss-part", part: p }); });
       partsEl.appendChild(node);
     });
-    if (isSpy) {
-      const sp = $("spy-targets");
+    if (jinroOn) {
+      // Teammates appear in the same parts grid with identical styling.
+      // Heroes get a support effect; spies sabotage. UI doesn't care.
       players.filter(pp => !pp.dead && pp.id !== player.id).forEach(teammate => {
-        const node = el(`<button class="part-btn" style="border-color:#ff7799;">
-          <div class="pn">😈 ${escapeHTML(teammate.name)}</div>
-          <div class="ph">HP ${teammate.hp}/${teammate.maxHp}</div>
-          <div class="pe" style="color:#ff7799;">なかまを こうげき！</div>
+        const node = el(`<button class="part-btn">
+          <div class="pn">${teammate.avatar?teammate.avatar+' ':''}${escapeHTML(teammate.name)}</div>
+          <div class="ph">なかま</div>
+          <div class="pe">サポート / ?</div>
         </button>`);
         tap(node, () => { SND.sfxPop(); onPick({ kind: "teammate", target: teammate }); });
-        sp.appendChild(node);
+        partsEl.appendChild(node);
       });
-      const healBoss = el(`<button class="part-btn" style="border-color:#ff7799;">
-        <div class="pn">💚 ボスを かいふく</div>
-        <div class="ph">+5 ボスHP</div>
-        <div class="pe" style="color:#ff7799;">こっそり たすける</div>
-      </button>`);
-      tap(healBoss, () => { SND.sfxPop(); onPick({ kind: "heal-boss" }); });
-      sp.appendChild(healBoss);
     }
     tap($("cancel"), () => onCancel());
   }
