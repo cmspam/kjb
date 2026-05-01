@@ -448,12 +448,22 @@ h3 { font-size: 28px; margin: 4px 0; }
 /* Body part image label */
 .part-icon { font-size: 32px; }
 
-/* Round indicator */
+/* Round indicator — absolute-positioned bubble at the top of the header.
+   Z-index 10 keeps it on top of any in-flow content. The header itself
+   reserves vertical space below for content so the bubble doesn't overlap
+   the boss core HP bar / stage SVG. */
 .round-banner {
   position:absolute; top: 8px; left: 50%; transform: translateX(-50%);
   background: rgba(0,0,0,.5); padding: 6px 14px; border-radius: 99px;
   font-weight: 800;
   z-index: 10;
+}
+/* Header wrap — make .round-banner's reserved space part of the layout
+   so in-flow children (HP bar, stage, etc.) stack below the banner instead
+   of behind it. */
+.header-wrap {
+  position: relative;
+  padding-top: 44px;
 }
 
 /* Exit button (visible during a fight) */
