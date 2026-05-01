@@ -651,7 +651,9 @@ window.UI = (() => {
         <div style="margin-top:14px;" id="hand-area"></div>
       </div>`));
     s.querySelectorAll(".wager-btn").forEach(b => tap(b, () => {
-      SND.sfxPop();
+      // Wager pick is a deliberate choice — sfxSelect (sharper than sfxPop)
+      // marks the commit. sfxPop becomes the menu-tap default.
+      if (SND.sfxSelect) SND.sfxSelect(); else SND.sfxPop();
       onPick(parseInt(b.dataset.stars,10));
     }));
     renderHandInto($("hand-area"), player, /*beforeQ*/true, onCard);
@@ -2328,7 +2330,7 @@ window.UI = (() => {
           <div class="ph">${partHpDisplay(p)}</div>
           <div class="pe">${effLabel}</div>
         </button>`);
-        if (!dead) tap(node, () => { SND.sfxPop(); onAttack({ kind: "boss-part", part: p }); });
+        if (!dead) tap(node, () => { SND.sfxSelect ? SND.sfxSelect() : SND.sfxPop(); onAttack({ kind: "boss-part", part: p }); });
         partsEl.appendChild(node);
       });
       // Teammate tiles in the SAME grid (jinro mode only). Identical styling
@@ -2341,12 +2343,12 @@ window.UI = (() => {
             <div class="ph">なかま</div>
             <div class="pe">サポート / ?</div>
           </button>`);
-          tap(node, () => { SND.sfxPop(); onAttack({ kind: "teammate", target: teammate }); });
+          tap(node, () => { SND.sfxSelect ? SND.sfxSelect() : SND.sfxPop(); onAttack({ kind: "teammate", target: teammate }); });
           partsEl.appendChild(node);
         });
       }
     }
-    tap($("end"), () => { SND.sfxPop(); onEnd(); });
+    tap($("end"), () => { SND.sfxConfirm ? SND.sfxConfirm() : SND.sfxPop(); onEnd(); });
     renderHandInto($("hand-area"), player, false, onCard);
   }
 
@@ -2440,11 +2442,11 @@ window.UI = (() => {
           ` : ''}
         </button>`);
       if (!isSelf && !isDead && hasAtk) {
-        tap(tile, () => { SND.sfxPop(); onPickOpponent(pp); });
+        tap(tile, () => { SND.sfxSelect ? SND.sfxSelect() : SND.sfxPop(); onPickOpponent(pp); });
       }
       field.appendChild(tile);
     });
-    tap($("end"), () => { SND.sfxPop(); onEnd(); });
+    tap($("end"), () => { SND.sfxConfirm ? SND.sfxConfirm() : SND.sfxPop(); onEnd(); });
     renderHandInto($("hand-area"), player, false, onCard);
   }
 
@@ -2495,7 +2497,7 @@ window.UI = (() => {
         <div class="ph">${partHpDisplay(p)}</div>
         <div class="pe">${effLabel}</div>
       </button>`);
-      if (!dead) tap(node, () => { SND.sfxPop(); onPick({ kind: "boss-part", part: p }); });
+      if (!dead) tap(node, () => { SND.sfxSelect ? SND.sfxSelect() : SND.sfxPop(); onPick({ kind: "boss-part", part: p }); });
       partsEl.appendChild(node);
     });
     if (jinroOn) {
@@ -2507,7 +2509,7 @@ window.UI = (() => {
           <div class="ph">なかま</div>
           <div class="pe">サポート / ?</div>
         </button>`);
-        tap(node, () => { SND.sfxPop(); onPick({ kind: "teammate", target: teammate }); });
+        tap(node, () => { SND.sfxSelect ? SND.sfxSelect() : SND.sfxPop(); onPick({ kind: "teammate", target: teammate }); });
         partsEl.appendChild(node);
       });
     }
