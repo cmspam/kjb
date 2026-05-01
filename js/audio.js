@@ -195,6 +195,50 @@ window.SND = (() => {
   function sfxNav()     { tone(330,.05,"triangle",.16); }
   // "I picked an option" — same family as sfxPop but a slightly higher pair.
   function sfxSelect()  { tone(620,.04,"square",.18); setTimeout(()=>tone(770,.05,"square",.18),40); }
+  // Synthesized "stadium crowd cheer". Bandpass-filtered white noise with an
+  // attack/sustain/release envelope and a wobbly band-center frequency so it
+  // doesn't sound like flat hiss. intensity: 0..1 controls peak gain.
+  // duration in ms. Fired on combo splashes, KO, victory for the live-event
+  // feel — without shipping a crowd-roar audio asset.
+  function crowdCheer(intensity, durationMs) {
+    if (muted) return;
+    const a = ctx(); if (!a) return;
+    if (a.state === "suspended") a.resume();
+    intensity = Math.max(0.05, Math.min(1, intensity == null ? 0.5 : intensity));
+    durationMs = Math.max(120, durationMs || 800);
+    const sr = a.sampleRate;
+    const len = Math.floor((durationMs / 1000) * sr);
+    const buf = a.createBuffer(1, len, sr);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.7;
+    const src = a.createBufferSource();
+    src.buffer = buf;
+    // Band-pass keeps the mid frequencies that read as voice.
+    const filter = a.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 850 + Math.random() * 300;
+    filter.Q.value = 1.4;
+    // LFO modulates the band center so the roar wobbles, not a flat hiss.
+    const lfo = a.createOscillator();
+    const lfoGain = a.createGain();
+    lfo.frequency.value = 4 + Math.random() * 3;
+    lfoGain.gain.value = 200;
+    lfo.connect(lfoGain).connect(filter.frequency);
+    // Attack/sustain/release envelope.
+    const gain = a.createGain();
+    const now = a.currentTime;
+    const dur = durationMs / 1000;
+    const peak = 0.18 * intensity;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(peak, now + Math.min(0.18, dur * 0.25));
+    gain.gain.setValueAtTime(peak, now + dur * 0.65);
+    gain.gain.linearRampToValueAtTime(0, now + dur);
+    src.connect(filter); filter.connect(gain); gain.connect(a.destination);
+    src.start(now);
+    lfo.start(now);
+    src.stop(now + dur);
+    lfo.stop(now + dur);
+  }
   function sfxFart()    {
     const a = ctx(); if (!a) return;
     const o = a.createOscillator(); const g = a.createGain();
@@ -922,7 +966,7 @@ window.SND = (() => {
   }
 
   return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat,
-           sfxPop, sfxFart, sfxBreak, sfxCrit, sfxConfirm, sfxNav, sfxSelect,
+           sfxPop, sfxFart, sfxBreak, sfxCrit, sfxConfirm, sfxNav, sfxSelect, crowdCheer,
            setMuted, isMuted, setVoice, listVoices,
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
            getThemes, setThemes, getSpellMode, setSpellMode, getA11y, setA11y,

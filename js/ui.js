@@ -1846,6 +1846,12 @@ window.UI = (() => {
       </div>`;
     document.body.appendChild(overlay);
     SND.sfxCorrect();
+    // Crowd cheer scales with combo tier — bigger streaks, louder roar.
+    if (SND.crowdCheer) {
+      const intensity = combo >= 10 ? 1.0 : combo >= 7 ? 0.75 : combo >= 5 ? 0.55 : 0.35;
+      const dur = combo >= 10 ? 1300 : combo >= 7 ? 1000 : 800;
+      SND.crowdCheer(intensity, dur);
+    }
     overlay.querySelector(".round-content").animate(
       [
         { transform: "translate(-50%, -50%) scale(0) rotate(-12deg)", opacity: 0 },
@@ -2066,6 +2072,8 @@ window.UI = (() => {
     document.body.appendChild(overlay);
     spawnConfetti(overlay.querySelector(".confetti-layer"), 50);
     SND.sfxVictory();
+    // Massive crowd roar on K.O. — biggest cheer in the game.
+    if (SND.crowdCheer) SND.crowdCheer(1.0, 2200);
     // Duck the theme so the K.O. sting reads. Larger dip + longer hold than
     // a crit since this is a bigger moment.
     if (SND.duckTheme) SND.duckTheme(1500, 0.20);
@@ -3071,6 +3079,8 @@ window.UI = (() => {
     show("victory");
     const s = $("screen-victory"); s.innerHTML = "";
     SND.sfxVictory();
+    // Sustained crowd cheer over the victory reveal.
+    if (SND.crowdCheer) SND.crowdCheer(0.9, 2800);
     const isFinalWin = boss && boss.isFinalBoss;
     let title = JP.victory;
     if (isFinalWin) title = "TRUE CHAMPION！";
