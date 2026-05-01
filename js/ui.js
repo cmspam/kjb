@@ -856,6 +856,18 @@ window.UI = (() => {
             }
             optsEl.querySelectorAll(".opt").forEach(x => x.classList.add("disabled"));
             if (correct) SND.sfxCorrect(); else SND.sfxWrong();
+            // Boss reacts on the question screen IN THE MOMENT — collapses the
+            // visual gap between "quiz" and "battle". Right answer = the boss
+            // flinches (kid will hit them next). Wrong answer = the boss laughs
+            // and looms larger. The reaction plays during the 850ms hold
+            // before the result screen renders.
+            const stageEl = s.querySelector(".stage");
+            if (stageEl) reactStage(stageEl, correct);
+            // Voice a hits-pool line on wrong answers — boss laughs at the kid.
+            if (!correct && boss && boss.id && Array.isArray(boss.hits) && boss.hits.length) {
+              const line = boss.hits[(Math.random()*boss.hits.length)|0];
+              setTimeout(() => SND.playBossLine(boss.id, line), 200);
+            }
             setTimeout(() => onAnswer(correct, i), 850);
           });
         }
@@ -2754,6 +2766,17 @@ window.UI = (() => {
       });
     }
     tap($("cancel"), () => onCancel());
+  }
+
+  // Boss reacts visually to the kid's answer on the question screen — N7's
+  // "quiz IS the battle" beat without redesigning the screen flow. Adds a
+  // brief CSS class that animates the stage SVG. Cleared after ~700ms.
+  function reactStage(stageEl, correct) {
+    if (!stageEl) return;
+    stageEl.classList.remove("react-correct", "react-wrong");
+    void stageEl.offsetWidth; // restart animation
+    stageEl.classList.add(correct ? "react-correct" : "react-wrong");
+    setTimeout(() => stageEl.classList.remove("react-correct", "react-wrong"), 720);
   }
 
   // Tiered text label for a part's HP — used in jinro mode during the round

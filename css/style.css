@@ -387,6 +387,30 @@ h3 { font-size: 28px; margin: 4px 0; }
 @keyframes shake-light  { 0%,100%{transform:translate(0,0);} 25%{transform:translate(-3px,1px);} 50%{transform:translate(2px,-1px);} 75%{transform:translate(-2px,2px);} }
 @keyframes shake-medium { 0%,100%{transform:translate(0,0);} 20%{transform:translate(-6px,2px);} 40%{transform:translate(5px,-3px);} 60%{transform:translate(-4px,4px);} 80%{transform:translate(6px,-2px);} }
 @keyframes shake-heavy  { 0%,100%{transform:translate(0,0);} 15%{transform:translate(-12px,4px) rotate(-1deg);} 35%{transform:translate(10px,-6px) rotate(1deg);} 55%{transform:translate(-8px,8px) rotate(-1deg);} 75%{transform:translate(11px,-4px) rotate(1deg);} }
+/* Boss reactions on the question screen (N7) — kid's answer immediately
+   triggers a visible boss reaction so the quiz screen feels like part
+   of the fight, not a separate quiz app. */
+.stage.react-correct svg {
+  animation: stage-react-correct .65s ease-out !important;
+}
+.stage.react-wrong svg {
+  animation: stage-react-wrong .65s ease-out !important;
+}
+@keyframes stage-react-correct {
+  /* Boss flinches — small recoil, leaning back, slight blue tint. */
+  0%   { transform: scale(1)    rotate(0);    filter: brightness(1); }
+  20%  { transform: scale(0.92) rotate(-3deg); filter: brightness(0.8) hue-rotate(-30deg); }
+  60%  { transform: scale(0.95) rotate(2deg); filter: brightness(0.85); }
+  100% { transform: scale(1)    rotate(0);   filter: brightness(1); }
+}
+@keyframes stage-react-wrong {
+  /* Boss laughs and grows — the kid messed up and the boss is loving it. */
+  0%   { transform: scale(1)    rotate(0);    filter: brightness(1); }
+  25%  { transform: scale(1.10) rotate(-2deg); filter: brightness(1.3) drop-shadow(0 0 18px #ff3b6b); }
+  55%  { transform: scale(1.08) rotate(3deg);  filter: brightness(1.4) drop-shadow(0 0 22px #ff3b6b); }
+  100% { transform: scale(1)    rotate(0);    filter: brightness(1); }
+}
+
 .stage.shake-light  { animation: shake-light  .35s ease; }
 .stage.shake-medium { animation: shake-medium .50s ease; }
 .stage.shake-heavy  { animation: shake-heavy  .65s ease; }
