@@ -544,6 +544,59 @@ h3 { font-size: 28px; margin: 4px 0; }
   display: flex; flex-direction: column; justify-content: center; gap: 4px;
   font-family: inherit;
 }
+/* CINEMATIC DEFEAT — multi-stage opener (N4). Black-curtain bg, looming
+   boss SVG centered, big headline + tagline. Shrinks to compact strip
+   at top after stage 3 to make room for the recap content beneath. */
+.defeat-cinematic {
+  position: relative;
+  width: 100%;
+  height: 70vh;
+  margin: 0;
+  overflow: hidden;
+  transition: height 0.6s ease, margin 0.6s ease;
+}
+.defeat-cinematic-shrunk { height: 28vh; margin-bottom: 8px; }
+.defeat-curtain {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(60,0,0,0.85), rgba(0,0,0,0.98));
+  pointer-events: none;
+}
+.defeat-stage {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.4s ease, transform 0.6s ease;
+}
+.defeat-stage svg { max-height: 60vh; max-width: 80%; transform-origin: center; }
+.defeat-cinematic-shrunk .defeat-stage svg { max-height: 22vh; }
+.defeat-headline {
+  position: absolute;
+  left: 50%; top: 50%;
+  font-size: 64px;
+  font-weight: 900;
+  color: var(--bad);
+  text-shadow: 0 8px 0 #000, 0 0 40px var(--bad);
+  letter-spacing: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.defeat-tagline {
+  position: absolute;
+  left: 50%; top: calc(50% + 64px);
+  transform: translate(-50%, 0);
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffaaaa;
+  letter-spacing: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.defeat-cinematic-shrunk .defeat-headline {
+  font-size: 28px;
+  top: 50%;
+  transform: translate(-50%, -50%) !important;
+}
+.defeat-cinematic-shrunk .defeat-tagline { display: none; }
+
 /* Skip button overlaid on boss-attack cinematic (P6.2) — appears after
    the WARNING beat so kids can dismiss repeated attacks. Bottom-right
    corner, semi-transparent so it doesn't fight with the action. */

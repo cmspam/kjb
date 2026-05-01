@@ -2790,31 +2790,87 @@ window.UI = (() => {
           </div>`;
       }
     }
-    s.appendChild(el(`
-      <div class="center" style="margin-top:4vh;">
-        <h1 class="shake">${title} 💀</h1>
-        ${endingHTML}
-        <div style="font-size:60px;">😵</div>
-        <div style="font-size:22px;color:var(--bad);">${JP.defeat_sub}</div>
-        <div style="margin-top:24px;">
-          ${players.map(p => `<div>${p.avatar?p.avatar+' ':''}${p.name}: HP ${p.hp} ${p.role==='spy'?'🕵️':''}${p.bestCombo>=3?` 🔥 さいこう ×${p.bestCombo}`:''}</div>`).join("")}
-        </div>
-        ${buildRecap(stats)}
-        <div class="row" style="margin-top:24px;">
-          <button class="btn huge bad" id="again">${JP.play_again}</button>
-          <button class="btn ghost" id="title">${JP.back_to_title}</button>
-        </div>
-      </div>`));
-    // The boss won — let their theme blare in triumph.
-    if (boss && boss.id) SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 700 });
-    // Triumphant boss line — catchphrase or a "raged" pool entry.
+    // CINEMATIC DEFEAT — multi-stage opener before the static recap loads.
+    // Stage 0 (0–700ms):    Black screen + ROAR text + boss-line voice
+    // Stage 1 (700–2100ms): Boss SVG looms huge, fades to red
+    // Stage 2 (2100–3500ms):"TOKYO HAS FALLEN..." typography flash
+    // Stage 3 (3500ms+):    The actual static recap content slides in
+    const cinematic = document.createElement("div");
+    cinematic.className = "defeat-cinematic";
+    cinematic.innerHTML = `
+      <div class="defeat-curtain"></div>
+      <div class="defeat-stage" id="def-stage" style="opacity:0;"></div>
+      <div class="defeat-headline" id="def-headline" style="opacity:0;">${title}</div>
+      <div class="defeat-tagline" id="def-tagline" style="opacity:0;">— TOKYO HAS FALLEN —</div>
+    `;
+    s.appendChild(cinematic);
+    // Stage 0: instant ROAR + sfx + voice
     if (boss && boss.id) {
       const pool = (JP.boss_taunts && JP.boss_taunts.raged) || [];
       const line = pool.length ? pool[(Math.random()*pool.length)|0] : boss.catchphrase;
-      if (line) setTimeout(() => SND.playBossLine(boss.id, line), 1000);
+      if (line) setTimeout(() => SND.playBossLine(boss.id, line), 320);
     }
-    tap($("again"), () => { SND.stopTheme(400); onAgain(); });
-    tap($("title"), () => { SND.stopTheme(400); onTitle(); });
+    // Stage 1 — looming boss
+    setTimeout(() => {
+      const stage = cinematic.querySelector("#def-stage");
+      if (stage && boss) {
+        stage.innerHTML = Monsters.renderBossSVG(boss);
+        stage.style.opacity = "1";
+        stage.animate(
+          [
+            { transform: "scale(0.4)", filter: "brightness(0.4) drop-shadow(0 0 6px #ff3b6b)" },
+            { transform: "scale(1.0)", filter: "brightness(1.0) drop-shadow(0 0 30px #ff3b6b)" }
+          ],
+          { duration: 1200, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+        );
+      }
+    }, 700);
+    // Stage 2 — headline + tagline slide in
+    setTimeout(() => {
+      const h = cinematic.querySelector("#def-headline");
+      const t = cinematic.querySelector("#def-tagline");
+      if (h) {
+        h.style.opacity = "1";
+        h.animate(
+          [
+            { transform: "translate(-50%, -50%) scale(0) rotate(-12deg)", opacity: 0 },
+            { transform: "translate(-50%, -50%) scale(1.2) rotate(4deg)",  opacity: 1, offset: 0.6 },
+            { transform: "translate(-50%, -50%) scale(1) rotate(0)",        opacity: 1 }
+          ],
+          { duration: 700, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+        );
+      }
+      if (t) {
+        setTimeout(() => {
+          t.style.opacity = "1";
+          t.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600, fill: "forwards" });
+        }, 600);
+      }
+    }, 2100);
+    // The boss's theme drones in heavy.
+    if (boss && boss.id) SND.playTheme(boss.id, { loop: true, volume: 0.55, fadeIn: 1500 });
+    // Stage 3 — recap + buttons (after cinematic finishes settling).
+    setTimeout(() => {
+      // Slide the cinematic up + reveal recap content beneath.
+      cinematic.classList.add("defeat-cinematic-shrunk");
+      const recap = el(`
+        <div class="center defeat-body" style="margin-top:2vh; animation: fade-in .4s ease;">
+          ${endingHTML}
+          <div style="font-size:22px;color:var(--bad);">${JP.defeat_sub}</div>
+          <div style="margin-top:18px;">
+            ${players.map(p => `<div>${p.avatar?p.avatar+' ':''}${p.name}: HP ${p.hp} ${p.role==='spy'?'🕵️':''}${p.bestCombo>=3?` 🔥 さいこう ×${p.bestCombo}`:''}</div>`).join("")}
+          </div>
+          ${buildRecap(stats)}
+          <div class="row" style="margin-top:22px;">
+            <button class="btn huge bad" id="again">${JP.play_again}</button>
+            <button class="btn ghost" id="title">${JP.back_to_title}</button>
+          </div>
+        </div>
+      `);
+      s.appendChild(recap);
+      tap($("again"), () => { SND.stopTheme(400); onAgain(); });
+      tap($("title"), () => { SND.stopTheme(400); onTitle(); });
+    }, 3500);
   }
 
   // -------- VOTE (Jinro mode) --------
