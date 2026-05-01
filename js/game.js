@@ -32,6 +32,59 @@ window.Game = (() => {
     return tier;
   }
 
+  // Attack types for monster-vs-monster (PvP) and boss-vs-player (hero) play.
+  // Each attack defined under a monster's `attacks` carries a `type` field
+  // (set in js/locale/<lang>.js). The type controls damage multiplier, hit
+  // count, target rule, side effects, and a label kids can read. Resolving
+  // an attack means: pick a type-def, multiply baseDmg by mult, then apply
+  // `hits` separate damage events. For "wild", each hit picks a fresh random
+  // alive part on the target. For "pierce", core armor is ignored. For
+  // "stun", the target gains a `_stunned` flag for one upcoming action
+  // (boss skips next attack / opponent loses 1 energy next turn).
+  //
+  // Attacks with no `type` (or unknown type) fall through to the BASIC
+  // default, which behaves like the legacy single-hit single-target attack
+  // — ensures pre-typed callers (the slingshot path before the picker is
+  // wired in) keep working unchanged.
+  const ATTACK_TYPES = {
+    heavy:  { mult: 1.5,  hits: 1, shakeTier: "heavy",  label: "💪 ヘビー",   tagline: "おおきい いっぱつ" },
+    quick:  { mult: 0.7,  hits: 2, shakeTier: "light",  label: "⚡ クイック",  tagline: "すばやい にれん" },
+    wild:   { mult: 0.5,  hits: 3, shakeTier: "medium", label: "🌪️ ワイルド", tagline: "ランダム みだれ", randomTarget: true },
+    pierce: { mult: 1.0,  hits: 1, shakeTier: "medium", label: "🎯 ピアス",    tagline: "アーマー つらぬき", ignoreArmor: true },
+    stun:   { mult: 0.7,  hits: 1, shakeTier: "light",  label: "❄️ スタン",    tagline: "つぎの ターン ふうじ", stun: true },
+  };
+  const BASIC_ATTACK_TYPE = { mult: 1.0, hits: 1, shakeTier: "medium", label: "", tagline: "" };
+  function attackTypeDef(type) {
+    return ATTACK_TYPES[type] || BASIC_ATTACK_TYPE;
+  }
+  // Build a hit plan: an array of damage events to apply in sequence. Each
+  // event has { dmg, ignoreArmor, stun, randomTarget }. Hits are distributed
+  // so total damage approximately matches `mult × baseDmg` (with rounding
+  // applied to each hit). Crits are still rolled per-hit by the caller.
+  function buildAttackPlan(type, baseDmg) {
+    const def = attackTypeDef(type);
+    const total = Math.max(0, Math.round(baseDmg * def.mult));
+    const hits = Math.max(1, def.hits);
+    // Distribute total across hits: first N-1 get floor(total/N), last one
+    // gets the remainder so we don't drop fractional damage. Each hit deals
+    // at minimum 1 damage if the total is non-zero.
+    const events = [];
+    let left = total;
+    for (let i = 0; i < hits; i++) {
+      const remainingHits = hits - i;
+      const dmg = i === hits - 1 ? left : Math.max(1, Math.floor(total / remainingHits));
+      left = Math.max(0, left - dmg);
+      events.push({
+        dmg,
+        ignoreArmor: !!def.ignoreArmor,
+        stun:        !!def.stun,
+        randomTarget: !!def.randomTarget,
+        shakeTier:   def.shakeTier,
+      });
+    }
+    return { def, events, totalDmg: total };
+  }
+
   let S = null; // current game state
 
   function newGame(opts) {
@@ -1150,5 +1203,11 @@ window.Game = (() => {
     }, () => location.reload(), () => location.reload());
   }
 
-  return { start, AVATARS: AVATAR_POOL };
+  return {
+    start,
+    AVATARS: AVATAR_POOL,
+    ATTACK_TYPES,           // exposed so UI.renderMonsterAttackPicker can show labels
+    attackTypeDef,
+    buildAttackPlan,        // exposed for UI preview ("this would deal X damage")
+  };
 })();
