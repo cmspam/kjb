@@ -975,12 +975,13 @@ g.part.bob {
   letter-spacing: 1px;
   box-shadow: 0 4px 16px rgba(255, 150, 0, 0.7);
   white-space: nowrap;
-  animation: pd-bonus-pop 1.5s ease-out forwards;
+  animation: pd-bonus-pop 2.4s ease-out forwards;
 }
 @keyframes pd-bonus-pop {
   0%   { opacity: 0; transform: translate(-50%, 30px) scale(0.6); }
-  35%  { opacity: 1; transform: translate(-50%, 0)    scale(1.1); }
-  60%  { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+  20%  { opacity: 1; transform: translate(-50%, 0)    scale(1.1); }
+  30%  { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+  88%  { opacity: 1; transform: translate(-50%, 0)    scale(1); }
   100% { opacity: 0; transform: translate(-50%, -10px) scale(1); }
 }
 
@@ -991,6 +992,9 @@ g.part.bob {
   position: fixed; inset: 0;
   z-index: 1820;
   pointer-events: none;
+  /* Clip the 3× scaled boss SVG to the viewport so it doesn't trigger
+   * page-level scrollbars or paint past the visible area. */
+  overflow: hidden;
 }
 .pd-bg {
   position: absolute; inset: 0;

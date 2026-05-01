@@ -1950,76 +1950,86 @@ window.UI = (() => {
   }
 
   // -------- PART DESTROYED ZOOM (cinematic) --------
-  // When a part hits 0 HP, zoom into that part on the boss SVG with a
-  // dramatic "BROKEN!" overlay. Replaces the older flat splash. Re-renders
-  // the boss SVG with a tighter viewBox centered on the destroyed part
-  // so the part's own state-2 draw (cracks / 💥 stars / bandages) reads
-  // up close. ~1500ms total. sfxBreak + theme duck for emphasis.
+  // When a part hits 0 HP, dolly-zoom into that part on the boss SVG with a
+  // dramatic "BROKEN!" overlay. The wrap renders the FULL boss (uncropped
+  // viewBox) and we scale it up by 3× via CSS transform with transform-origin
+  // anchored to the part's position inside the SVG — so the part stays put on
+  // screen while the rest of the boss expands outward past the viewport,
+  // selling a real camera push-in instead of a static pre-cropped close-up.
+  // ~2400ms total: zoom-in (700ms) → hold (~1400ms) → fade-out (300ms).
+  // sfxBreak + theme duck for emphasis.
   function showPartDestroyedZoom(boss, part, opts) {
     if (!boss || !part || !part.geom) return;
     const overlay = document.createElement("div");
     overlay.className = "part-destroy-overlay";
     const energyBonus = opts && opts.energyBonus;
     const breakerName = opts && opts.breakerName;
-    // Compute zoomed viewBox centered on the destroyed part. Boss SVGs use
-    // 0 0 800 480; zoom in 2.0× and clamp so we don't pan past the edges.
-    const fx = part.geom.x;
-    const fy = part.geom.y;
-    const zoom = 2.0;
-    const w = 800 / zoom, h = 480 / zoom;
-    const x = Math.max(0, Math.min(800 - w, fx - w/2));
-    const y = Math.max(0, Math.min(480 - h, fy - h/2));
+    // Boss SVGs use viewBox 0 0 800 480. Convert the part's center to a
+    // percentage inside the SVG box so we can pin transform-origin there
+    // and zoom from a static viewport view of the full boss into the part.
+    const originX = (part.geom.x / 800) * 100;
+    const originY = (part.geom.y / 480) * 100;
     let svgHTML = "";
-    try {
-      svgHTML = Monsters.renderBossSVG(boss).replace(/viewBox="0 0 800 480"/, `viewBox="${x} ${y} ${w} ${h}"`);
-    } catch(_) {}
+    try { svgHTML = Monsters.renderBossSVG(boss); } catch(_) {}
     const bonusHTML = energyBonus ? `<div class="pd-bonus">⚡ +${energyBonus} エナジー${breakerName?` (${escapeHTML(breakerName)})`:''}</div>` : "";
     overlay.innerHTML = `
       <div class="pd-bg"></div>
       <div class="pd-flash"></div>
-      <div class="pd-svg-wrap">${svgHTML}</div>
+      <div class="pd-svg-wrap" style="transform-origin: ${originX}% ${originY}%;">${svgHTML}</div>
       <div class="pd-banner">💥 BROKEN! 💥</div>
       <div class="pd-partname">${escapeHTML(part.name_jp || "")}</div>
       ${bonusHTML}`;
     document.body.appendChild(overlay);
     if (SND.sfxBreak) SND.sfxBreak(); else SND.sfxPop();
-    if (SND.duckTheme) SND.duckTheme(900, 0.30);
-    // Zoom-in punch animation. Translate(-50%, -50%) MUST be in every
-    // keyframe — Web Animations API replaces the whole transform, so
-    // dropping the translate would offset the wrap to bottom-right of
-    // center (visually invisible on small screens).
+    if (SND.duckTheme) SND.duckTheme(2000, 0.30);
+    // Translate(-50%, -50%) MUST be in every keyframe — Web Animations API
+    // replaces the whole transform property; dropping the translate would
+    // offset the wrap to bottom-right of center (invisible on small screens).
+    // Camera push-in: scale 1 → 3 in the first 30% (≈700ms), holds at 3
+    // until 88%, brief overshoot to 3.05 + opacity-drop on exit.
     overlay.querySelector(".pd-svg-wrap").animate(
       [
-        { transform: "translate(-50%, -50%) scale(1.3)", opacity: 0 },
-        { transform: "translate(-50%, -50%) scale(1.0)", opacity: 1, offset: 0.35 },
-        { transform: "translate(-50%, -50%) scale(1.0)", opacity: 1, offset: 0.85 },
-        { transform: "translate(-50%, -50%) scale(1.05)", opacity: 0 }
+        { transform: "translate(-50%, -50%) scale(1.0)",  opacity: 0, offset: 0    },
+        { transform: "translate(-50%, -50%) scale(1.0)",  opacity: 1, offset: 0.06 },
+        { transform: "translate(-50%, -50%) scale(3.0)",  opacity: 1, offset: 0.30 },
+        { transform: "translate(-50%, -50%) scale(3.0)",  opacity: 1, offset: 0.88 },
+        { transform: "translate(-50%, -50%) scale(3.10)", opacity: 0, offset: 1.0  }
       ],
-      { duration: 1500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+      { duration: 2400, easing: "cubic-bezier(.36,.07,.19,.97)", fill: "forwards" }
     );
     overlay.querySelector(".pd-flash").animate(
-      [{ opacity: 0 }, { opacity: 0.85, offset: 0.15 }, { opacity: 0 }],
-      { duration: 600, fill: "forwards" }
+      [
+        { opacity: 0, offset: 0    },
+        { opacity: .85, offset: 0.06 },
+        { opacity: 0, offset: 0.20 },
+        { opacity: 0, offset: 1.0  }
+      ],
+      { duration: 2400, fill: "forwards" }
     );
+    // Banner waits until the camera has settled on the part (~700ms in)
+    // before popping. Holds, then fades with the rest of the overlay.
     overlay.querySelector(".pd-banner").animate(
       [
-        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
-        { transform: "translate(-50%, -50%) scale(1.3) rotate(8deg)", opacity: 1, offset: 0.45 },
-        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1, offset: 0.85 },
-        { transform: "translate(-50%, -50%) scale(1.1) rotate(0)", opacity: 0 }
+        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)",   opacity: 0, offset: 0    },
+        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)",   opacity: 0, offset: 0.28 },
+        { transform: "translate(-50%, -50%) scale(1.3) rotate(8deg)",   opacity: 1, offset: 0.42 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)",        opacity: 1, offset: 0.50 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)",        opacity: 1, offset: 0.88 },
+        { transform: "translate(-50%, -50%) scale(1.1) rotate(0)",      opacity: 0, offset: 1.0  }
       ],
-      { duration: 1500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+      { duration: 2400, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
     );
     overlay.querySelector(".pd-partname").animate(
       [
-        { opacity: 0, transform: "translate(-50%, 0) scale(0.5)" },
-        { opacity: 1, transform: "translate(-50%, 0) scale(1)", offset: 0.5 },
-        { opacity: 1, transform: "translate(-50%, 0) scale(1)", offset: 0.85 },
-        { opacity: 0, transform: "translate(-50%, 0) scale(1)" }
+        { opacity: 0, transform: "translate(-50%, 0) scale(0.5)", offset: 0    },
+        { opacity: 0, transform: "translate(-50%, 0) scale(0.5)", offset: 0.32 },
+        { opacity: 1, transform: "translate(-50%, 0) scale(1)",   offset: 0.48 },
+        { opacity: 1, transform: "translate(-50%, 0) scale(1)",   offset: 0.88 },
+        { opacity: 0, transform: "translate(-50%, 0) scale(1)",   offset: 1.0  }
       ],
-      { duration: 1500, fill: "forwards" }
+      { duration: 2400, fill: "forwards" }
     );
-    setTimeout(() => { try { overlay.remove(); } catch(_){} }, 1500);
+    setTimeout(() => { try { overlay.remove(); } catch(_){} }, 2400);
   }
 
   // -------- PART DESTROYED SPLASH (legacy) --------
