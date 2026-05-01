@@ -954,6 +954,12 @@ window.Game = (() => {
     S.pronounceTarget = null; // bonus is one-shot per turn
     // Discard unspent attackPower; leftover energy stays (banked for cards next turn)
     currentPlayer().attackPower = 0;
+    // Bug fix: doubleNextAttack used to leak across rounds — if a player
+    // played `combo` and ended turn without attacking, the flag persisted and
+    // the NEXT-NEXT player's first attack would unexpectedly double. Now
+    // cleared at end-of-turn, scoped to the activating turn only.
+    S.doubleNextAttack = false;
+    S.pendingDamageBonus = 0;
     S.currentIdx++;
     nextTurn();
   }
@@ -966,10 +972,17 @@ window.Game = (() => {
       if (p.energy < card.cost) return;
       p.energy -= card.cost;
       p.hand.splice(idx, 1);
-      S.discard.push(card);
+      discardOrSink(card);
       const ef = card.effect;
-      if (ef.type === Cards.C.HINT) { S.hintForCurrentQ = true; UI.toast("ヒント！ まちがいを 1つ けして、おとも ゆっくり〜"); }
-      else if (ef.type === Cards.C.REROLL_Q) { S.rerolledThisQ = true; UI.toast("やりなおし！"); }
+      if (ef.type === Cards.C.HINT) {
+        // Max one hint per question — refund if already used.
+        if (S.hintForCurrentQ) { p.energy += card.cost; p.hand.push(card); S.discard.pop(); UI.toast("もう ヒントを つかった！", 1500); return redrawCb(); }
+        S.hintForCurrentQ = true; UI.toast("ヒント！ まちがいを 1つ けして、おとも ゆっくり〜");
+      }
+      else if (ef.type === Cards.C.REROLL_Q) {
+        if (S.rerolledThisQ) { p.energy += card.cost; p.hand.push(card); S.discard.pop(); UI.toast("もう やりなおした！", 1500); return redrawCb(); }
+        S.rerolledThisQ = true; UI.toast("やりなおし！");
+      }
       else if (ef.type === Cards.C.ENERGY) { p.energy += ef.v; UI.toast(`エナジー +${ef.v}`); }
       else if (ef.type === Cards.C.DRAW) { for (let i=0;i<ef.v;i++) drawCard(p); UI.toast(`カードを ${ef.v}まい ひいた`); }
       else { UI.toast("いま つかえないよ"); p.energy += card.cost; p.hand.push(card); S.discard.pop(); return redrawCb(); }
@@ -1002,7 +1015,7 @@ window.Game = (() => {
         const ef0 = card.effect;
         const isHealCard = ef0 && (ef0.type === Cards.C.HEAL_TARGET || ef0.type === Cards.C.HEAL_SELF);
         if (S.mode === "pvp" && isHealCard) {
-          p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
+          p.energy -= card.cost; p.hand.splice(idx,1); discardOrSink(card);
           applyCardEffect(p, card, p);  // target=self for typing safety
           SND.sfxCard();
           goAction();
@@ -1010,7 +1023,7 @@ window.Game = (() => {
         }
         pickPlayer(p, (target) => {
           try {
-            p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
+            p.energy -= card.cost; p.hand.splice(idx,1); discardOrSink(card);
             SND.sfxCard();
             // Reveal and Accuse drive their own continuation flow (private
             // overlay / cinematic toast → goAction). applyCardEffect's
@@ -1033,7 +1046,7 @@ window.Game = (() => {
         }, () => goAction());
         return;
       }
-      p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
+      p.energy -= card.cost; p.hand.splice(idx,1); discardOrSink(card);
       applyCardEffect(p, card, null);
       SND.sfxCard();
       if (S.mode === "pvp") {
@@ -1076,6 +1089,19 @@ window.Game = (() => {
     c.className = "btn ghost"; c.textContent = JP.cancel;
     UI.tap(c, onCancel);
     s.appendChild(c);
+  }
+
+  // Anti-stall: heal cards go to the BOTTOM of the deck rather than the
+  // discard pile, so the player can't loop heal-draw-heal-draw to outpace
+  // boss damage forever. Card mechanically exits hand (energy spent, hand
+  // slot freed) but waits its full turn through the deck before redraw.
+  function discardOrSink(card) {
+    const ef = card && card.effect;
+    if (ef && (ef.type === Cards.C.HEAL_TARGET || ef.type === Cards.C.HEAL_TEAM || ef.type === Cards.C.HEAL_SELF)) {
+      S.deck.push(card);
+    } else {
+      S.discard.push(card);
+    }
   }
 
   // Heal helpers for PvP: heal cards in PvP target the kid's OWN monster's
@@ -1164,7 +1190,12 @@ window.Game = (() => {
         pick.hp = Math.max(0, pick.hp - ef.v);
         SND.sfxHit();
       }
-      UI.toast(`ベロ ビーム！${oppName?` ${oppName} に`:''} ${ef.v}ダメ ×${n}`);
+      // Generalized toast — the previous "ベロ ビーム" copy was tako-themed
+      // even when the boss was a different monster. Now uses the card's name
+      // ("ベロ ビーム" / "Whip Splash" / etc. depending on locale) so flavor
+      // matches the played card.
+      const cardName = card && (card.name_jp || card.id) || "スプレッド";
+      UI.toast(`${cardName}！${oppName?` ${oppName} に`:''} ${ef.v}ダメ ×${n}`);
     } else if (ef.type === C.REVEAL_ROLE) {
       // Private reveal handled at playCardInAction level — see below — so the
       // overlay can drive its own continuation cleanly. Should not be reached

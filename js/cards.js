@@ -29,20 +29,31 @@ window.Cards = (() => {
   // from the active locale via window.JP.cards[id] (or window.I18N.card(id)).
   const POOL_BASE = [
     { id:"fart_bomb",  icon:"💨", cost:1, effect:{type:C.DMG_BONUS, v:3},    needsTarget:false, attackMod:true },
-    { id:"mega_punch", icon:"👊", cost:2, effect:{type:C.DMG_BONUS, v:5},    needsTarget:false, attackMod:true },
+    // mega_punch bumped from +5 → +6 so 1× mega_punch (2⚡) competes with
+    // 2× fart_bomb (also 2⚡, 6 dmg). Identical total, but mega_punch saves
+    // a card slot — meaningful in late game when hand-cap matters.
+    { id:"mega_punch", icon:"👊", cost:2, effect:{type:C.DMG_BONUS, v:6},    needsTarget:false, attackMod:true },
     { id:"unko_shield",icon:"🛡️", cost:1, effect:{type:C.SHIELD_SELF},        needsTarget:false },
     { id:"team_shield",icon:"✨", cost:2, effect:{type:C.SHIELD_TEAM},        needsTarget:false },
     { id:"heal",       icon:"🍌", cost:1, effect:{type:C.HEAL_TARGET, v:5},   needsTarget:true, targetType:"player" },
     { id:"team_heal",  icon:"🌬️", cost:2, effect:{type:C.HEAL_TEAM, v:3},     needsTarget:false },
-    { id:"energy",     icon:"🥤", cost:0, effect:{type:C.ENERGY, v:2},        needsTarget:false },
+    // energy now costs 1⚡ for +3⚡ (net +2). Was 0⚡ for +2 → net 2 free
+    // energy combined with draw_two could chain into infinite-energy loops.
+    // Net same value, but charges an action so the kid can't infinite-loop.
+    { id:"energy",     icon:"🥤", cost:1, effect:{type:C.ENERGY, v:3},        needsTarget:false },
     { id:"draw_two",   icon:"🎴", cost:1, effect:{type:C.DRAW, v:2},          needsTarget:false },
     { id:"combo",      icon:"🔥", cost:1, effect:{type:C.DOUBLE_NEXT},        needsTarget:false },
     { id:"spread",     icon:"👅", cost:2, effect:{type:C.HIT_RANDOM_2, v:2},  needsTarget:false, attackMod:false },
     { id:"reveal",     icon:"🔍", cost:1, effect:{type:C.REVEAL_ROLE},        needsTarget:true, targetType:"player", jinroOnly:true },
     { id:"accuse",     icon:"⚖️", cost:2, effect:{type:C.ACCUSE_PLAYER},      needsTarget:true, targetType:"player", jinroOnly:true },
     { id:"escape",     icon:"🏃", cost:1, effect:{type:C.SKIP_BOSS_ATK},      needsTarget:false },
-    { id:"hint",       icon:"💡", cost:0, effect:{type:C.HINT},               needsTarget:false, beforeQ:true },
-    { id:"reroll",     icon:"💪", cost:1, effect:{type:C.REROLL_Q},           needsTarget:false, beforeQ:true },
+    // hint now costs 1⚡ (was 0⚡) — was the strictly-better choice on every
+    // listening Q since it both ducked one wrong answer AND slowed the audio
+    // for free. The 1⚡ price makes it a real choice vs other plays.
+    { id:"hint",       icon:"💡", cost:1, effect:{type:C.HINT},               needsTarget:false, beforeQ:true },
+    // reroll: anpan boss unlock. Was 0 copies in deck — now 2 so the unlock
+    // is meaningful play, not a flavor stub.
+    { id:"reroll",     icon:"🔄", cost:1, effect:{type:C.REROLL_Q},           needsTarget:false, beforeQ:true },
   ];
 
   // Look up flavor for a card id from the active locale, with safe fallback.
@@ -117,7 +128,7 @@ window.Cards = (() => {
       fart_bomb: 6, mega_punch: 3, unko_shield: 4, team_shield: 2, heal: 4,
       team_heal: 2, energy: 4, draw_two: 3, combo: 3, spread: 2,
       reveal: jinroMode ? 3 : 0, accuse: jinroMode ? 2 : 0,
-      escape: 3, hint: 4, reroll: 0
+      escape: 3, hint: 3, reroll: 2,
     };
     for (const c of POOL_BASE) {
       if (!isUnlocked(c.id)) continue; // locked until the right boss is defeated
