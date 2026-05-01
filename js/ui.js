@@ -707,6 +707,17 @@ window.UI = (() => {
     // Translucent overlay card sits ON the stage so the boss SVG remains
     // the dominant visual. options[] inside the card; tap commits answer
     // and triggers reactStage() before the result transition.
+    // Boss "thinking" indicator floats above the stage during the question.
+    // Adds presence — boss is waiting for the kid's answer. Gets a grin
+    // emoji when the timer goes low (boss thinks the kid won't make it).
+    const stageInQ = s.querySelector(".stage");
+    if (stageInQ) {
+      const thinking = document.createElement("div");
+      thinking.className = "boss-thinking";
+      thinking.id = "boss-thinking";
+      thinking.textContent = "❓";
+      stageInQ.appendChild(thinking);
+    }
     s.appendChild(el(`
       <div class="question-card question-overlay">
         ${timerHtml}
@@ -732,7 +743,16 @@ window.UI = (() => {
         remaining--;
         if (tn) tn.textContent = remaining;
         const t = $("q-timer");
-        if (t && remaining <= 5) t.classList.add("low");
+        if (t && remaining <= 5) {
+          t.classList.add("low");
+          // Boss starts grinning when the timer drops low — visceral
+          // "is the kid gonna make it?" pressure.
+          const think = document.getElementById("boss-thinking");
+          if (think && think.textContent === "❓") {
+            think.textContent = "😈";
+            think.classList.add("grinning");
+          }
+        }
         if (remaining <= 0) {
           clearInterval(timerHandle);
           if (!answered) {
@@ -880,6 +900,12 @@ window.UI = (() => {
             // before the result screen renders.
             const stageEl = s.querySelector(".stage");
             if (stageEl) reactStage(stageEl, correct);
+            // Clear the thinking-pose indicator on answer.
+            const think = document.getElementById("boss-thinking");
+            if (think) {
+              think.classList.add("dismissing");
+              setTimeout(() => { try { think.remove(); } catch(_){} }, 400);
+            }
             // Voice a hits-pool line on wrong answers — boss laughs at the kid.
             if (!correct && boss && boss.id && Array.isArray(boss.hits) && boss.hits.length) {
               const line = boss.hits[(Math.random()*boss.hits.length)|0];

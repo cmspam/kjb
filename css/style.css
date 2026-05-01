@@ -800,6 +800,38 @@ h3 { font-size: 28px; margin: 4px 0; }
   transform: none;
 }
 
+/* Boss "thinking" indicator (N7 polish) — floats above the stage during
+   the question screen. ❓ while waiting; ❓ swaps to 😈 when timer
+   drops low. Dismisses with a fly-up on answer. */
+.boss-thinking {
+  position: absolute;
+  top: 8px; right: 18px;
+  font-size: 36px;
+  z-index: 6;
+  animation: boss-thinking-bob 1.6s ease-in-out infinite;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 0 rgba(0,0,0,0.4));
+}
+@keyframes boss-thinking-bob {
+  0%, 100% { transform: translateY(0)    rotate(-3deg); }
+  50%      { transform: translateY(-8px) rotate(3deg); }
+}
+.boss-thinking.grinning {
+  animation: boss-thinking-grin 0.7s ease-in-out infinite;
+  filter: drop-shadow(0 4px 0 rgba(0,0,0,0.4)) drop-shadow(0 0 16px rgba(255,80,80,0.7));
+}
+@keyframes boss-thinking-grin {
+  0%, 100% { transform: scale(1)    rotate(-5deg); }
+  50%      { transform: scale(1.15) rotate(5deg); }
+}
+.boss-thinking.dismissing {
+  animation: boss-thinking-fly 0.4s ease-out forwards;
+}
+@keyframes boss-thinking-fly {
+  0%   { transform: translateY(0)     scale(1)   rotate(0); opacity: 1; }
+  100% { transform: translateY(-60px) scale(0.4) rotate(40deg); opacity: 0; }
+}
+
 /* Killing blow — slow-mo freeze + huge damage number when core dies. */
 .killing-blow-overlay {
   position: fixed; inset: 0;
