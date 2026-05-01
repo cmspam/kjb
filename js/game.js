@@ -831,11 +831,16 @@ window.Game = (() => {
         if (oppCore && oppCore.hp <= 0) {
           opponent.dead = true;
           UI.toast(JP.pvp_eliminated(opponent.name), 2000);
-          UI.showKO(opMon, () => {
-            const winner = checkPvpWinner();
-            if (winner) doVictory({ winner });
-            else endTurn();
-          });
+          // Slow-mo killing-blow freeze before KO cinematic.
+          const finishKO = () => {
+            UI.showKO(opMon, () => {
+              const winner = checkPvpWinner();
+              if (winner) doVictory({ winner });
+              else endTurn();
+            });
+          };
+          if (UI.showKillingBlow) UI.showKillingBlow(plan.totalDmg, finishKO);
+          else finishKO();
           return;
         }
         if (!opMon._cliffShown && oppCore && oppCore.hp === 1) {
@@ -992,8 +997,17 @@ window.Game = (() => {
       setTimeout(() => UI.showPhase2Intro && UI.showPhase2Intro(S.boss, () => {}), 600);
     }
     // Check win — doVictory wraps the K.O. cinematic so all kill paths
-    // (this one, card effects, etc.) get the same reveal.
-    if (core && core.hp <= 0) { return doVictory(); }
+    // (this one, card effects, etc.) get the same reveal. Slow-mo
+    // killing-blow freeze plays first when the kill came from this
+    // attack (dmg-event landed on core).
+    if (core && core.hp <= 0) {
+      if (part === core && UI.showKillingBlow) {
+        UI.showKillingBlow(dmg, () => doVictory());
+      } else {
+        doVictory();
+      }
+      return;
+    }
     // Cliffhanger: core sits at exactly 1 HP. Drop the music, show a splash,
     // beat of silence — then continue. One shot per fight.
     if (!S.boss._cliffShown && core && core.hp === 1) {

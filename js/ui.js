@@ -924,6 +924,51 @@ window.UI = (() => {
     });
   }
 
+  // -------- KILLING BLOW (slow-mo freeze on core kill) --------
+  // When the core hits 0, freeze the world for ~700ms and float a huge
+  // damage number before the K.O. cinematic plays. Adds dramatic peak
+  // to the most important moment in the fight.
+  function showKillingBlow(dmg, onDone) {
+    const overlay = document.createElement("div");
+    overlay.className = "killing-blow-overlay";
+    overlay.innerHTML = `
+      <div class="kb-vignette"></div>
+      <div class="kb-flash"></div>
+      <div class="kb-dmg">-${dmg|0}</div>
+      <div class="kb-label">FINISH!</div>`;
+    document.body.appendChild(overlay);
+    if (SND.sfxCrit) SND.sfxCrit();
+    if (SND.duckTheme) SND.duckTheme(900, 0.15);
+    // Hit-stop on the stage: pause its motion for the freeze frame.
+    const stage = document.querySelector(".stage");
+    if (stage) {
+      stage.classList.add("hit-stop", "kb-frozen");
+      setTimeout(() => stage.classList.remove("hit-stop", "kb-frozen"), 700);
+    }
+    overlay.querySelector(".kb-flash").animate(
+      [{ opacity: 0 }, { opacity: 0.9, offset: 0.2 }, { opacity: 0 }],
+      { duration: 700, fill: "forwards" }
+    );
+    overlay.querySelector(".kb-dmg").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0.4)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.4)", opacity: 1, offset: 0.3 },
+        { transform: "translate(-50%, -50%) scale(1.2)", opacity: 1, offset: 0.7 },
+        { transform: "translate(-50%, -50%) scale(1.5)", opacity: 0 }
+      ],
+      { duration: 700, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".kb-label").animate(
+      [
+        { transform: "translate(-50%, 0) scale(0)", opacity: 0 },
+        { transform: "translate(-50%, 0) scale(1.2)", opacity: 1, offset: 0.5 },
+        { transform: "translate(-50%, 0) scale(1)", opacity: 1 }
+      ],
+      { duration: 600, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    setTimeout(() => { try { overlay.remove(); } catch(_){} if (onDone) onDone(); }, 750);
+  }
+
   // -------- CARD-PLAY FLOURISH --------
   // When a kid plays a card, briefly hero it onto the screen — big card,
   // glow + scale punch, name + effect read-out, then dissolves into
@@ -3473,7 +3518,7 @@ window.UI = (() => {
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
            renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
-           showMatchTitleCard, renderBossPickerMap, showCardPlay,
+           showMatchTitleCard, renderBossPickerMap, showCardPlay, showKillingBlow,
            showRoundIntro, showRageIntro, showPhase2Intro, showKO, showFightStinger, spawnConfetti,
            showComboSplash, showFirstBloodSplash, showPartDestroyedSplash, showSpeechBonusSplash,
            showCompendium, runSpeechChallenge,

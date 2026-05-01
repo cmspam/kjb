@@ -665,6 +665,46 @@ h3 { font-size: 28px; margin: 4px 0; }
   transform: none;
 }
 
+/* Killing blow — slow-mo freeze + huge damage number when core dies. */
+.killing-blow-overlay {
+  position: fixed; inset: 0;
+  z-index: 1880;
+  pointer-events: none;
+}
+.kb-vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(0,0,0,0.85) 100%);
+}
+.kb-flash {
+  position: absolute; inset: 0;
+  background: rgba(255, 255, 255, 0.95);
+  opacity: 0;
+}
+.kb-dmg {
+  position: absolute;
+  left: 50%; top: 50%;
+  font-size: 180px;
+  font-weight: 900;
+  color: var(--bad);
+  text-shadow: 0 8px 0 #000, 0 0 60px var(--bad), 0 0 120px var(--bad);
+  letter-spacing: -8px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.kb-label {
+  position: absolute;
+  left: 50%; top: calc(50% + 110px);
+  font-size: 36px;
+  font-weight: 900;
+  color: #ffcc00;
+  text-shadow: 0 4px 0 #000, 0 0 30px #ffcc00;
+  letter-spacing: 8px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+/* Stage in the killing-blow freeze: dim + slight scale shake. */
+.stage.kb-frozen { filter: brightness(0.6) saturate(0.8); transition: filter 0.1s ease; }
+
 /* Card-play flourish — when a card is played, briefly hero it
    center-screen with glow + scale punch + name/effect read-out. */
 .card-play-overlay {
