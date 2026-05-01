@@ -310,8 +310,16 @@ window.UI = (() => {
       const pvpDisabled = count < 2; // PvP needs ≥2 players
       if (pvpDisabled && mode === "pvp") mode = "hero";
       s.appendChild(el(`
-        <div class="center" style="margin-top: 3vh;">
-          <h1 class="pop">${JP.title}</h1>
+        <div class="title-bg">
+          <div class="title-vignette"></div>
+          <div class="title-lightning"></div>
+          <div class="title-silhouette title-silhouette-1">🐙</div>
+          <div class="title-silhouette title-silhouette-2">👾</div>
+          <div class="title-silhouette title-silhouette-3">🦑</div>
+        </div>
+        <div class="center title-content" style="margin-top: 3vh; position: relative; z-index: 1;">
+          <div class="title-tonight">▶▶ TONIGHT · TOKYO ◀◀</div>
+          <h1 class="pop title-headline">${JP.title}</h1>
           <div class="title-en bob">${JP.titleEn}</div>
           <div class="kaiju-row" style="font-size: 56px; margin: 8px 0;">
             <span class="kaiju-emoji" style="animation-delay: 0.0s;">🐙</span><span class="kaiju-emoji" style="animation-delay: 0.4s;">💩</span><span class="kaiju-emoji" style="animation-delay: 0.8s;">👾</span><span class="kaiju-emoji" style="animation-delay: 1.2s;">🦑</span>
@@ -334,7 +342,8 @@ window.UI = (() => {
             <button class="toggle ${mode==='hero'?'on':''}" id="m-hero" style="font-size:14px;padding:8px 12px;">⚔️ ${JP.mode_hero}</button>
             <button class="toggle ${mode==='pvp'?'on':''} ${pvpDisabled?'':''}" id="m-pvp" ${pvpDisabled?'disabled style="opacity:.45;font-size:14px;padding:8px 12px;"':'style="font-size:14px;padding:8px 12px;"'}>${JP.mode_pvp}</button>
           </div>
-          <button class="btn huge hot" id="btn-start">${JP.start} ⚔️</button>
+          <button class="btn huge hot title-start-btn" id="btn-start">${JP.start} ⚔️</button>
+          <div class="title-press-start">▶ TAP TO START ◀</div>
           <div class="row" style="margin-top:8px;">
             <button class="btn ghost" id="btn-rules">あそびかた ❓</button>
             <button class="btn ghost" id="btn-compendium">📖 ずかん${(window.Progress&&Progress.totalDefeated())?` (${Progress.totalDefeated()}/6)`:''}</button>
