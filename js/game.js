@@ -834,7 +834,10 @@ window.Game = (() => {
           S.log.push(`${p.name} → ${opponent.name}.${hitPart.name_jp}: ${hitDmg}${ev.ignoreArmor ? ' (pierce)' : ''}`);
           if (hitPart.hp === 0) {
             S.log.push(`${opponent.name} の ${hitPart.name_jp} を こわした！`);
-            if (UI.showPartDestroyedSplash) UI.showPartDestroyedSplash(`${opponent.name} の ${hitPart.name_jp}`);
+            // Zoom cinematic on the destroyed part — same pattern as hero
+            // mode. Falls back to flat splash if geom is missing.
+            if (UI.showPartDestroyedZoom && hitPart.geom) UI.showPartDestroyedZoom(opMon, hitPart);
+            else if (UI.showPartDestroyedSplash) UI.showPartDestroyedSplash(`${opponent.name} の ${hitPart.name_jp}`);
             else if (SND.sfxBreak) SND.sfxBreak();
             else SND.sfxPop();
           }
@@ -972,26 +975,31 @@ window.Game = (() => {
       }
       dmg = reduced;
     }
-    // Optional slingshot animation before damage applies
+    // Optional slingshot animation: visuals fire at bang time (so the
+    // kid sees the part redraw + dmg-num + part-destroyed cinematic AS
+    // the 💥 lands), reactions + state transitions fire at modal close.
     if (SND.getSlingshot && SND.getSlingshot()) {
-      UI.showSlingshot(S.boss, part.name_jp, () => applyPartHit(p, part, dmg));
+      UI.showSlingshot(
+        S.boss, part.name_jp,
+        () => applyPartHitVisual(p, part, dmg),       // onConnect (bang)
+        () => applyPartHit(p, part, dmg, true)         // onFire (modal close)
+      );
       return;
     }
     applyPartHit(p, part, dmg);
   }
 
-  function applyPartHit(p, part, dmg) {
+  // Phase 1 of a hero attack — VISUAL impact. Fires at the slingshot's
+  // bang moment (or immediately for non-slingshot paths) so the kid sees
+  // the damage register at the same instant they see the 💥. No game-
+  // state branching here — all checks (KO, cliffhanger, rage, phase-2,
+  // boss reaction bubble) happen in applyPartHitReactions afterward.
+  function applyPartHitVisual(p, part, dmg) {
     part.hp = Math.max(0, part.hp - dmg);
-    // Track the biggest single hit for the post-battle scorecard.
     if (S.battleStats && dmg > (S.battleStats.biggestHit || 0)) {
       S.battleStats.biggestHit = dmg;
       S.battleStats.biggestHitBy = p ? p.name : null;
     }
-    // Re-render the boss SVG in place so the part's damaged/destroyed
-    // visual state updates as the attack connects (each part's draw fn
-    // branches on partState which reads .hp/.maxHP). Without this, kids
-    // saw the dmg-num float but the boss looked unchanged until the
-    // next full screen transition.
     refreshStageSVG(S.boss);
     SND.sfxHit();
     const stage = document.querySelector(".stage");
@@ -1001,11 +1009,32 @@ window.Game = (() => {
       num.className = "dmg-num tier-" + tier; num.textContent = "-" + dmg;
       stage.appendChild(num);
       setTimeout(() => num.remove(), 1100);
+    }
+    if (part.hp === 0) {
+      // Dramatic part-destroyed zoom-in cinematic — replaces the small
+      // splash overlay. Re-renders the boss SVG with a tighter viewBox
+      // centered on the broken part, with a "BROKEN!" headline.
+      if (UI.showPartDestroyedZoom) UI.showPartDestroyedZoom(S.boss, part);
+      else if (UI.showPartDestroyedSplash) UI.showPartDestroyedSplash(part.name_jp);
+      else if (SND.sfxBreak) SND.sfxBreak();
+    }
+  }
+
+  // Phase 2 of a hero attack — game-state REACTIONS. Fires after the
+  // slingshot modal has fully closed (or immediately for non-slingshot
+  // paths). The visual phase has already deducted hp + flashed the dmg-
+  // num + redrawn the SVG; this phase handles boss hit-bubble + voice,
+  // log entry, phase-2 trigger, KO/cliffhanger/rage transitions, endTurn.
+  function applyPartHit(p, part, dmg, _visualAlreadyApplied) {
+    if (!_visualAlreadyApplied) {
+      applyPartHitVisual(p, part, dmg);
+    }
+    const stage = document.querySelector(".stage");
+    if (stage) {
       // Boss reaction speech bubble — sequenced AFTER the damage number floats away
       // (both sit near the top of the stage and would otherwise overlap).
       const hits = S.boss.hits || [];
       if (hits.length) {
-        // Avoid back-to-back duplicate lines — small per-boss ring buffer.
         S.boss._hitsHist = S.boss._hitsHist || [];
         const line = window.pickRandNoRepeat
           ? pickRandNoRepeat(hits, S.boss._hitsHist, 3)
@@ -1018,7 +1047,6 @@ window.Game = (() => {
           bubble.textContent = line;
           stageNow.appendChild(bubble);
           setTimeout(() => bubble.remove(), 2000);
-          // Voice the reaction
           if (S.boss && S.boss.id) SND.playBossLine(S.boss.id, line);
         }, 1100);
       }
@@ -1026,15 +1054,11 @@ window.Game = (() => {
     UI.toast(JP.hit_part(p.name, part.name_jp, dmg), 1800);
     p.attackPower = 0;
     S.pendingDamageBonus = 0;
+    p._attackBlockedReason = "attacked";
     S.log.push(`${p.name} → ${part.name_jp}: ${dmg} ダメージ！`);
-    // shaking would be added with animation; we re-render to update HP.
     if (part.hp === 0) {
       S.log.push(`${part.name_jp} を こわした！`);
-      // Don't sfxPop on part destroy anymore — sfxBreak is a glass-shatter
-      // chord that actually feels like something broke. Splash overlay too.
-      if (UI.showPartDestroyedSplash) UI.showPartDestroyedSplash(part.name_jp);
-      else SND.sfxBreak ? SND.sfxBreak() : SND.sfxPop();
-      S.boss._lostPartTaunt = true; // one-shot: next taunt reflects this loss
+      S.boss._lostPartTaunt = true;
     }
     // PHASE 2 transition (N2) — once the core drops below 50%, the boss
     // enters its second form. Visual change via a CSS class on the stage,

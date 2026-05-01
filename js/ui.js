@@ -1227,7 +1227,20 @@ window.UI = (() => {
   }
 
   // -------- SLINGSHOT (interactive attack animation, hero mode) --------
-  function showSlingshot(boss, partName, onFire) {
+  // Slingshot has TWO callback hooks now:
+  //   onConnect — fires at bang time (~380ms in, when 💥 appears + sfxHit
+  //               plays). Caller does the part-damage + SVG redraw here so
+  //               the kid sees the visual update sync'd to the bang.
+  //   onFire    — fires at modal close (~900ms). Caller runs the post-hit
+  //               reactions / KO check / endTurn here. Modal fades out
+  //               between bang and close so the boss reveal is visible.
+  // Either is optional (legacy callers passing only onFire still work).
+  function showSlingshot(boss, partName, onConnect, onFire) {
+    // Backward-compat: if only one callback, treat it as onFire.
+    if (typeof onFire === "undefined" && typeof onConnect === "function") {
+      onFire = onConnect;
+      onConnect = null;
+    }
     SND.unlock();
     const taunt = pickRand(JP.slingshot_taunts || ["うってみろよ！"]);
     // Boss voices the heckle — only attempt when we know which boss is talking
@@ -1325,12 +1338,18 @@ window.UI = (() => {
         bang.className = "sling-bang";
         bang.textContent = "💥";
         modal.appendChild(bang);
-        SND.sfxHit();
+        // The connect hook fires HERE — kid hears the bang, sees the boss
+        // SVG redraw with damage applied, hears any part-destroyed
+        // cinematic. Modal also begins fading out so the stage reveal is
+        // visible by the time the modal closes 520ms later.
+        if (typeof onConnect === "function") onConnect();
+        modal.style.transition = "opacity 0.45s ease";
+        modal.style.opacity = "0";
       }, 380);
       setTimeout(() => {
         document.removeEventListener("touchmove", blockScroll);
         modal.remove();
-        onFire();
+        if (typeof onFire === "function") onFire();
       }, 900);
     }
   }
@@ -1904,8 +1923,75 @@ window.UI = (() => {
     setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 1100);
   }
 
-  // -------- PART DESTROYED SPLASH --------
-  // Fired when a boss/opponent monster part hp hits 0.
+  // -------- PART DESTROYED ZOOM (cinematic) --------
+  // When a part hits 0 HP, zoom into that part on the boss SVG with a
+  // dramatic "BROKEN!" overlay. Replaces the older flat splash. Re-renders
+  // the boss SVG with a tighter viewBox centered on the destroyed part
+  // so the part's own state-2 draw (cracks / 💥 stars / bandages) reads
+  // up close. ~1500ms total. sfxBreak + theme duck for emphasis.
+  function showPartDestroyedZoom(boss, part) {
+    if (!boss || !part || !part.geom) return;
+    const overlay = document.createElement("div");
+    overlay.className = "part-destroy-overlay";
+    // Compute zoomed viewBox centered on the destroyed part. Boss SVGs use
+    // 0 0 800 480; zoom in 2.0× and clamp so we don't pan past the edges.
+    const fx = part.geom.x;
+    const fy = part.geom.y;
+    const zoom = 2.0;
+    const w = 800 / zoom, h = 480 / zoom;
+    const x = Math.max(0, Math.min(800 - w, fx - w/2));
+    const y = Math.max(0, Math.min(480 - h, fy - h/2));
+    let svgHTML = "";
+    try {
+      svgHTML = Monsters.renderBossSVG(boss).replace(/viewBox="0 0 800 480"/, `viewBox="${x} ${y} ${w} ${h}"`);
+    } catch(_) {}
+    overlay.innerHTML = `
+      <div class="pd-bg"></div>
+      <div class="pd-flash"></div>
+      <div class="pd-svg-wrap">${svgHTML}</div>
+      <div class="pd-banner">💥 BROKEN! 💥</div>
+      <div class="pd-partname">${escapeHTML(part.name_jp || "")}</div>`;
+    document.body.appendChild(overlay);
+    if (SND.sfxBreak) SND.sfxBreak(); else SND.sfxPop();
+    if (SND.duckTheme) SND.duckTheme(900, 0.30);
+    // Zoom-in punch animation for the SVG container.
+    overlay.querySelector(".pd-svg-wrap").animate(
+      [
+        { transform: "scale(1.3)", opacity: 0 },
+        { transform: "scale(1.0)", opacity: 1, offset: 0.35 },
+        { transform: "scale(1.0)", opacity: 1, offset: 0.85 },
+        { transform: "scale(1.05)", opacity: 0 }
+      ],
+      { duration: 1500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".pd-flash").animate(
+      [{ opacity: 0 }, { opacity: 0.85, offset: 0.15 }, { opacity: 0 }],
+      { duration: 600, fill: "forwards" }
+    );
+    overlay.querySelector(".pd-banner").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.3) rotate(8deg)", opacity: 1, offset: 0.45 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1, offset: 0.85 },
+        { transform: "translate(-50%, -50%) scale(1.1) rotate(0)", opacity: 0 }
+      ],
+      { duration: 1500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".pd-partname").animate(
+      [
+        { opacity: 0, transform: "translate(-50%, 0) scale(0.5)" },
+        { opacity: 1, transform: "translate(-50%, 0) scale(1)", offset: 0.5 },
+        { opacity: 1, transform: "translate(-50%, 0) scale(1)", offset: 0.85 },
+        { opacity: 0, transform: "translate(-50%, 0) scale(1)" }
+      ],
+      { duration: 1500, fill: "forwards" }
+    );
+    setTimeout(() => { try { overlay.remove(); } catch(_){} }, 1500);
+  }
+
+  // -------- PART DESTROYED SPLASH (legacy) --------
+  // Smaller banner overlay — kept for non-zoom callers (PvP applyHits
+  // still uses this fallback when geom data is unavailable).
   function showPartDestroyedSplash(partName) {
     const overlay = document.createElement("div");
     overlay.className = "round-intro-overlay";
@@ -3627,7 +3713,7 @@ window.UI = (() => {
            renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
            showMatchTitleCard, renderBossPickerMap, showCardPlay, showKillingBlow,
            showRoundIntro, showRageIntro, showPhase2Intro, showKO, showFightStinger, spawnConfetti,
-           showComboSplash, showFirstBloodSplash, showPartDestroyedSplash, showSpeechBonusSplash,
+           showComboSplash, showFirstBloodSplash, showPartDestroyedSplash, showPartDestroyedZoom, showSpeechBonusSplash,
            showCompendium, runSpeechChallenge,
            menuModal, showPvpFaceoff, showCliffhanger };
 })();

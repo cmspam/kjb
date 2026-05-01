@@ -913,6 +913,61 @@ g.part.bob {
   100% { transform: translateY(-60px) scale(0.4) rotate(40deg); opacity: 0; }
 }
 
+/* Part destroyed zoom — cinematic close-up on the broken part with
+   "BROKEN!" headline. Layered: dark bg + flash overlay + zoomed SVG +
+   banner text + part name. ~1.5s total. */
+.part-destroy-overlay {
+  position: fixed; inset: 0;
+  z-index: 1820;
+  pointer-events: none;
+}
+.pd-bg {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(80,0,0,0.85), rgba(0,0,0,0.95));
+}
+.pd-flash {
+  position: absolute; inset: 0;
+  background: rgba(255, 255, 255, 0.95);
+  opacity: 0;
+}
+.pd-svg-wrap {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%; max-width: 720px;
+  height: 50%;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 0 24px rgba(255, 80, 80, 0.7));
+}
+.pd-svg-wrap svg { width: 100%; height: 100%; }
+.pd-banner {
+  position: absolute;
+  left: 50%; top: 50%;
+  font-size: 88px;
+  font-weight: 900;
+  color: #ffcc00;
+  text-shadow: 0 8px 0 #000, 0 0 40px var(--bad), 0 0 80px var(--bad);
+  letter-spacing: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.pd-partname {
+  position: absolute;
+  left: 50%; top: calc(50% + 80px);
+  transform: translate(-50%, 0);
+  font-size: 32px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 0 #000, 0 0 20px var(--bad);
+  letter-spacing: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .pd-banner   { font-size: 56px; letter-spacing: 4px; }
+  .pd-partname { font-size: 22px; top: calc(50% + 60px); }
+}
+
 /* Killing blow — slow-mo freeze + huge damage number when core dies. */
 .killing-blow-overlay {
   position: fixed; inset: 0;
