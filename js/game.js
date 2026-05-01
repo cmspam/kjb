@@ -282,22 +282,28 @@ window.Game = (() => {
     });
   }
 
-  // Re-render the on-screen boss/opponent SVG so damaged or destroyed parts
-  // update their drawing in place, without waiting for a full screen
-  // re-render. Called from each per-hit damage application.
+  // Re-render any currently-visible boss/opponent SVG so damaged or
+  // destroyed parts update their drawing in place. Targets:
+  //   .stage .stage-svg     — primary battle stage
+  //   .sling-target-svg     — the in-modal boss preview the slingshot
+  //                           shows the kid
+  //   .stage > svg          — legacy direct-child for boss intro / KO /
+  //                           defeat-cinematic stages
+  // Called from each per-hit damage application so the kid sees the
+  // visual update sync'd to the bang.
   function refreshStageSVG(monster) {
     if (!monster || !window.Monsters || !Monsters.renderBossSVG) return;
+    const newSvg = Monsters.renderBossSVG(monster);
     const stageSvgEl = document.querySelector(".stage .stage-svg");
+    if (stageSvgEl) stageSvgEl.innerHTML = newSvg;
+    const slingTarget = document.querySelector(".sling-target-svg");
+    if (slingTarget) slingTarget.innerHTML = newSvg;
     if (!stageSvgEl) {
-      // Legacy direct-child fallback (boss intro / KO / defeat-cinematic
-      // render the SVG outside .stage-svg).
       const stage = document.querySelector(".stage");
       if (stage && stage.firstElementChild && stage.firstElementChild.tagName === "svg") {
-        stage.innerHTML = Monsters.renderBossSVG(monster);
+        stage.innerHTML = newSvg;
       }
-      return;
     }
-    stageSvgEl.innerHTML = Monsters.renderBossSVG(monster);
   }
 
   // Snapshot HP / part HP at the start of a jinro round so finishBossTurn can

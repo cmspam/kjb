@@ -1248,10 +1248,15 @@ window.UI = (() => {
     if (boss && boss.id) SND.playBossLine(boss.id, taunt);
     const modal = document.createElement("div");
     modal.className = "sling-modal";
+    // Render the actual boss (small / "in the distance") instead of a
+    // 🎯 reticle so the kid sees what they're aiming at. On fire(), the
+    // boss SVG scales up rapidly (3D-like approach) while the rock flies
+    // toward it, then 💥 lands. Boss SVG re-renders to show damage.
+    const bossSvg = (boss && Monsters.renderBossSVG) ? Monsters.renderBossSVG(boss) : "";
     modal.innerHTML = `
       <div class="sling-bubble">${escapeHTML(taunt)}</div>
       <div class="sling-target-area">
-        <div class="sling-emoji-target">🎯</div>
+        <div class="sling-target-svg" id="sling-target-svg">${bossSvg}</div>
         <div class="sling-target-name">${escapeHTML(partName||"")}</div>
       </div>
       <svg viewBox="0 0 400 500" id="sling-svg" preserveAspectRatio="xMidYEnd meet">
@@ -1328,11 +1333,17 @@ window.UI = (() => {
       bandL.setAttribute("y2", "260");
       bandR.setAttribute("y2", "260");
       SND.sfxPop();
+      // Boss zooms in (3D-like approach) — runs in parallel with the rock
+      // flight so the rock and the now-larger boss meet at bang time.
+      const targetSvg = modal.querySelector("#sling-target-svg");
+      if (targetSvg) targetSvg.classList.add("zooming");
       const proj = document.createElement("div");
       proj.className = "sling-proj";
       proj.textContent = "🪨";
       modal.appendChild(proj);
-      requestAnimationFrame(() => { proj.style.top = "5%"; proj.style.transform = "translate(-50%, 0) scale(1.4) rotate(180deg)"; });
+      // Rock arcs upward AND grows larger to sell the perspective
+      // (closer = bigger). End scale 2.4 vs the previous 1.4.
+      requestAnimationFrame(() => { proj.style.top = "20%"; proj.style.transform = "translate(-50%, 0) scale(2.4) rotate(180deg)"; });
       setTimeout(() => {
         const bang = document.createElement("div");
         bang.className = "sling-bang";
@@ -1954,13 +1965,16 @@ window.UI = (() => {
     document.body.appendChild(overlay);
     if (SND.sfxBreak) SND.sfxBreak(); else SND.sfxPop();
     if (SND.duckTheme) SND.duckTheme(900, 0.30);
-    // Zoom-in punch animation for the SVG container.
+    // Zoom-in punch animation. Translate(-50%, -50%) MUST be in every
+    // keyframe — Web Animations API replaces the whole transform, so
+    // dropping the translate would offset the wrap to bottom-right of
+    // center (visually invisible on small screens).
     overlay.querySelector(".pd-svg-wrap").animate(
       [
-        { transform: "scale(1.3)", opacity: 0 },
-        { transform: "scale(1.0)", opacity: 1, offset: 0.35 },
-        { transform: "scale(1.0)", opacity: 1, offset: 0.85 },
-        { transform: "scale(1.05)", opacity: 0 }
+        { transform: "translate(-50%, -50%) scale(1.3)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.0)", opacity: 1, offset: 0.35 },
+        { transform: "translate(-50%, -50%) scale(1.0)", opacity: 1, offset: 0.85 },
+        { transform: "translate(-50%, -50%) scale(1.05)", opacity: 0 }
       ],
       { duration: 1500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
     );

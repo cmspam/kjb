@@ -1542,12 +1542,28 @@ rt {
   border: 10px solid transparent; border-top-color: #000;
 }
 .sling-target-area {
-  position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 18%; left: 50%; transform: translateX(-50%);
   text-align: center;
+  pointer-events: none;
 }
-.sling-emoji-target { font-size: 80px; animation: bob 1.4s ease-in-out infinite; }
+.sling-target-svg {
+  width: 200px; height: 160px;
+  display: flex; align-items: center; justify-content: center;
+  transform: scale(0.55);
+  transform-origin: center center;
+  /* Approach transition: 380ms matches the rock's flight to bang time. */
+  transition: transform 380ms cubic-bezier(.36,.07,.19,.97), filter 380ms ease;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4));
+  animation: bob 2.4s ease-in-out infinite;
+}
+.sling-target-svg svg { max-width: 100%; max-height: 100%; }
+.sling-target-svg.zooming {
+  transform: scale(1.65);
+  filter: drop-shadow(0 0 32px rgba(255,80,80,0.85));
+  animation: none;
+}
 .sling-target-name {
-  font-size: 18px; font-weight: 900; color: var(--accent);
+  font-size: 16px; font-weight: 900; color: var(--accent);
   text-shadow: 0 2px 0 #000;
   margin-top: 4px;
 }
