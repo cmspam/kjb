@@ -913,6 +913,77 @@ g.part.bob {
   100% { transform: translateY(-60px) scale(0.4) rotate(40deg); opacity: 0; }
 }
 
+/* Part button info tags — surfaced on each .part-btn so kids can see
+   the math their attack is fighting against (armor on core, projected
+   damage on every part, big-crit highlight). */
+.pe.pe-armor {
+  color: #9be0ff;
+  font-weight: 900;
+  font-size: 13px;
+  margin-top: 2px;
+}
+.pe.pe-proj {
+  color: #ffcc00;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.pe.pe-proj.pe-crit {
+  color: #fff;
+  text-shadow: 0 2px 0 #000, 0 0 12px #ff5511;
+  animation: pe-crit-pulse 0.9s ease-in-out infinite;
+}
+@keyframes pe-crit-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+/* Boss debuff pills — small badge row under the boss name showing what
+   the team's part-breaking has accomplished (boss attacks reduced,
+   miss chance up, etc.). Active visualization of the strategy payoff. */
+.boss-debuffs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0 6px;
+  padding: 0 8px;
+}
+.boss-debuff-pill {
+  background: linear-gradient(160deg, #2a4a3a, #1a3024);
+  color: #aaffcc;
+  border: 1px solid #4a8a6a;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* Part-destroyed energy bonus tag inside the zoom cinematic. */
+.pd-bonus {
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ffcc44, #ff8833);
+  color: #1a0a00;
+  padding: 8px 18px;
+  border-radius: 22px;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 16px rgba(255, 150, 0, 0.7);
+  white-space: nowrap;
+  animation: pd-bonus-pop 1.5s ease-out forwards;
+}
+@keyframes pd-bonus-pop {
+  0%   { opacity: 0; transform: translate(-50%, 30px) scale(0.6); }
+  35%  { opacity: 1; transform: translate(-50%, 0)    scale(1.1); }
+  60%  { opacity: 1; transform: translate(-50%, 0)    scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -10px) scale(1); }
+}
+
 /* Part destroyed zoom — cinematic close-up on the broken part with
    "BROKEN!" headline. Layered: dark bg + flash overlay + zoomed SVG +
    banner text + part name. ~1.5s total. */

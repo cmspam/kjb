@@ -840,9 +840,11 @@ window.Game = (() => {
           S.log.push(`${p.name} → ${opponent.name}.${hitPart.name_jp}: ${hitDmg}${ev.ignoreArmor ? ' (pierce)' : ''}`);
           if (hitPart.hp === 0) {
             S.log.push(`${opponent.name} の ${hitPart.name_jp} を こわした！`);
-            // Zoom cinematic on the destroyed part — same pattern as hero
-            // mode. Falls back to flat splash if geom is missing.
-            if (UI.showPartDestroyedZoom && hitPart.geom) UI.showPartDestroyedZoom(opMon, hitPart);
+            // Same break reward as hero mode: +1 energy to the kid who
+            // broke the part. Surfaced in the zoom cinematic.
+            const bonusEnergy = 1;
+            if (p) p.energy = (p.energy || 0) + bonusEnergy;
+            if (UI.showPartDestroyedZoom && hitPart.geom) UI.showPartDestroyedZoom(opMon, hitPart, { energyBonus: bonusEnergy, breakerName: p && p.name });
             else if (UI.showPartDestroyedSplash) UI.showPartDestroyedSplash(`${opponent.name} の ${hitPart.name_jp}`);
             else if (SND.sfxBreak) SND.sfxBreak();
             else SND.sfxPop();
@@ -1017,10 +1019,18 @@ window.Game = (() => {
       setTimeout(() => num.remove(), 1100);
     }
     if (part.hp === 0) {
+      // BREAKING REWARD — the kid who broke the part gets +1 energy as
+      // an immediate, visible payoff. Pairs with the part-destroyed
+      // cinematic which surfaces the bonus in the splash text. Without
+      // this, breaking parts felt like "long-term debuff for free hits"
+      // with no in-the-moment click. Now every break is a click.
+      const bonusEnergy = 1;
+      if (p) p.energy = (p.energy || 0) + bonusEnergy;
       // Dramatic part-destroyed zoom-in cinematic — replaces the small
       // splash overlay. Re-renders the boss SVG with a tighter viewBox
-      // centered on the broken part, with a "BROKEN!" headline.
-      if (UI.showPartDestroyedZoom) UI.showPartDestroyedZoom(S.boss, part);
+      // centered on the broken part, with a "BROKEN!" headline + the
+      // energy bonus as a sub-tag.
+      if (UI.showPartDestroyedZoom) UI.showPartDestroyedZoom(S.boss, part, { energyBonus: bonusEnergy, breakerName: p && p.name });
       else if (UI.showPartDestroyedSplash) UI.showPartDestroyedSplash(part.name_jp);
       else if (SND.sfxBreak) SND.sfxBreak();
     }
@@ -1675,5 +1685,50 @@ window.Game = (() => {
     // Jinro HP-hidden gate so UI renders "?" / part-tier labels during the
     // round and exact numbers on the recap. Cheap getter — reads S.
     isHpHidden: () => !!(S && S.hpHiddenThisRound),
+    // Effective core armor — readonly view that accounts for the per-party-
+    // size armorDiv. Used by UI to show "🛡️ N" on the core button so kids
+    // can see the math their burst attack is fighting against.
+    effectiveCoreArmor: () => {
+      if (!S || !S.boss || !window.Monsters) return 0;
+      const raw = Monsters.coreArmor(S.boss);
+      const div = (S.scaling && S.scaling.armorDiv) || 1;
+      return Math.floor(raw / div);
+    },
+    // Project the damage an attack would do RIGHT NOW against `part`. Pure
+    // function — doesn't mutate state. Mirrors the math in doAttack so part
+    // buttons can show "→ N ダメ" tags. Returns 0 if no attack power.
+    projectAttackDamage: (player, part) => {
+      if (!S || !player || !part) return 0;
+      if (!player.attackPower || player.attackPower <= 0) return 0;
+      let dmg = player.attackPower + (S.pendingDamageBonus || 0);
+      const damageMonster = S.boss;
+      const mult = damageMonster && window.Monsters ? Monsters.damageMultiplier(damageMonster) : 1;
+      dmg = Math.round(dmg * mult);
+      if (S.doubleNextAttack) dmg *= 2;
+      if (S.boss && S.boss.weakness && S.currentQuestion) {
+        const cat = questionCategory(S.currentQuestion);
+        if (cat === S.boss.weakness) dmg = Math.round(dmg * 1.5);
+      }
+      if (part.effect === "win" && S.boss) {
+        const armor = Math.floor(Monsters.coreArmor(S.boss) / ((S.scaling && S.scaling.armorDiv) || 1));
+        dmg = Math.max(1, dmg - armor);
+      }
+      return dmg;
+    },
+    // Snapshot of currently-active boss debuffs caused by destroyed parts.
+    // UI shows these as badges so kids can see what their part-breaking
+    // accomplished. Returns an array of { icon, label } pairs.
+    bossDebuffs: () => {
+      if (!S || !S.boss || !window.Monsters) return [];
+      const out = [];
+      const mods = Monsters.bossModifiers(S.boss);
+      const lostAttacks = (S.boss.attacksPerRound || 0) - mods.atks;
+      if (lostAttacks > 0) out.push({ icon: "💪", label: `こうげき −${lostAttacks}` });
+      if (mods.missChance > 0)  out.push({ icon: "👁️", label: `はずれ +${Math.round(mods.missChance * 100)}%` });
+      if (!mods.hasSpecial)     out.push({ icon: "👄", label: "とくしゅ ふうじ" });
+      const dmgMul = Monsters.damageMultiplier(S.boss);
+      if (dmgMul > 1)           out.push({ icon: "⚡", label: `ダメージ ×${dmgMul.toFixed(1)}` });
+      return out;
+    },
   };
 })();

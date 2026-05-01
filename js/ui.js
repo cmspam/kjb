@@ -1940,10 +1940,12 @@ window.UI = (() => {
   // the boss SVG with a tighter viewBox centered on the destroyed part
   // so the part's own state-2 draw (cracks / 💥 stars / bandages) reads
   // up close. ~1500ms total. sfxBreak + theme duck for emphasis.
-  function showPartDestroyedZoom(boss, part) {
+  function showPartDestroyedZoom(boss, part, opts) {
     if (!boss || !part || !part.geom) return;
     const overlay = document.createElement("div");
     overlay.className = "part-destroy-overlay";
+    const energyBonus = opts && opts.energyBonus;
+    const breakerName = opts && opts.breakerName;
     // Compute zoomed viewBox centered on the destroyed part. Boss SVGs use
     // 0 0 800 480; zoom in 2.0× and clamp so we don't pan past the edges.
     const fx = part.geom.x;
@@ -1956,12 +1958,14 @@ window.UI = (() => {
     try {
       svgHTML = Monsters.renderBossSVG(boss).replace(/viewBox="0 0 800 480"/, `viewBox="${x} ${y} ${w} ${h}"`);
     } catch(_) {}
+    const bonusHTML = energyBonus ? `<div class="pd-bonus">⚡ +${energyBonus} エナジー${breakerName?` (${escapeHTML(breakerName)})`:''}</div>` : "";
     overlay.innerHTML = `
       <div class="pd-bg"></div>
       <div class="pd-flash"></div>
       <div class="pd-svg-wrap">${svgHTML}</div>
       <div class="pd-banner">💥 BROKEN! 💥</div>
-      <div class="pd-partname">${escapeHTML(part.name_jp || "")}</div>`;
+      <div class="pd-partname">${escapeHTML(part.name_jp || "")}</div>
+      ${bonusHTML}`;
     document.body.appendChild(overlay);
     if (SND.sfxBreak) SND.sfxBreak(); else SND.sfxPop();
     if (SND.duckTheme) SND.duckTheme(900, 0.30);
@@ -2918,9 +2922,19 @@ window.UI = (() => {
         const isCore = p.effect === "win";
         const cls = `part-btn ${dead?'dead':''} ${isCore?'core-btn':''}`;
         const icon = isCore ? "⭐ " : "";
+        // Armor display on the core button so kids see what their burst
+        // is up against. Projected damage on every part button so kids
+        // can compare "hit this part for X" vs "hit core for Y after armor".
+        const armorHTML = (isCore && window.Game && Game.effectiveCoreArmor)
+          ? `<div class="pe pe-armor">🛡️ アーマー ${Game.effectiveCoreArmor()}</div>` : "";
+        const projDmg = (window.Game && Game.projectAttackDamage) ? Game.projectAttackDamage(player, p) : 0;
+        const isCrit = projDmg >= 16;
+        const projHTML = (!dead && projDmg > 0) ? `<div class="pe pe-proj ${isCrit?'pe-crit':''}">→ ${projDmg} ダメージ${isCrit?' ⚡':''}</div>` : "";
         const node = el(`<button class="${cls}">
           <div class="pn">${icon}${p.name_jp}${isCore?' （よわてん）':''}</div>
           <div class="ph">${partHpDisplay(p)}</div>
+          ${armorHTML}
+          ${projHTML}
           <div class="pe">${effLabel}</div>
         </button>`);
         if (!dead) tap(node, () => { SND.sfxSelect ? SND.sfxSelect() : SND.sfxPop(); onAttack({ kind: "boss-part", part: p }); });
@@ -3108,9 +3122,17 @@ window.UI = (() => {
       const isCore = p.effect === "win";
       const cls = `part-btn ${dead?'dead':''} ${isCore?'core-btn':''}`;
       const icon = isCore ? "⭐ " : "";
+      // Same armor + projected-damage labels as renderAction's part list.
+      const armorHTML = (isCore && window.Game && Game.effectiveCoreArmor)
+        ? `<div class="pe pe-armor">🛡️ アーマー ${Game.effectiveCoreArmor()}</div>` : "";
+      const projDmg = (window.Game && Game.projectAttackDamage) ? Game.projectAttackDamage(player, p) : 0;
+      const isCrit = projDmg >= 16;
+      const projHTML = (!dead && projDmg > 0) ? `<div class="pe pe-proj ${isCrit?'pe-crit':''}">→ ${projDmg} ダメージ${isCrit?' ⚡':''}</div>` : "";
       const node = el(`<button class="${cls}">
         <div class="pn">${icon}${p.name_jp}${isCore?' （よわてん）':''}</div>
         <div class="ph">${partHpDisplay(p)}</div>
+        ${armorHTML}
+        ${projHTML}
         <div class="pe">${effLabel}</div>
       </button>`);
       if (!dead) tap(node, () => { SND.sfxSelect ? SND.sfxSelect() : SND.sfxPop(); onPick({ kind: "boss-part", part: p }); });
@@ -3161,16 +3183,20 @@ window.UI = (() => {
   }
 
   function effectLabel(p) {
+    // Made the labels concretely state the "if you break this" payoff so
+    // kids can see *why* they should attack non-core parts, not just
+    // assume "core is the only goal." Each label leads with an emoji that
+    // matches the part type for quick scanning.
     switch (p.effect) {
-      case "atk-1": return "1あし: ボス -1こうげき";
-      case "miss-50": return "目: ボス はずれやすく";
-      case "miss-40": return "目: ボス はずれやすく";
-      case "miss-30": return "目: ボス はずれやすく";
-      case "no-poison": return "くち: どくが でない";
-      case "no-special": return "とくしゅ こうげき ふうじ";
-      case "weak-spot": return "よわてん！ ダメージ +50%";
-      case "slow": return "あし: ボス おそく";
-      case "win": return "コア！ こわすと しょうり！";
+      case "atk-1":      return "💪 こわすと ボス −1 こうげき";
+      case "miss-50":    return "👁️ こわすと ボス めいちゅう −50%";
+      case "miss-40":    return "👁️ こわすと ボス めいちゅう −40%";
+      case "miss-30":    return "👁️ こわすと ボス めいちゅう −30%";
+      case "no-poison":  return "👄 こわすと どく ふうじ";
+      case "no-special": return "👄 こわすと とくしゅ こうげき ふうじ";
+      case "weak-spot":  return "⚡ こわすと ぜんダメージ ×1.5！";
+      case "slow":       return "🦵 こわすと ボス −0.5 こうげき";
+      case "win":        return "💎 コア！ こわすと しょうり！";
       default: return "";
     }
   }
@@ -3520,11 +3546,22 @@ window.UI = (() => {
     const stageBgHTML = (boss && boss.id && window.Stages && Stages.exists(boss.id))
       ? `<div class="stage-bg">${Stages.render(boss.id)}</div>`
       : "";
+    // Boss-debuffs badge row — surfaces what the team's part-breaking has
+    // accomplished. Each broken part with a passive effect contributes a
+    // tag like "💪 こうげき −1" or "👁️ はずれ +50%". When empty, no row.
+    let debuffRowHTML = "";
+    if (boss && window.Game && Game.bossDebuffs) {
+      const debuffs = Game.bossDebuffs();
+      if (debuffs.length) {
+        debuffRowHTML = `<div class="boss-debuffs">${debuffs.map(d => `<span class="boss-debuff-pill">${d.icon} ${escapeHTML(d.label)}</span>`).join("")}</div>`;
+      }
+    }
     return `
       <div class="header-wrap">
         ${bossCoreBar}
         <div class="stage${ragedClass}">${stageBgHTML}<div class="stage-svg">${svg}</div></div>
         <div class="boss-name">${boss ? `${boss.name_jp}${boss.raged?' 😡':''}` : ""}</div>
+        ${debuffRowHTML}
         <div class="players">${playerTiles}</div>
       </div>
     `;
