@@ -1329,31 +1329,44 @@ window.UI = (() => {
     function fire() {
       if (fired) return;
       fired = true;
+      // Slingshot snaps forward (the actual shot mechanic — rock leaves the
+      // pouch). The slingshot SVG itself fades to 0 right after via the
+      // .firing class on the modal so the camera leaves the slingshot
+      // behind and follows the rock.
       pouchG.style.transition = "transform 0.18s cubic-bezier(.18,.89,.32,1.28)";
       pouchG.setAttribute("transform", "translate(0, -20)");
       bandL.setAttribute("y2", "260");
       bandR.setAttribute("y2", "260");
       SND.sfxPop();
-      // Boss zooms in (3D-like approach) — runs in parallel with the rock
-      // flight so the rock and the now-larger boss meet at bang time.
+      // Bullet-cam phase. Drop the .firing class to:
+      //   - shake the modal (handheld camera feel)
+      //   - fade out the slingshot SVG and target name
+      // Then layer the speed-lines tunnel + foreground rock + zooming boss.
+      modal.classList.add("firing");
+      const tunnel = document.createElement("div");
+      tunnel.className = "sling-speedlines";
+      modal.appendChild(tunnel);
+      // Boss rushes toward the camera on a hard ease-in curve — stays small
+      // for most of the 380ms, then SMASHES into the camera at impact.
       const targetSvg = modal.querySelector("#sling-target-svg");
       if (targetSvg) targetSvg.classList.add("zooming");
+      // Foreground rock — locked at the bottom-center, drifts up + tumbles
+      // slightly via the .sling-proj keyframe. We're riding behind it.
       const proj = document.createElement("div");
       proj.className = "sling-proj";
       proj.textContent = "🪨";
       modal.appendChild(proj);
-      // Rock arcs upward AND grows larger to sell the perspective
-      // (closer = bigger). End scale 2.4 vs the previous 1.4.
-      requestAnimationFrame(() => { proj.style.top = "20%"; proj.style.transform = "translate(-50%, 0) scale(2.4) rotate(180deg)"; });
       setTimeout(() => {
+        // Impact frame: white radial flash punches through, then the bang
+        // emoji pops. The connect hook fires here so the kid hears the
+        // bang the same instant the boss redraws with damage.
+        const flash = document.createElement("div");
+        flash.className = "sling-impact-flash";
+        modal.appendChild(flash);
         const bang = document.createElement("div");
         bang.className = "sling-bang";
         bang.textContent = "💥";
         modal.appendChild(bang);
-        // The connect hook fires HERE — kid hears the bang, sees the boss
-        // SVG redraw with damage applied, hears any part-destroyed
-        // cinematic. Modal also begins fading out so the stage reveal is
-        // visible by the time the modal closes 520ms later.
         if (typeof onConnect === "function") onConnect();
         modal.style.transition = "opacity 0.45s ease";
         modal.style.opacity = "0";

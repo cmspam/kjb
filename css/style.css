@@ -1581,7 +1581,15 @@ rt {
   -webkit-user-select: none;
 }
 
-/* Slingshot attack overlay */
+/* Slingshot attack overlay.
+ * Two phases: AIM and FIRE. During AIM the kid sees the slingshot at the
+ * bottom and the boss small in the distance (bobbing). On release we switch
+ * to a "bullet-cam": camera locks behind the rock, the slingshot fades, the
+ * background fills with radial speed-lines streaking out from the target's
+ * vanishing point, the boss SVG rushes toward the camera on a hard ease-in
+ * curve (small for most of the duration, then SMASH), and a white flash
+ * punches the impact frame.
+ */
 .sling-modal {
   position: fixed; inset: 0;
   background: linear-gradient(180deg, rgba(40,0,60,.92), rgba(20,0,30,.96));
@@ -1591,7 +1599,26 @@ rt {
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+  perspective: 1200px;
+  perspective-origin: 50% 30%;
 }
+.sling-modal.firing { animation: sling-shake 0.40s steps(10) both; }
+@keyframes sling-shake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-3px, 1px); }
+  20% { transform: translate( 3px,-1px); }
+  30% { transform: translate(-1px, 2px); }
+  40% { transform: translate( 1px, 1px); }
+  50% { transform: translate(-3px,-2px); }
+  60% { transform: translate( 3px, 1px); }
+  70% { transform: translate(-1px,-3px); }
+  80% { transform: translate( 2px,-1px); }
+  90% { transform: translate(-2px, 0px); }
+}
+/* Slingshot fades out the moment we fire — camera leaves it behind. */
+.sling-modal.firing #sling-svg { opacity: 0; transition: opacity .15s ease; }
+.sling-modal.firing .sling-target-name { opacity: 0; transition: opacity .15s ease; }
+
 #sling-svg {
   width: 70vmin; max-width: 420px; height: 60vmin; max-height: 500px;
   margin-top: auto;
@@ -1607,30 +1634,35 @@ rt {
   max-width: 80%;
   text-align: center;
   animation: sling-bubble-pop .4s cubic-bezier(.18,.89,.32,1.28);
+  z-index: 1503;
 }
 .sling-bubble:after {
   content: ""; position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
   border: 10px solid transparent; border-top-color: #000;
 }
+/* Boss target sits at the speed-line vanishing point so when it grows it
+ * appears to come straight out of the focal point of the speed lines. */
 .sling-target-area {
-  position: absolute; top: 18%; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
   text-align: center;
   pointer-events: none;
 }
 .sling-target-svg {
   width: 200px; height: 160px;
   display: flex; align-items: center; justify-content: center;
-  transform: scale(0.55);
+  transform: scale(0.45);
   transform-origin: center center;
-  /* Approach transition: 380ms matches the rock's flight to bang time. */
-  transition: transform 380ms cubic-bezier(.36,.07,.19,.97), filter 380ms ease;
+  /* Hard ease-in — boss looks tiny for most of the flight, then explodes
+   * into the camera in the last ~80ms. Sells the bullet-cam acceleration. */
+  transition: transform 380ms cubic-bezier(.85,.05,.98,.35),
+              filter 380ms ease;
   filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4));
   animation: bob 2.4s ease-in-out infinite;
 }
 .sling-target-svg svg { max-width: 100%; max-height: 100%; }
 .sling-target-svg.zooming {
-  transform: scale(1.65);
-  filter: drop-shadow(0 0 32px rgba(255,80,80,0.85));
+  transform: scale(5.2);
+  filter: drop-shadow(0 0 48px rgba(255,80,80,0.95));
   animation: none;
 }
 .sling-target-name {
@@ -1645,17 +1677,70 @@ rt {
   font-weight: 900; font-size: 18px;
   pointer-events: none;
 }
+/* Radial speed-lines streaking out from the target's vanishing point.
+ * Built from a repeating-conic-gradient (the streaks themselves) masked by
+ * a radial-gradient (clean center hole + outward fade). The whole layer
+ * scales out and fades in over the 380ms approach. mix-blend-mode: screen
+ * keeps the streaks bright against the dark modal background. */
+.sling-speedlines {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 30%,
+    rgba(255,255,255,0)   0deg,
+    rgba(255,255,255,.85) .55deg,
+    rgba(255,255,255,0)   1.4deg,
+    rgba(255,255,255,0)   6deg
+  );
+  -webkit-mask: radial-gradient(circle at 50% 30%, transparent 0%, transparent 5%, black 14%, black 90%, transparent 100%);
+          mask: radial-gradient(circle at 50% 30%, transparent 0%, transparent 5%, black 14%, black 90%, transparent 100%);
+  z-index: 1499;
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation: sling-speed .40s cubic-bezier(.6,.05,.9,.3) forwards;
+}
+@keyframes sling-speed {
+  0%   { opacity: 0; transform: scale(0.5); }
+  20%  { opacity: 1; }
+  100% { opacity: 1; transform: scale(2.4); }
+}
+/* Foreground rock — riding in front of the camera. Slight wobble + drift
+ * upward so it feels like we're hurtling alongside it, not tracking past. */
 .sling-proj {
-  position: fixed; left: 50%; top: 60%;
-  transform: translate(-50%, 0) rotate(0deg);
-  font-size: 56px;
-  transition: top .42s linear, transform .42s linear;
+  position: fixed; left: 50%; top: auto; bottom: 8%;
+  transform: translate(-50%, 0) scale(1.6) rotate(0deg);
+  font-size: 80px;
   z-index: 1501;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.6));
+  animation: sling-rock-cam .42s cubic-bezier(.55,.05,.85,.4) both;
+}
+@keyframes sling-rock-cam {
+  0%   { transform: translate(-50%,  20px) scale(1.0) rotate(0deg); }
+  35%  { transform: translate(-50%,  -8px) scale(1.7) rotate(-10deg); }
+  100% { transform: translate(-50%, -28px) scale(2.0) rotate(35deg); }
+}
+/* Impact: white radial flash centered on the target. Brief (350ms) so it
+ * hard-cuts the moment of impact without blanking the screen. */
+.sling-impact-flash {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 30%,
+    rgba(255,255,255,1) 0%,
+    rgba(255,255,255,.85) 22%,
+    rgba(255,255,255,0) 65%);
+  pointer-events: none;
+  z-index: 1500;
+  opacity: 0;
+  animation: sling-flash .35s ease-out forwards;
+}
+@keyframes sling-flash {
+  0%   { opacity: 0; }
+  18%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 .sling-bang {
-  position: fixed; left: 50%; top: 22%;
+  position: fixed; left: 50%; top: 30%;
   transform: translate(-50%, -50%);
-  font-size: 140px;
+  font-size: 160px;
   z-index: 1502;
   animation: sling-bang-pop .55s ease;
 }
@@ -1664,9 +1749,9 @@ rt {
   100% { transform: scale(1); }
 }
 @keyframes sling-bang-pop {
-  0% { transform: translate(-50%,-50%) scale(0) rotate(-30deg); }
-  60% { transform: translate(-50%,-50%) scale(1.6) rotate(10deg); }
-  100% { transform: translate(-50%,-50%) scale(1.2) rotate(0); opacity: 0; }
+  0%   { transform: translate(-50%,-50%) scale(0) rotate(-30deg); }
+  60%  { transform: translate(-50%,-50%) scale(1.7) rotate(10deg); }
+  100% { transform: translate(-50%,-50%) scale(1.3) rotate(0); opacity: 0; }
 }
 
 /* Boss attack animation overlay */
