@@ -3313,8 +3313,11 @@ window.UI = (() => {
       }
       const lowHp = !p.dead && p.maxHp && p.hp <= p.maxHp * 0.3;
       const hpDisplay = (hpHidden && !p.dead) ? "❤️ ?" : `❤️ ${p.hp}`;
+      // Combo tier class drives flame-trail intensity on the tile.
+      const c = p.combo || 0;
+      const comboCls = c >= 10 ? 'combo-10' : c >= 7 ? 'combo-7' : c >= 5 ? 'combo-5' : c >= 3 ? 'combo-3' : '';
       return `
-      <div class="player ${currentPlayer && p.id===currentPlayer.id?'active':''} ${p.dead?'dead':''} ${(lowHp && !hpHidden)?'low-hp':''}">
+      <div class="player ${currentPlayer && p.id===currentPlayer.id?'active':''} ${p.dead?'dead':''} ${(lowHp && !hpHidden)?'low-hp':''} ${comboCls}">
         <div class="name">${p.avatar?p.avatar+' ':''}${escapeHTML(p.name)}</div>
         <div class="hp ${(!hpHidden && p.hp<=5)?'low':''}">${hpDisplay}</div>
         <div class="energy">⚡ ${p.energy} 🎴 ${p.hand?p.hand.length:0}${p.combo>=2?` 🔥×${p.combo}`:''}</div>
