@@ -1242,9 +1242,10 @@ window.UI = (() => {
       onConnect = null;
     }
     SND.unlock();
-    const taunt = pickRand(JP.slingshot_taunts || ["うってみろよ！"]);
-    // Boss voices the heckle — only attempt when we know which boss is talking
-    // (PvP path passes the opponent monster, so this still works there too).
+    // Per-boss slingshot heckle in that boss's dialect; pre-rendered by the
+    // voicegen build so playBossLine actually plays audio.
+    const slingPool = (boss && boss.taunts && boss.taunts.slingshot) || ["うってみろよ！"];
+    const taunt = pickRand(slingPool);
     if (boss && boss.id) SND.playBossLine(boss.id, taunt);
     const modal = document.createElement("div");
     modal.className = "sling-modal";
@@ -1824,8 +1825,9 @@ window.UI = (() => {
     SND.unlock();
     const overlay = document.createElement("div");
     overlay.className = "round-intro-overlay";
-    // Use a hits-pool line for the phase-2 phrase — IS pre-rendered. The
-    // boss_taunts.hurt pool is locale-only and not voiced by the build.
+    // Use a hits-pool line for the phase-2 phrase. Both hits and taunts are
+    // pre-rendered now, but hits give bigger variety and the kid hears one
+    // shouted line punching through the sting.
     const phrase = (boss && Array.isArray(boss.hits) && boss.hits.length)
       ? boss.hits[(Math.random()*boss.hits.length)|0]
       : "まだまだ！";
@@ -2115,14 +2117,13 @@ window.UI = (() => {
   // Big red splash, boss SVG with red glow, rage phrase. Caller still owns
   // the game state changes (attacksPerRound++, raged flag); this is just the
   // show-and-tell.
-  const RAGE_PHRASES = [
-    "ぐぉぉぉぉ！", "もう ゆるさん！", "これからが ほんき！",
-    "ぼくの ほんとうの すがた！", "ぐおおお〜！", "なめるなよ！",
-    "本気[ほんき] モード！", "もう おこったぞ！"
-  ];
+  // Per-boss rage cry pool in dialect; pre-rendered. Generic fallback only
+  // fires if a boss block somehow lacks taunts.rage.
+  const RAGE_FALLBACK = ["ぐぉぉぉぉ！", "もう ゆるさん！", "本気[ほんき] モード！"];
   function showRageIntro(boss, onDone) {
     SND.unlock();
-    const phrase = RAGE_PHRASES[(Math.random()*RAGE_PHRASES.length)|0];
+    const ragePool = (boss && boss.taunts && boss.taunts.rage) || RAGE_FALLBACK;
+    const phrase = ragePool[(Math.random()*ragePool.length)|0];
     const overlay = document.createElement("div");
     overlay.className = "rage-overlay";
     overlay.innerHTML = `
@@ -3391,9 +3392,8 @@ window.UI = (() => {
       <div class="defeat-tagline" id="def-tagline" style="opacity:0;">— TOKYO HAS FALLEN —</div>
     `;
     s.appendChild(cinematic);
-    // Stage 0: instant ROAR + sfx + voice. Use catchphrase (always
-    // pre-rendered) — boss_taunts pool entries 404 because the build
-    // pipeline doesn't render those.
+    // Stage 0: instant ROAR + sfx + voice. Catchphrase is the iconic line —
+    // it's the right marquee read for the defeat cinematic.
     if (boss && boss.id && boss.catchphrase) {
       setTimeout(() => SND.playBossLine(boss.id, boss.catchphrase), 320);
     }

@@ -715,14 +715,15 @@ window.Game = (() => {
   }
 
   // Pick a contextual boss taunt based on the current game state. Returns a
-  // string from the JP.boss_taunts pool best matching the situation, or null
-  // if nothing fits / the data isn't loaded.
+  // string from the boss's per-boss taunts pool best matching the situation,
+  // or null if nothing fits. Each boss carries its own taunts in its dialect
+  // so the line is voiceable (pre-rendered by the voicegen build).
   function pickBossTaunt(p) {
     if (!S.boss || S.boss._lostPartTaunt) {
       // _lostPartTaunt is one-shot — applyPartHit sets it after a part dies
       // so the next render's taunt reflects that, then we clear it below.
     }
-    const T = (window.JP && JP.boss_taunts) || null;
+    const T = (S.boss && S.boss.taunts) || null;
     if (!T) return null;
     const core = S.boss.parts.find(x => x.effect === "win");
     const corePct = core ? core.hp / core.maxHP : 1;
