@@ -36,6 +36,8 @@ window.Game = (() => {
       setTimeout(() => stage.classList.remove("hit-stop"), 180);
       // Crit-specific SFX — distinct rising chord vs. sfxHit's two-tone bonk.
       if (SND.sfxCrit) SND.sfxCrit();
+      // Duck the theme briefly so the crit-flash + sting punch through.
+      if (SND.duckTheme) SND.duckTheme(700, 0.30);
       UI.toast("⚡ クリティカル！", 1400);
     }
     return tier;

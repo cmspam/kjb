@@ -1726,6 +1726,9 @@ window.UI = (() => {
     document.body.appendChild(overlay);
     spawnConfetti(overlay.querySelector(".confetti-layer"), 50);
     SND.sfxVictory();
+    // Duck the theme so the K.O. sting reads. Larger dip + longer hold than
+    // a crit since this is a bigger moment.
+    if (SND.duckTheme) SND.duckTheme(1500, 0.20);
     overlay.querySelector(".ko-svg").animate(
       [
         { transform: "scale(1) rotate(0)",            filter: "saturate(1) brightness(1)",      opacity: 1 },

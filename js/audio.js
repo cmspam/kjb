@@ -280,6 +280,29 @@ window.SND = (() => {
   }
   function isThemePlaying() { return !!currentTheme && !currentTheme.paused; }
 
+  // Duck the theme volume briefly so a dramatic moment (crit, KO,
+  // cliffhanger) reads in the audio mix. Volume drops to dipFraction × the
+  // current target, holds for `holdMs`, then ramps back. No-op if no theme.
+  let _duckEndTime = 0;
+  function duckTheme(holdMs, dipFraction) {
+    if (!currentTheme || !_themeMeta) return;
+    const dip = Math.max(0.05, Math.min(1, dipFraction != null ? dipFraction : 0.35));
+    const target = _themeMeta.volume || 0.5;
+    const dipped = target * dip;
+    const hold = Math.max(150, holdMs || 600);
+    _duckEndTime = performance.now() + hold;
+    fadeTo(currentTheme, dipped, 120, () => {
+      // Only ramp back if no newer duck is active.
+      const now = performance.now();
+      const remaining = Math.max(0, _duckEndTime - now);
+      setTimeout(() => {
+        if (currentTheme && _themeMeta && performance.now() >= _duckEndTime) {
+          fadeTo(currentTheme, _themeMeta.volume || 0.5, 280);
+        }
+      }, remaining);
+    });
+  }
+
   // ---------- BOSS VOICE LINES ----------
   // Each boss has a pre-rendered Opus clip per line they ever say (catchphrase,
   // attack name, attack phrase, hit reaction, taunt, slingshot heckle, rage
@@ -903,7 +926,7 @@ window.SND = (() => {
            setMuted, isMuted, setVoice, listVoices,
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
            getThemes, setThemes, getSpellMode, setSpellMode, getA11y, setA11y,
-           playTheme, playThemeSnippet, stopTheme, isThemePlaying, playSiren,
+           playTheme, playThemeSnippet, stopTheme, duckTheme, isThemePlaying, playSiren,
            playBossLine, stopBossVoice,
            isSpeechSupported, recognizeOnce };
 })();
