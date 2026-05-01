@@ -983,7 +983,8 @@ window.Game = (() => {
     }
     // PHASE 2 transition (N2) — once the core drops below 50%, the boss
     // enters its second form. Visual change via a CSS class on the stage,
-    // small attack-power bump applied on subsequent boss turns.
+    // small attack-power bump applied on subsequent boss turns. Shares the
+    // `core` lookup with the win/cliffhanger/rage checks below.
     const core = S.boss.parts.find(x => x.effect === "win");
     if (core && !S.boss._phase2 && core.hp > 0 && core.hp <= core.maxHP * 0.5) {
       S.boss._phase2 = true;
@@ -993,7 +994,6 @@ window.Game = (() => {
     }
     // Check win — doVictory wraps the K.O. cinematic so all kill paths
     // (this one, card effects, etc.) get the same reveal.
-    const core = S.boss.parts.find(x => x.effect === "win");
     if (core && core.hp <= 0) { return doVictory(); }
     // Cliffhanger: core sits at exactly 1 HP. Drop the music, show a splash,
     // beat of silence — then continue. One shot per fight.
