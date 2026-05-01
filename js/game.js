@@ -214,31 +214,30 @@ window.Game = (() => {
     UI.renderSetup({ count, onConfirm: (opts) => {
       opts.mode = mode;  // Pipe through from title
       newGame(opts);
-      // Cache factory ids once so cycleBoss doesn't rebuild the full list each tap.
-      let factoryIds = null;
-      const cycleBoss = () => {
-        if (!S.boss) return;
-        const factories = Monsters.listFactories();
-        if (!factoryIds) factoryIds = factories.map(f => f().id);
-        const cur = factoryIds.indexOf(S.boss.id);
-        const next = (cur + 1 + factories.length) % factories.length;
-        S.boss = factories[next]();
-        // Re-apply the per-party-size scaling that newGame() applied to the
-        // original boss; otherwise the new boss attacks the wrong number of times.
-        if (S.scaling) S.boss.attacksPerRound = S.scaling.attacks;
-        beginMatch();
+      // Boss picker (map view). Replaces the one-step "cycle through bosses"
+      // button with a grid showing all 6 with progress badges. Tap a tile to
+      // pick that boss; the bossIntro then shows for them.
+      const openMap = () => {
+        UI.renderBossPickerMap(S.boss && S.boss.id, (factory) => {
+          S.boss = factory();
+          if (S.scaling) S.boss.attacksPerRound = S.scaling.attacks;
+          beginMatch();
+        }, () => beginMatch());
       };
       const beginMatch = () => {
         if (S.mode === "pvp") {
           // PvP: each kid picks their monster, then go straight to first turn.
           // No boss intro, so no cycle button either.
           pickMonstersSequentially(0, () => startRound());
-        } else if (S.jinro) {
-          UI.renderBossIntro(S.boss,
-            () => revealRolesSequentially(0, () => startRound()),
-            cycleBoss);
         } else {
-          UI.renderBossIntro(S.boss, () => startRound(), cycleBoss);
+          // Hero (and jinro): pre-fight TV-style title card, then boss intro,
+          // then either role-reveal sequence (jinro) or straight to round 1.
+          const afterIntro = S.jinro
+            ? () => revealRolesSequentially(0, () => startRound())
+            : () => startRound();
+          UI.showMatchTitleCard(S.boss, S.players, () => {
+            UI.renderBossIntro(S.boss, afterIntro, openMap);
+          });
         }
       };
       beginMatch();

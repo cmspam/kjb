@@ -548,6 +548,40 @@ h3 { font-size: 28px; margin: 4px 0; }
   display: flex; flex-direction: column; justify-content: center; gap: 4px;
   font-family: inherit;
 }
+/* Boss picker map (N6) — grid of all kaiju with progress badges. */
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.map-tile {
+  background: linear-gradient(160deg, #2a1a3a, #1a0a2a);
+  color: #fff;
+  border: 2px solid #553377;
+  border-radius: 14px;
+  padding: 10px 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+  font-family: inherit;
+}
+.map-tile:hover, .map-tile:active {
+  border-color: var(--accent);
+  box-shadow: 0 0 18px rgba(255,204,0,0.4);
+  transform: translateY(-2px);
+}
+.map-tile.map-defeated {
+  opacity: 0.55;
+  border-color: #4caf50;
+}
+.map-tile.map-current  { border-color: var(--accent); box-shadow: 0 0 14px rgba(255,204,0,0.45); }
+.map-tile-svg          { height: 110px; display: flex; align-items: center; justify-content: center; }
+.map-tile-svg svg      { max-height: 110px; max-width: 90%; }
+.map-tile-name         { font-size: 15px; font-weight: 900; color: var(--accent); margin-top: 4px; }
+.map-tile-status       { font-size: 12px; color: #ccc; }
+.map-tile.map-defeated .map-tile-status { color: #7ff0a0; }
+
 /* Match scorecard — broadcast-style stat block on the post-battle recap
    (N1). Big numbers, label tags, sportscentre vibes. */
 .match-scorecard {

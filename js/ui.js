@@ -904,6 +904,83 @@ window.UI = (() => {
     });
   }
 
+  // -------- MATCH TITLE CARD (N6) --------
+  // TV-broadcast pre-fight splash: "TONIGHT'S MAIN EVENT" headline, boss
+  // vs player(s), brief 1.8s flash. Fires before renderBossIntro so the
+  // boss reveal already feels like a sports broadcast main card.
+  function showMatchTitleCard(boss, players, onDone) {
+    SND.unlock();
+    const overlay = document.createElement("div");
+    overlay.className = "round-intro-overlay";
+    const playerLine = (players || []).map(p => `${p.avatar?p.avatar+' ':''}${escapeHTML(p.name)}`).join(" · ");
+    overlay.innerHTML = `
+      <div class="round-flash" style="background:rgba(0,0,0,0);"></div>
+      <div class="round-content" style="text-align:center;">
+        <div style="font-size:13px; letter-spacing:6px; color:var(--accent); font-weight:800;">▶▶ TONIGHT ◀◀</div>
+        <div class="round-label" style="color:#fff; font-size:18px; letter-spacing:4px; margin-top: 6px;">MAIN EVENT</div>
+        <div style="font-size: 36px; font-weight: 900; color: var(--accent); margin: 14px 0 6px; text-shadow: 0 6px 0 #000, 0 0 20px var(--accent);">${escapeHTML(boss && boss.name_jp || "")}</div>
+        <div style="font-size: 22px; color: var(--bad); font-weight: 900;">— VS —</div>
+        <div style="font-size: 18px; color: #fff; margin-top: 8px; max-width: 80vw; word-wrap: break-word;">${playerLine}</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxBoss();
+    overlay.querySelector(".round-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0.4)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.05)", opacity: 1, offset: 0.55 },
+        { transform: "translate(-50%, -50%) scale(1)", opacity: 1 }
+      ],
+      { duration: 600, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".round-flash").animate(
+      [
+        { background: "rgba(255, 204, 0, 0)" },
+        { background: "rgba(255, 204, 0, 0.25)", offset: 0.5 },
+        { background: "rgba(255, 204, 0, 0)" }
+      ],
+      { duration: 500, iterations: 1 }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 1900);
+  }
+
+  // -------- BOSS PICKER MAP (N6) --------
+  // Replaces the one-at-a-time "cycle boss" button with a grid of all
+  // available kaiju, badged by defeat status. The kid taps the kaiju
+  // they want to fight. Skipped if Monsters.listFactories doesn't yield
+  // ≥2 candidates (single-boss flow falls through to the legacy cycle).
+  function renderBossPickerMap(currentBossId, onPick, onCancel) {
+    show("title");
+    const s = $("screen-title"); s.innerHTML = "";
+    const factories = (Monsters && Monsters.listFactories) ? Monsters.listFactories() : [];
+    const samples = factories.map(f => f());
+    const tilesHTML = samples.map((m, i) => {
+      const defeated = !!(window.Progress && Progress.isDefeated && Progress.isDefeated(m.id));
+      const isCurrent = m.id === currentBossId;
+      return `
+        <button class="map-tile ${defeated?'map-defeated':''} ${isCurrent?'map-current':''}" data-idx="${i}">
+          <div class="map-tile-svg">${Monsters.renderBossSVG(m)}</div>
+          <div class="map-tile-name">${escapeHTML(m.name_jp)}</div>
+          <div class="map-tile-status">${defeated ? '✅ たおした' : (isCurrent ? '⚔️ せんちゅう' : 'たたかう？')}</div>
+        </button>`;
+    }).join("");
+    s.appendChild(el(`
+      <div class="center" style="max-width: 880px; margin: 12px auto; padding: 0 12px;">
+        <div class="subtle" style="color:var(--accent); letter-spacing:4px;">★ あいてを えらぶ ★</div>
+        <h2 style="margin: 4px 0; color: var(--accent);">🗺️ カイジュウ ぜんかい</h2>
+        <div class="subtle" style="font-size:13px;">タップで バトル スタート！</div>
+        <div class="map-grid">${tilesHTML}</div>
+        <button class="btn ghost" id="map-back" style="margin-top:14px;">${JP.back || "もどる"}</button>
+      </div>`));
+    s.querySelectorAll(".map-tile").forEach(btn => {
+      tap(btn, () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        const factory = factories[idx];
+        if (factory) onPick(factory);
+      });
+    });
+    tap($("map-back"), () => { if (onCancel) onCancel(); });
+  }
+
   // -------- BOSS INTRO (shown once at game start) --------
   // Backstories use 「漢字[よみ]」 syntax that gets converted to ruby tags so kanji
   // shows the hiragana reading above it. Inserted via innerHTML so the ruby renders.
@@ -3229,6 +3306,7 @@ window.UI = (() => {
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
            renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
+           showMatchTitleCard, renderBossPickerMap,
            showRoundIntro, showRageIntro, showPhase2Intro, showKO, showFightStinger, spawnConfetti,
            showComboSplash, showFirstBloodSplash, showPartDestroyedSplash, showSpeechBonusSplash,
            showCompendium, runSpeechChallenge,
