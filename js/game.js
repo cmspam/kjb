@@ -19,14 +19,23 @@ window.Game = (() => {
   function applyDamageTier(stage, dmg) {
     if (!stage) return;
     const tier = dmgTier(dmg);
-    stage.classList.remove("shake","shake-light","shake-medium","shake-heavy");
+    stage.classList.remove("shake","shake-light","shake-medium","shake-heavy","shake-crit");
     void stage.offsetWidth; // restart the animation
-    stage.classList.add("shake-" + (tier === "crit" ? "heavy" : tier));
+    // Crit gets its own dedicated class — was shake-heavy before, which made
+    // a 16dmg crit feel identical to a 9dmg heavy. Now distinctly bigger.
+    stage.classList.add("shake-" + tier);
     if (tier === "crit") {
       const flash = document.createElement("div");
       flash.className = "crit-flash";
       document.body.appendChild(flash);
       setTimeout(() => flash.remove(), 600);
+      // Crit hit-stop: 180ms freeze frame on the stage so the impact lands.
+      // Done via a CSS class that pauses any running animation; cleared
+      // on the same frame as flash removal.
+      stage.classList.add("hit-stop");
+      setTimeout(() => stage.classList.remove("hit-stop"), 180);
+      // Crit-specific SFX — distinct rising chord vs. sfxHit's two-tone bonk.
+      if (SND.sfxCrit) SND.sfxCrit();
       UI.toast("⚡ クリティカル！", 1400);
     }
     return tier;

@@ -354,6 +354,11 @@ h3 { font-size: 28px; margin: 4px 0; }
 .stage.shake-light  { animation: shake-light  .35s ease; }
 .stage.shake-medium { animation: shake-medium .50s ease; }
 .stage.shake-heavy  { animation: shake-heavy  .65s ease; }
+@keyframes shake-crit { 0%,100%{transform:translate(0,0) scale(1);} 8%{transform:translate(-18px,6px) rotate(-2deg) scale(1.04);} 22%{transform:translate(16px,-9px) rotate(2deg) scale(1.06);} 38%{transform:translate(-14px,12px) rotate(-1.5deg) scale(1.05);} 56%{transform:translate(17px,-7px) rotate(1.5deg) scale(1.04);} 75%{transform:translate(-9px,5px) rotate(-1deg) scale(1.02);} }
+.stage.shake-crit   { animation: shake-crit   .80s cubic-bezier(.36,.07,.19,.97); }
+/* Hit-stop: pauses any running stage animation for ~180ms after a crit so
+   the impact "lands" before motion resumes. Pairs with sfxCrit + crit-flash. */
+.stage.hit-stop, .stage.hit-stop * { animation-play-state: paused !important; }
 
 /* Crit flash — full-screen overlay flash for damage ≥ crit threshold */
 .crit-flash {
