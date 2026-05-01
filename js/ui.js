@@ -310,6 +310,7 @@ window.UI = (() => {
       const pvpDisabled = count < 2; // PvP needs ≥2 players
       if (pvpDisabled && mode === "pvp") mode = "hero";
       s.appendChild(el(`
+        <div class="title-root" style="position:relative; width:100%;">
         <div class="title-bg">
           <div class="title-vignette"></div>
           <div class="title-lightning"></div>
@@ -350,6 +351,7 @@ window.UI = (() => {
             <button class="btn ghost" id="btn-settings">せってい ⚙️</button>
           </div>
           <div class="subtle" style="margin-top: 10px;">タップで おとが でます 🔊</div>
+        </div>
         </div>`));
       const cr = $("t-count-row");
       [1,2,3,4,5,6].forEach(n => {
