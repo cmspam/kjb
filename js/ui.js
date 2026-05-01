@@ -1273,6 +1273,20 @@ window.UI = (() => {
     const phrase = pickRand(attack.phrases || [attack.name]);
     const m = (attack.name || "").match(/(\p{Extended_Pictographic}️?)\s*$/u);
     const emoji = m ? m[1] : "💥";
+    // Telegraph color per attack type — flash + charge glow read the
+    // type at a glance. Helps kids learn to recognize incoming threats.
+    const TELEGRAPH_COLORS = {
+      heavy:  "#ff3b6b",
+      quick:  "#ffcc44",
+      wild:   "#aa66ff",
+      pierce: "#44ddee",
+      stun:   "#88ddff",
+    };
+    const telegraphColor = TELEGRAPH_COLORS[attack && attack.type] || "#ff3b6b";
+    const tcRGBA = (a) => {
+      const n = parseInt(telegraphColor.slice(1), 16);
+      return `rgba(${(n>>16)&255}, ${(n>>8)&255}, ${n&255}, ${a})`;
+    };
     // Stage-3 visual + final reveal text vary by why the attack didn't land.
     // Hits use the default 💥 / damage flow.
     const missVisual = (
@@ -1325,9 +1339,9 @@ window.UI = (() => {
     );
     overlay.querySelector(".boss-warn-flash").animate(
       [
-        { background: "rgba(255, 59, 107, 0)" },
-        { background: "rgba(255, 59, 107, 0.4)", offset: 0.5 },
-        { background: "rgba(255, 59, 107, 0)" }
+        { background: tcRGBA(0) },
+        { background: tcRGBA(0.45), offset: 0.5 },
+        { background: tcRGBA(0) }
       ],
       { duration: 400, iterations: 2 }
     );
@@ -1350,16 +1364,54 @@ window.UI = (() => {
       if (boss && boss.id) SND.playBossLine(boss.id, phrase);
       const svgWrap = overlay.querySelector(".boss-anim-svg-wrap");
       svgWrap.innerHTML = Monsters.renderBossSVG(boss);
-      // Charge: scale up + glow shake
-      svgWrap.animate(
-        [
-          { transform: "scale(1) rotate(0)", filter: "brightness(1)" },
-          { transform: "scale(1.12) rotate(-4deg)", filter: "brightness(1.6) drop-shadow(0 0 18px #ff3b6b)", offset: 0.35 },
-          { transform: "scale(1.18) rotate(4deg)", filter: "brightness(2) drop-shadow(0 0 32px #ffcc00)", offset: 0.7 },
-          { transform: "scale(1) rotate(0)", filter: "brightness(1)" }
-        ],
-        { duration: 1000, easing: "ease-in-out", fill: "forwards" }
-      );
+      // Type-telegraphed charge: distinct windup motion + glow per attack
+      // type so kids learn to read incoming threats. Heavy = wind-back-then-
+      // slam, Quick = rapid jitter, Wild = spinning, Pierce = focus narrow,
+      // Stun = ice freeze. Glow color matches the warning flash.
+      const tg = telegraphColor;
+      const chargeKeyframes = (() => {
+        const t = attack && attack.type;
+        if (t === "heavy") return [
+          { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
+          { transform: "scale(0.85) rotate(-8deg)", filter: `brightness(1.2) drop-shadow(0 0 14px ${tg})`, offset: 0.4 },
+          { transform: "scale(1.30) rotate(6deg)",  filter: `brightness(2.2) drop-shadow(0 0 36px ${tg})`, offset: 0.85 },
+          { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
+        ];
+        if (t === "quick") return [
+          { transform: "scale(1) translate(0,0)",          filter: "brightness(1)" },
+          { transform: "scale(1.08) translate(-6px, 0)",   filter: `brightness(1.4) drop-shadow(0 0 14px ${tg})`, offset: 0.18 },
+          { transform: "scale(1.08) translate(6px, 0)",    filter: `brightness(1.5) drop-shadow(0 0 18px ${tg})`, offset: 0.36 },
+          { transform: "scale(1.08) translate(-5px, 0)",   filter: `brightness(1.6) drop-shadow(0 0 20px ${tg})`, offset: 0.55 },
+          { transform: "scale(1.08) translate(5px, 0)",    filter: `brightness(1.7) drop-shadow(0 0 22px ${tg})`, offset: 0.75 },
+          { transform: "scale(1) translate(0,0)",          filter: "brightness(1)" },
+        ];
+        if (t === "wild") return [
+          { transform: "scale(1) rotate(0)",      filter: "brightness(1)" },
+          { transform: "scale(1.1) rotate(180deg)", filter: `brightness(1.5) hue-rotate(60deg) drop-shadow(0 0 24px ${tg})`, offset: 0.5 },
+          { transform: "scale(1.1) rotate(360deg)", filter: `brightness(1.8) hue-rotate(180deg) drop-shadow(0 0 30px ${tg})`, offset: 0.85 },
+          { transform: "scale(1) rotate(360deg)", filter: "brightness(1)" },
+        ];
+        if (t === "pierce") return [
+          { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
+          { transform: "scale(0.92) rotate(0)",    filter: `brightness(1.3) drop-shadow(0 0 16px ${tg}) contrast(1.3)`, offset: 0.5 },
+          { transform: "scale(1.25) rotate(0)",    filter: `brightness(2.4) drop-shadow(0 0 40px ${tg}) contrast(1.5)`, offset: 0.85 },
+          { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
+        ];
+        if (t === "stun") return [
+          { transform: "scale(1) rotate(0)",       filter: "brightness(1) saturate(1)" },
+          { transform: "scale(1.05) rotate(-2deg)",filter: `brightness(1.4) saturate(0.6) drop-shadow(0 0 22px ${tg}) hue-rotate(180deg)`, offset: 0.5 },
+          { transform: "scale(1.08) rotate(2deg)", filter: `brightness(1.6) saturate(0.5) drop-shadow(0 0 30px ${tg}) hue-rotate(180deg)`, offset: 0.85 },
+          { transform: "scale(1) rotate(0)",       filter: "brightness(1) saturate(1)" },
+        ];
+        // Default / untyped — original generic charge.
+        return [
+          { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
+          { transform: "scale(1.12) rotate(-4deg)", filter: `brightness(1.6) drop-shadow(0 0 18px ${tg})`, offset: 0.35 },
+          { transform: "scale(1.18) rotate(4deg)",  filter: `brightness(2) drop-shadow(0 0 32px #ffcc00)`, offset: 0.7 },
+          { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
+        ];
+      })();
+      svgWrap.animate(chargeKeyframes, { duration: 1000, easing: "ease-in-out", fill: "forwards" });
       const bubble = overlay.querySelector(".boss-anim-bubble");
       bubble.animate(
         [
