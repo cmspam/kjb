@@ -877,6 +877,18 @@ h3 { font-size: 28px; margin: 4px 0; }
   .rage-phrase { font-size: 18px; }
 }
 
+/* Phase-2 stage treatment (N2) — boss core dropped below 50%. Saturated
+   purple/magenta drop-shadow + slight scale bump. Stacks under .raged
+   (which is the 25% threshold). */
+.stage.phase-2 svg {
+  filter: brightness(1.08) saturate(1.4) drop-shadow(0 0 18px #ff66cc);
+  animation: stage-idle 4.5s ease-in-out infinite, phase-2-pulse 2.4s ease-in-out infinite;
+}
+@keyframes phase-2-pulse {
+  0%, 100% { filter: brightness(1.08) saturate(1.4) drop-shadow(0 0 18px #ff66cc); }
+  50%      { filter: brightness(1.16) saturate(1.6) drop-shadow(0 0 28px #ff66cc); }
+}
+
 /* Boss in rage during normal rendering — pulsing red aura on the .stage svg */
 .stage.raged svg {
   filter: drop-shadow(0 0 14px #ff3b6b);

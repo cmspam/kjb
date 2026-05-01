@@ -981,6 +981,16 @@ window.Game = (() => {
       else SND.sfxBreak ? SND.sfxBreak() : SND.sfxPop();
       S.boss._lostPartTaunt = true; // one-shot: next taunt reflects this loss
     }
+    // PHASE 2 transition (N2) — once the core drops below 50%, the boss
+    // enters its second form. Visual change via a CSS class on the stage,
+    // small attack-power bump applied on subsequent boss turns.
+    const core = S.boss.parts.find(x => x.effect === "win");
+    if (core && !S.boss._phase2 && core.hp > 0 && core.hp <= core.maxHP * 0.5) {
+      S.boss._phase2 = true;
+      const stageEl = document.querySelector(".stage");
+      if (stageEl) stageEl.classList.add("phase-2");
+      setTimeout(() => UI.showPhase2Intro && UI.showPhase2Intro(S.boss, () => {}), 600);
+    }
     // Check win — doVictory wraps the K.O. cinematic so all kill paths
     // (this one, card effects, etc.) get the same reveal.
     const core = S.boss.parts.find(x => x.effect === "win");
@@ -1345,6 +1355,7 @@ window.Game = (() => {
         let dmg = 4 + Math.floor(S.round/2);
         const mouthAlive = S.boss.parts.find(p=>p.type==="mouth" && p.hp>0);
         if (mouthAlive && mods.hasSpecial && Math.random() < 0.35) dmg += 2;
+        if (S.boss._phase2) dmg += 1; // phase-2 bonus damage (50% core threshold)
         // Apply attack-type multiplier (Heavy 1.5×, Pierce 1.0×, Stun/Quick
         // 0.7×, Wild 0.5×). Pure single-hit for boss-side; the multi-hit
         // mechanic is left for the player-side PvP path.

@@ -1493,6 +1493,48 @@ window.UI = (() => {
     setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 1300);
   }
 
+  // -------- PHASE TRANSITION SPLASH (N2) --------
+  // Fired when boss core drops below the 50% threshold. The boss enters its
+  // "second form" — game.js sets a _phase2 flag that the stage CSS reads
+  // for an enhanced glow + saturation, plus boss-attack damage gets a small
+  // bump. This is the middle dramatic beat between fight start and rage
+  // mode (which fires at 25%).
+  function showPhase2Intro(boss, onDone) {
+    SND.unlock();
+    const overlay = document.createElement("div");
+    overlay.className = "round-intro-overlay";
+    const phrase = pickRand((JP.boss_taunts && JP.boss_taunts.hurt) || ["まだまだ！", "つぎの すがた！"]);
+    overlay.innerHTML = `
+      <div class="round-flash" style="background:rgba(255,80,200,0)"></div>
+      <div class="round-content">
+        <div class="round-label" style="color:#ff66cc;">⚡ PHASE 2 ⚡</div>
+        <div class="round-num" style="font-size:48px;color:#ff66cc; text-shadow: 0 6px 0 #000, 0 0 30px #ff66cc;">${escapeHTML(boss && boss.name_jp || '')}</div>
+        <div class="round-sub" style="color:#fff;">${escapeHTML(phrase)}</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxBoss();
+    if (boss && boss.id) SND.playBossLine(boss.id, phrase);
+    // Brief duck so the phase-2 sting reads.
+    if (SND.duckTheme) SND.duckTheme(1100, 0.30);
+    overlay.querySelector(".round-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.25) rotate(8deg)", opacity: 1, offset: 0.55 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1 }
+      ],
+      { duration: 540, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".round-flash").animate(
+      [
+        { background: "rgba(255, 80, 200, 0)" },
+        { background: "rgba(255, 80, 200, 0.5)", offset: 0.5 },
+        { background: "rgba(255, 80, 200, 0)" }
+      ],
+      { duration: 460, iterations: 2 }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 1700);
+  }
+
   // -------- COMBO TIER SPLASH --------
   // Brief banner when a kid hits combo 3 / 5 / 7 / 10 — turns a "+1 dmg
   // bonus" toast into a real moment. Reuses round-intro-overlay styling
@@ -3185,7 +3227,7 @@ window.UI = (() => {
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
            renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
-           showRoundIntro, showRageIntro, showKO, showFightStinger, spawnConfetti,
+           showRoundIntro, showRageIntro, showPhase2Intro, showKO, showFightStinger, spawnConfetti,
            showComboSplash, showFirstBloodSplash, showPartDestroyedSplash, showSpeechBonusSplash,
            showCompendium, runSpeechChallenge,
            menuModal, showPvpFaceoff, showCliffhanger };
