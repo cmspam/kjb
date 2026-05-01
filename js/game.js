@@ -1165,25 +1165,39 @@ window.Game = (() => {
       for (let i = 0; i < mods.atks; i++) {
         const stillAlive = S.players.filter(p => !p.dead);
         if (stillAlive.length === 0) break;
-        const target = stillAlive[(Math.random()*stillAlive.length)|0];
+        // Pick the attack first so we can read its type and apply type effects
+        // (×1.5 for heavy, ×0.7 for stun, ignore shield for pierce, etc.).
+        const atk = bossAttacks[(Math.random()*bossAttacks.length)|0];
+        const def = attackTypeDef(atk && atk.type);
+        // Wild attacks pick a fresh random target each time; others pick once.
+        const target = def.randomTarget
+          ? stillAlive[(Math.random()*stillAlive.length)|0]
+          : stillAlive[(Math.random()*stillAlive.length)|0];
         if (target.skipBossAtk) {
-          queue.push({ target, dmg: 0, missed: true, missReason: "escape" });
+          queue.push({ target, dmg: 0, missed: true, missReason: "escape", atk, def });
           target.skipBossAtk = false;
           continue;
         }
         if (Math.random() < mods.missChance) {
-          queue.push({ target, dmg: 0, missed: true, missReason: "miss" });
+          queue.push({ target, dmg: 0, missed: true, missReason: "miss", atk, def });
           continue;
         }
-        if (target.shield) {
-          queue.push({ target, dmg: 0, missed: true, missReason: "shield" });
+        // Pierce ignores shields: shield doesn't trigger a "shield" miss outcome
+        // for a piercing attack — instead the shield is left intact and the
+        // damage lands as if no shield were present.
+        if (target.shield && !def.ignoreArmor) {
+          queue.push({ target, dmg: 0, missed: true, missReason: "shield", atk, def });
           target.shield = false;
           continue;
         }
         let dmg = 4 + Math.floor(S.round/2);
         const mouthAlive = S.boss.parts.find(p=>p.type==="mouth" && p.hp>0);
         if (mouthAlive && mods.hasSpecial && Math.random() < 0.35) dmg += 2;
-        queue.push({ target, dmg });
+        // Apply attack-type multiplier (Heavy 1.5×, Pierce 1.0×, Stun/Quick
+        // 0.7×, Wild 0.5×). Pure single-hit for boss-side; the multi-hit
+        // mechanic is left for the player-side PvP path.
+        dmg = Math.max(1, Math.round(dmg * def.mult));
+        queue.push({ target, dmg, atk, def });
       }
     }
     // Defensive fallback: if the loop produced nothing (all heroes died
@@ -1201,7 +1215,12 @@ window.Game = (() => {
   //   • Plain: apply damage immediately
   function processBossAttack(queue, idx, lines) {
     if (idx >= queue.length) return finishBossTurn(lines);
-    const { target, dmg, missed, missReason } = queue[idx];
+    const entry = queue[idx];
+    const { target, dmg, missed, missReason } = entry;
+    // Use the attack chosen at queue-build time (which carries the type def)
+    // — falls back to a random pick for legacy fizzle entries.
+    const atk = entry.atk || pickRand((S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words);
+    const def = entry.def || attackTypeDef(atk && atk.type);
     if (target.dead) return processBossAttack(queue, idx+1, lines);
 
     // Hard-mode defensive Q only fires for hits (a miss already misses).
@@ -1210,12 +1229,15 @@ window.Game = (() => {
       if (q) {
         target.seenIds.push(q.id);
         UI.renderDefenseQ(target, q, dmg, S.boss, S.players, (correct) => {
-          const atk = pickRand((S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words);
           if (correct) {
             lines.push(`${target.name} は こたえて かわした！ ✨`);
           } else {
             target.hp = Math.max(0, target.hp - dmg);
-            lines.push(`${target.name} に ${atk.name} → ${dmg} ダメージ！`);
+            lines.push(`${target.name} に ${atk.name} → ${dmg} ダメージ！${def.label ? ' ('+def.label+')' : ''}`);
+            if (def.stun) {
+              target._stunnedNextTurn = true;
+              lines.push(`❄️ ${target.name} は スタン！ つぎの ターン こうげき できない`);
+            }
             if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…💀`); }
             const t = q.ptype; if (t) target.misses[t] = (target.misses[t]||0)+1;
           }
@@ -1225,7 +1247,6 @@ window.Game = (() => {
       }
     }
 
-    const atk = pickRand((S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words);
     const apply = () => {
       if (missed) {
         // Log line varies by why the attack didn't connect.
@@ -1239,13 +1260,17 @@ window.Game = (() => {
         lines.push(line);
       } else {
         target.hp = Math.max(0, target.hp - dmg);
-        lines.push(`${target.name} に ${atk.name} → ${dmg} ダメージ！`);
+        lines.push(`${target.name} に ${atk.name} → ${dmg} ダメージ！${def.label ? ' ('+def.label+')' : ''}`);
+        if (def.stun) {
+          target._stunnedNextTurn = true;
+          lines.push(`❄️ ${target.name} は スタン！ つぎの ターン こうげき できない`);
+        }
         if (target.hp === 0) { target.dead = true; lines.push(`${target.name} は たおれた…💀`); }
       }
       processBossAttack(queue, idx+1, lines);
     };
     if (SND.getBossAnim && SND.getBossAnim()) {
-      UI.showBossAttackAnim(S.boss, atk, target.name, dmg, !!missed, apply, missReason);
+      UI.showBossAttackAnim(S.boss, atk, target.name, dmg, !!missed, apply, missReason, { typeLabel: def.label });
     } else {
       apply();
     }
