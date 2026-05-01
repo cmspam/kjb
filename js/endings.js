@@ -459,7 +459,63 @@ window.Endings = (() => {
     return { svg, captionJp: "アンパンマンは たおされ、新ヒーローに なった…", captionEn: "Anpan Maguro toppled Anpanman and took the throne." };
   }
 
-  const SCENES = { tako, unko, tral, pamp, parfait, anpan };
+  // Brainrot King — every boss's evil ending stacked into one apocalyptic scene.
+  // The kid who LOSES to the final form gets this cataclysmic image.
+  function brainrot() {
+    const svg = `
+      <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <radialGradient id="brEndSky" cx=".5" cy=".4" r=".7">
+            <stop offset="0"  stop-color="#5a1a8a"/>
+            <stop offset=".5" stop-color="#1a0a2a"/>
+            <stop offset="1"  stop-color="#000"/>
+          </radialGradient>
+        </defs>
+        <rect width="800" height="500" fill="url(#brEndSky)"/>
+        <!-- Apocalyptic skyline silhouette -->
+        <g fill="#000" opacity=".85">
+          <rect x="0"   y="380" width="120" height="120"/>
+          <rect x="120" y="350" width="80"  height="150"/>
+          <rect x="200" y="400" width="60"  height="100"/>
+          <rect x="260" y="370" width="100" height="130"/>
+          <rect x="360" y="395" width="50"  height="105"/>
+          <rect x="410" y="360" width="90"  height="140"/>
+          <rect x="500" y="385" width="70"  height="115"/>
+          <rect x="570" y="345" width="100" height="155"/>
+          <rect x="670" y="380" width="130" height="120"/>
+        </g>
+        <!-- Each boss's icon raining onto the city -->
+        <text x="80"  y="120" font-size="46">🐙</text>
+        <text x="200" y="100" font-size="46">💩</text>
+        <text x="320" y="130" font-size="46">🦷</text>
+        <text x="440" y="100" font-size="46">🐑</text>
+        <text x="560" y="120" font-size="46">🍦</text>
+        <text x="680" y="100" font-size="46">👊</text>
+        <!-- Glowing chaos core hovering in the sky -->
+        <radialGradient id="brEndCore" cx=".5" cy=".5" r=".5">
+          <stop offset="0"   stop-color="#fff"/>
+          <stop offset=".4"  stop-color="#ffcc00"/>
+          <stop offset=".75" stop-color="#ff66cc"/>
+          <stop offset="1"   stop-color="#bb44ff" stop-opacity="0"/>
+        </radialGradient>
+        <circle cx="400" cy="240" r="120" fill="url(#brEndCore)"/>
+        <circle cx="400" cy="240" r="50" fill="#ffcc00" stroke="#fff" stroke-width="3"/>
+        <text x="400" y="252" text-anchor="middle" font-size="40">👁️</text>
+        <!-- Tiny terrified humans -->
+        <g fill="#fff" opacity=".8">
+          <circle cx="120" cy="450" r="6"/><rect x="116" y="455" width="8" height="20"/>
+          <circle cx="280" cy="465" r="6"/><rect x="276" y="470" width="8" height="20"/>
+          <circle cx="500" cy="450" r="6"/><rect x="496" y="455" width="8" height="20"/>
+          <circle cx="700" cy="465" r="6"/><rect x="696" y="470" width="8" height="20"/>
+        </g>
+        <!-- Title banner -->
+        <rect x="60" y="40" width="680" height="56" rx="16" fill="#3a0a5a" stroke="#ffcc00" stroke-width="4"/>
+        <text x="400" y="80" text-anchor="middle" fill="#ffcc00" font-size="28" font-weight="900" style="text-shadow:0 2px 0 #000">ブレインロット 帝国[ていこく] せんげん！</text>
+      </svg>`;
+    return { svg, captionJp: "6つの 野望[やぼう]が ぜんぶ 同時[どうじ]に 実現[じつげん]してしまった…", captionEn: "All six kaiju ambitions came true at once. The world is theirs now." };
+  }
+
+  const SCENES = { tako, unko, tral, pamp, parfait, anpan, brainrot };
 
   function render(bossId) {
     const fn = SCENES[bossId];

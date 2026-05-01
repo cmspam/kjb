@@ -715,11 +715,85 @@ window.Monsters = (() => {
     </g>`;
   }
 
+  // ---------- FINAL BOSS: ブレインロット・キング ----------
+  // The fusion overmind that emerges when all 6 kaiju have been defeated.
+  // A glowing chaos core in the middle, with one iconic limb from each of
+  // the 6 bosses orbiting it. Reuses every existing draw helper; no new art.
+  // Higher HP + 3 attacks/round + own attack pool. Only spawns from the boss
+  // picker map after Progress.isDefeated() reports all 6 normal bosses cleared.
+  function makeBrainrotKing() {
+    const id = "brainrot";
+    const f = window.I18N.boss(id);
+    const pn = f.parts || {};
+    const color = "#bb44ff";
+    return {
+      id,
+      name_jp: f.name_jp,
+      name_en: f.name_en,
+      catchphrase: f.catchphrase,
+      attacks: f.attacks,
+      backstory: f.backstory,
+      weakness: f.weakness,
+      weakness_label: f.weakness_label,
+      color,
+      isFinalBoss: true,        // flag for victory/defeat code paths
+      attacksPerRound: 3,        // higher than normal (2)
+      bodySVG: () => `
+        <defs>
+          <radialGradient id="brainrotBody" cx=".5" cy=".5" r=".75">
+            <stop offset="0"  stop-color="#5a1a8a" stop-opacity=".95"/>
+            <stop offset=".55" stop-color="#2a0a4a" stop-opacity=".7"/>
+            <stop offset="1"  stop-color="#1a0a2a" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="400" cy="240" rx="360" ry="220" fill="url(#brainrotBody)"/>
+        <!-- Aura rings around the core -->
+        <circle cx="400" cy="240" r="100" fill="none" stroke="${color}"   stroke-width="2"   opacity=".55"/>
+        <circle cx="400" cy="240" r="150" fill="none" stroke="#ff66cc"    stroke-width="1.5" opacity=".4"/>
+        <circle cx="400" cy="240" r="200" fill="none" stroke="#ffcc00"    stroke-width="1"   opacity=".25"/>
+        <!-- Sparks scattered around the void -->
+        <text x="120" y="120" font-size="22">✨</text>
+        <text x="660" y="130" font-size="22">✨</text>
+        <text x="160" y="380" font-size="22">⚡</text>
+        <text x="640" y="380" font-size="22">⚡</text>
+        <text x="60"  y="240" font-size="22">🌟</text>
+        <text x="730" y="240" font-size="22">🌟</text>
+        <text x="400" y="60"  font-size="20" text-anchor="middle">💫</text>
+        <text x="400" y="450" font-size="20" text-anchor="middle">💫</text>
+      `,
+      parts: [
+        // Six "trophy limbs" — one borrowed from each defeated boss. Damaging
+        // them strips armor from the core (existing armor mechanic = number
+        // of intact non-core parts).
+        { id:"tako_arm",    type:"limb", name_jp:pn.tako_arm    || "タコ うで",     maxHP:14, hp:14, geom:{x:230, y:140, dir:200, len:130}, draw:(p)=>drawTentacle(p,"#ff8ec7"), effect:"atk-1" },
+        { id:"parfait_top", type:"limb", name_jp:pn.parfait_top || "パフェ さくらんぼ", maxHP:14, hp:14, geom:{x:600, y:120, r:32},                draw:(p)=>drawCherryCore(p,"#ee2244"), effect:"miss-30" },
+        { id:"unko_belly",  type:"limb", name_jp:pn.unko_belly  || "ばくだん おなか", maxHP:18, hp:18, geom:{x:220, y:300, w:48, h:34},          draw:(p)=>drawBelly(p,"#a87245"), effect:"no-special" },
+        { id:"anpan_face",  type:"limb", name_jp:pn.anpan_face  || "アンパン かお",   maxHP:14, hp:14, geom:{x:600, y:300, r:34},                draw:(p)=>drawNoseCore(p,"#ee3344"), effect:"miss-40" },
+        { id:"tral_tongue", type:"limb", name_jp:pn.tral_tongue || "ベロ",            maxHP:12, hp:12, geom:{x:340, y:380, len:90},               draw:(p)=>drawTongue(p,"#ff5a8a"), effect:"atk-1" },
+        { id:"pampamu_arm", type:"limb", name_jp:pn.pampamu_arm || "ふわふわ あし",   maxHP:14, hp:14, geom:{x:500, y:380, dir:75, len:90},      draw:(p)=>drawLeg(p,"#ddaaff"), effect:"slow" },
+        // Central swirling chaos core — the actual weak point.
+        { id:"core",        type:"core", name_jp:pn.core         || "カオス コア",     maxHP:50, hp:50, geom:{x:400, y:240, r:34},                draw:(p)=>drawCore(p,"#ffcc00"), effect:"win" },
+      ],
+      hits: f.hits || []
+    };
+  }
+
   const factories = [makeTakoTakoSahur, makeBombardiroUnkodilo, makeTralaleroPakupaku, makeBrrPampamu, makeParfaitIwashi, makeAnpanmaguro];
+  const finalFactories = [makeBrainrotKing];
 
   function randomBoss() { return factories[Math.floor(Math.random()*factories.length)](); }
-  // Returns the list of factory functions so the monster-pick screen can show all options.
+  // Returns the list of factory functions so the monster-pick screen can show
+  // all options. Final boss is excluded here on purpose — kids shouldn't be
+  // able to pick the brainrot king as their PvP monster, and the regular
+  // boss-cycle flow shouldn't surface it.
   function listFactories() { return factories.slice(); }
+  // All factories including final/secret bosses — for the picker map only.
+  function listAllFactories() { return factories.concat(finalFactories); }
+  // Returns the final-boss factory if available, or null. Decoupled from
+  // unlock state so callers can decide whether to show / gate it.
+  function getFinalBossFactory() {
+    return finalFactories.length ? finalFactories[0] : null;
+  }
 
   function renderBossSVG(boss) {
     const armor = coreArmor(boss);
@@ -785,5 +859,6 @@ window.Monsters = (() => {
     return m;
   }
 
-  return { randomBoss, listFactories, renderBossSVG, alive, aliveTargets, partById, bossModifiers, damageMultiplier, coreArmor };
+  return { randomBoss, listFactories, listAllFactories, getFinalBossFactory,
+           renderBossSVG, alive, aliveTargets, partById, bossModifiers, damageMultiplier, coreArmor };
 })();

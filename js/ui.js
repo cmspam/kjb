@@ -963,24 +963,41 @@ window.UI = (() => {
   function renderBossPickerMap(currentBossId, onPick, onCancel) {
     show("title");
     const s = $("screen-title"); s.innerHTML = "";
-    const factories = (Monsters && Monsters.listFactories) ? Monsters.listFactories() : [];
+    const normalFactories = (Monsters && Monsters.listFactories) ? Monsters.listFactories() : [];
+    // Final boss tile: only surfaced once every regular boss has been
+    // defeated at least once. Until unlocked, a locked-card placeholder
+    // teases the kid with "?" instead.
+    const finalFactory = (Monsters && Monsters.getFinalBossFactory) ? Monsters.getFinalBossFactory() : null;
+    const allDefeated = normalFactories.every(fac => {
+      const m = fac();
+      return !!(window.Progress && Progress.isDefeated && Progress.isDefeated(m.id));
+    });
+    const factories = (finalFactory && allDefeated) ? normalFactories.concat([finalFactory]) : normalFactories;
     const samples = factories.map(f => f());
     const tilesHTML = samples.map((m, i) => {
       const defeated = !!(window.Progress && Progress.isDefeated && Progress.isDefeated(m.id));
       const isCurrent = m.id === currentBossId;
+      const isFinal = !!m.isFinalBoss;
       return `
-        <button class="map-tile ${defeated?'map-defeated':''} ${isCurrent?'map-current':''}" data-idx="${i}">
+        <button class="map-tile ${defeated?'map-defeated':''} ${isCurrent?'map-current':''} ${isFinal?'map-final':''}" data-idx="${i}">
           <div class="map-tile-svg">${Monsters.renderBossSVG(m)}</div>
-          <div class="map-tile-name">${escapeHTML(m.name_jp)}</div>
-          <div class="map-tile-status">${defeated ? '✅ たおした' : (isCurrent ? '⚔️ せんちゅう' : 'たたかう？')}</div>
+          <div class="map-tile-name">${escapeHTML(m.name_jp)}${isFinal?' 👑':''}</div>
+          <div class="map-tile-status">${isFinal ? '⚡ ファイナル ボス！' : (defeated ? '✅ たおした' : (isCurrent ? '⚔️ せんちゅう' : 'たたかう？'))}</div>
         </button>`;
     }).join("");
+    // Locked teaser tile when not yet unlocked.
+    const lockedTeaser = (finalFactory && !allDefeated) ? `
+      <div class="map-tile map-locked" aria-disabled="true">
+        <div class="map-tile-svg" style="font-size:80px; opacity:0.4;">❓</div>
+        <div class="map-tile-name">？？？</div>
+        <div class="map-tile-status">${normalFactories.length}たい たおすと…</div>
+      </div>` : "";
     s.appendChild(el(`
       <div class="center" style="max-width: 880px; margin: 12px auto; padding: 0 12px;">
         <div class="subtle" style="color:var(--accent); letter-spacing:4px;">★ あいてを えらぶ ★</div>
         <h2 style="margin: 4px 0; color: var(--accent);">🗺️ カイジュウ ぜんかい</h2>
         <div class="subtle" style="font-size:13px;">タップで バトル スタート！</div>
-        <div class="map-grid">${tilesHTML}</div>
+        <div class="map-grid">${tilesHTML}${lockedTeaser}</div>
         <button class="btn ghost" id="map-back" style="margin-top:14px;">${JP.back || "もどる"}</button>
       </div>`));
     s.querySelectorAll(".map-tile").forEach(btn => {
@@ -2874,8 +2891,10 @@ window.UI = (() => {
     show("victory");
     const s = $("screen-victory"); s.innerHTML = "";
     SND.sfxVictory();
+    const isFinalWin = boss && boss.isFinalBoss;
     let title = JP.victory;
-    if (mode === "pvp" && winner) title = JP.pvp_winner(winner.name);
+    if (isFinalWin) title = "TRUE CHAMPION！";
+    else if (mode === "pvp" && winner) title = JP.pvp_winner(winner.name);
     else if (jinro && spyWins) title = JP.spy_wins;
     else if (jinro && !spyWins) title = JP.hero_wins;
     const winnerMonster = mode === "pvp" && winner && winner.monster
@@ -2893,6 +2912,25 @@ window.UI = (() => {
             <div style="font-size:18px; font-weight:900; color:#fff; padding:10px 6px;">${escapeHTML(e.captionJp)}</div>
           </div>`;
       }
+    }
+    // FINAL BOSS WIN — campaign complete cinematic. Stack all 6 boss icons in
+    // a "purified bow-out" row, big TRUE ENDING banner, special voice line,
+    // ranked stats. Only fires when the brainrot king is defeated.
+    if (isFinalWin) {
+      endingHTML = `
+        <div class="true-ending-card">
+          <div class="true-ending-banner">★ TRUE ENDING ★ CAMPAIGN COMPLETE</div>
+          <div class="true-ending-row">
+            <span class="true-ending-icon" style="animation-delay: 0.0s;">🐙</span>
+            <span class="true-ending-icon" style="animation-delay: 0.2s;">💩</span>
+            <span class="true-ending-icon" style="animation-delay: 0.4s;">🦷</span>
+            <span class="true-ending-icon" style="animation-delay: 0.6s;">🐑</span>
+            <span class="true-ending-icon" style="animation-delay: 0.8s;">🍦</span>
+            <span class="true-ending-icon" style="animation-delay: 1.0s;">👊</span>
+          </div>
+          <div class="true-ending-caption">6体[たい]を ぜんぶ たおして、ブレインロット・キングも たおした！</div>
+          <div class="true-ending-sub">きみは ほんとうの チャンピオンだ！🏆 ぜんセカイの きぼう！</div>
+        </div>`;
     }
     // Card-unlock banner — first time this boss has been defeated.
     let unlockBanner = "";
