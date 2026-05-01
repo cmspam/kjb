@@ -792,7 +792,10 @@ window.Game = (() => {
         // Hit reaction voice — opponent monster yelps after the dust settles.
         const hits = opMon.hits || [];
         if (hits.length) {
-          const line = hits[(Math.random()*hits.length)|0];
+          opMon._hitsHist = opMon._hitsHist || [];
+          const line = window.pickRandNoRepeat
+            ? pickRandNoRepeat(hits, opMon._hitsHist, 3)
+            : hits[(Math.random()*hits.length)|0];
           setTimeout(() => {
             const stageNow = document.querySelector(".stage");
             if (stageNow) {
@@ -930,7 +933,11 @@ window.Game = (() => {
       // (both sit near the top of the stage and would otherwise overlap).
       const hits = S.boss.hits || [];
       if (hits.length) {
-        const line = hits[(Math.random()*hits.length)|0];
+        // Avoid back-to-back duplicate lines — small per-boss ring buffer.
+        S.boss._hitsHist = S.boss._hitsHist || [];
+        const line = window.pickRandNoRepeat
+          ? pickRandNoRepeat(hits, S.boss._hitsHist, 3)
+          : hits[(Math.random()*hits.length)|0];
         setTimeout(() => {
           const stageNow = document.querySelector(".stage");
           if (!stageNow) return;

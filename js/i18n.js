@@ -112,6 +112,27 @@ window.I18N = (() => {
 
 window.pickRand = (arr) => arr[Math.floor(Math.random()*arr.length)];
 
+// Pick from `arr` avoiding entries seen in `historyArr` (the most recent N
+// picks). Mutates historyArr — caller passes the same ring buffer each call
+// (e.g. a stash on a boss object). Falls back to pickRand for tiny pools.
+window.pickRandNoRepeat = function(arr, historyArr, avoidLast) {
+  if (!Array.isArray(arr) || !arr.length) return undefined;
+  const avoid = Math.min(avoidLast == null ? 3 : avoidLast, Math.max(0, arr.length - 1));
+  if (avoid <= 0 || arr.length <= 1) return arr[0];
+  const hist = Array.isArray(historyArr) ? historyArr : [];
+  let pick;
+  let tries = 0;
+  do {
+    pick = arr[(Math.random() * arr.length) | 0];
+    tries++;
+  } while (hist.includes(pick) && tries < 12);
+  if (Array.isArray(historyArr)) {
+    historyArr.push(pick);
+    while (historyArr.length > avoid) historyArr.shift();
+  }
+  return pick;
+};
+
 // Furigana helper. Authors write 漢字[よみ] and this turns it into proper
 // HTML <ruby> tags so kanji shows the hiragana reading above it (kids' book
 // style). Locale-independent — non-JA locales simply won't use the markup.

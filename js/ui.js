@@ -920,9 +920,15 @@ window.UI = (() => {
     // Loop the boss's theme song while the kid reads the backstory. The render
     // is reached as a result of a user tap, so iOS audio gesture is satisfied.
     SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 600 });
-    // Boss says their catchphrase on entrance. The backstory itself is read
-    // silently — only the theme song plays under it (kid reads at their own pace).
+    // Boss says their catchphrase on entrance, then narrates a snippet of
+    // the backstory — the build pipeline ships per-line voice clips for the
+    // backstory (split on \n), so we voice the first paragraph for drama
+    // without dragging out the read-along.
     if (boss.catchphrase) SND.playBossLine(boss.id, boss.catchphrase);
+    if (boss.backstory) {
+      const firstPara = String(boss.backstory).split(/\n\n|👹/)[0].split(/\n/).slice(0, 2).join(" ").trim();
+      if (firstPara) setTimeout(() => SND.playBossLine(boss.id, firstPara), 2400);
+    }
     tap($("intro-go"), () => { SND.stopBossVoice(); SND.stopTheme(400); onContinue(); });
     if (onCycle) {
       tap($("intro-cycle"), () => { SND.stopBossVoice(); SND.stopTheme(200); onCycle(); });
@@ -2226,11 +2232,20 @@ window.UI = (() => {
   }
 
   // -------- RESULT --------
+  // History buffers for de-duplicating phrase pickers — keep the last few
+  // used so back-to-back duplicates don't happen on small pools.
+  const _cheerHist = [];
+  const _burnHist = [];
   function renderResult({ correct, energyEarned, cardsDrawn, question, chosen, player, boss, players }, onContinue) {
     show("result");
     const s = $("screen-result"); s.innerHTML = "";
     s.appendChild(el(buildHeader(boss, players, player)));
-    const cheer = correct ? pickRand(JP.correct_cheer) : pickRand(JP.wrong_burn);
+    // De-duped pickers so a 10-question battle doesn't surface the same
+    // 5-line pool twice in a row.
+    const pickFn = window.pickRandNoRepeat || ((arr, _h) => pickRand(arr));
+    const cheer = correct
+      ? pickFn(JP.correct_cheer || ["ナイス〜！"], _cheerHist, 3)
+      : pickFn(JP.wrong_burn    || ["ボスが わらった"], _burnHist,  3);
     let wrongDetail = "";
     if (!correct && question) {
       const correctText = question.options[question.answer];
@@ -2256,6 +2271,12 @@ window.UI = (() => {
         <button class="btn huge ${correct?'good':'ghost'}" id="cont">${JP.next}</button>
       </div>`));
     tap($("cont"), () => onContinue());
+    // Voice the boss's reaction line — the burn pool is text-only without
+    // this. Only on wrong answers; correct answers don't have a "boss
+    // suffers" voice line in the existing dataset (could add later).
+    if (!correct && boss && boss.id) {
+      setTimeout(() => SND.playBossLine(boss.id, cheer), 220);
+    }
     // Speak the correct answer on wrong-answer to help kids who can't read it yet.
     if (!correct && question && question.options && typeof question.answer === "number") {
       const txt = question.options[question.answer];
@@ -2655,6 +2676,15 @@ window.UI = (() => {
     const themeId = (mode === "pvp" && winner && winner.monster) ? winner.monster.id
                   : (boss && boss.id) ? boss.id : null;
     if (themeId) SND.playTheme(themeId, { loop: true, volume: 0.55, fadeIn: 800 });
+    // Defeated boss says one last grumble — uses their "low HP" pool for
+    // dramatic last-words flavor. Hero-mode only — PvP champion already had
+    // their winning trash-talk during the K.O. cinematic.
+    if (mode !== "pvp" && boss && boss.id) {
+      const pool = (JP.boss_taunts && (JP.boss_taunts.desperate || JP.boss_taunts.low_hp)) || [];
+      if (pool.length) {
+        setTimeout(() => SND.playBossLine(boss.id, pool[(Math.random()*pool.length)|0]), 1100);
+      }
+    }
     tap($("again"), () => { SND.stopTheme(400); onAgain(); });
     tap($("title"), () => { SND.stopTheme(400); onTitle(); });
   }
@@ -2696,6 +2726,12 @@ window.UI = (() => {
       </div>`));
     // The boss won — let their theme blare in triumph.
     if (boss && boss.id) SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 700 });
+    // Triumphant boss line — catchphrase or a "raged" pool entry.
+    if (boss && boss.id) {
+      const pool = (JP.boss_taunts && JP.boss_taunts.raged) || [];
+      const line = pool.length ? pool[(Math.random()*pool.length)|0] : boss.catchphrase;
+      if (line) setTimeout(() => SND.playBossLine(boss.id, line), 1000);
+    }
     tap($("again"), () => { SND.stopTheme(400); onAgain(); });
     tap($("title"), () => { SND.stopTheme(400); onTitle(); });
   }
