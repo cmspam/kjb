@@ -969,6 +969,19 @@ window.Game = (() => {
       const ef = card.effect;
       // Cards that need a target
       if (card.needsTarget && card.targetType === "player") {
+        // In PvP, heal cards target the kid's OWN monster's parts (no team
+        // exists — everyone's a competitor), so we skip the player picker
+        // entirely. applyCardEffect's heal branch detects PvP and routes to
+        // healMonsterPart.
+        const ef0 = card.effect;
+        const isHealCard = ef0 && (ef0.type === Cards.C.HEAL_TARGET || ef0.type === Cards.C.HEAL_SELF);
+        if (S.mode === "pvp" && isHealCard) {
+          p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
+          applyCardEffect(p, card, p);  // target=self for typing safety
+          SND.sfxCard();
+          goAction();
+          return;
+        }
         pickPlayer(p, (target) => {
           try {
             p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
@@ -1028,20 +1041,56 @@ window.Game = (() => {
     s.appendChild(c);
   }
 
+  // Heal helpers for PvP: heal cards in PvP target the kid's OWN monster's
+  // parts (since there's no team and player.hp is meaningless there). Auto-
+  // pick the most-damaged alive part — keeps card play single-tap.
+  function healMostDamagedPart(p, v) {
+    const m = p.monster;
+    if (!m) return false;
+    const hurt = m.parts.filter(x => x.hp > 0 && x.hp < x.maxHP);
+    if (!hurt.length) {
+      UI.toast(`${p.name} の モンスターは げんき！ なおすところ ない`);
+      return false;
+    }
+    hurt.sort((a, b) => (a.hp / a.maxHP) - (b.hp / b.maxHP));
+    const part = hurt[0];
+    const restore = Math.min(v, part.maxHP - part.hp);
+    part.hp += restore;
+    UI.toast(`💚 ${p.name} の ${part.name_jp} +${restore} HP！`);
+    return true;
+  }
+  function healAllOwnParts(p, v) {
+    const m = p.monster;
+    if (!m) return false;
+    const hurt = m.parts.filter(x => x.hp > 0 && x.hp < x.maxHP);
+    if (!hurt.length) {
+      UI.toast(`${p.name} の モンスターは げんき！`);
+      return false;
+    }
+    let total = 0;
+    hurt.forEach(x => {
+      const before = x.hp;
+      x.hp = Math.min(x.maxHP, x.hp + v);
+      total += x.hp - before;
+    });
+    UI.toast(`💚 ${p.name} の モンスター ぜんぶ +${v} HP！(けい +${total})`);
+    return true;
+  }
+
   function applyCardEffect(p, card, target) {
     const ef = card.effect, C = Cards.C;
     if (ef.type === C.DMG_BONUS) {
       S.pendingDamageBonus += ef.v;
       UI.toast(`つぎの こうげきに +${ef.v}！`);
     } else if (ef.type === C.HEAL_TARGET) {
-      target.hp = Math.min(target.maxHp, target.hp + ef.v);
-      UI.toast(`${target.name}: HP +${ef.v}`);
+      if (S.mode === "pvp") healMostDamagedPart(p, ef.v);
+      else { target.hp = Math.min(target.maxHp, target.hp + ef.v); UI.toast(`${target.name}: HP +${ef.v}`); }
     } else if (ef.type === C.HEAL_TEAM) {
-      S.players.filter(x=>!x.dead).forEach(x => x.hp = Math.min(x.maxHp, x.hp + ef.v));
-      UI.toast(`みんな +${ef.v} HP`);
+      if (S.mode === "pvp") healAllOwnParts(p, ef.v);
+      else { S.players.filter(x=>!x.dead).forEach(x => x.hp = Math.min(x.maxHp, x.hp + ef.v)); UI.toast(`みんな +${ef.v} HP`); }
     } else if (ef.type === C.HEAL_SELF) {
-      p.hp = Math.min(p.maxHp, p.hp + ef.v);
-      UI.toast(`+${ef.v} HP`);
+      if (S.mode === "pvp") healMostDamagedPart(p, ef.v);
+      else { p.hp = Math.min(p.maxHp, p.hp + ef.v); UI.toast(`+${ef.v} HP`); }
     } else if (ef.type === C.SHIELD_SELF) {
       p.shield = true; UI.toast(`シールド！`);
     } else if (ef.type === C.SHIELD_TEAM) {

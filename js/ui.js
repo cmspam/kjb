@@ -2529,7 +2529,25 @@ window.UI = (() => {
   function buildHeader(boss, players, currentPlayer) {
     const svg = boss ? Monsters.renderBossSVG(boss) : "";
     const ragedClass = boss && boss.raged ? " raged" : "";
+    // PvP detection: any player has a .monster set means we're monster-vs-
+    // monster. Player HP is meaningless there (no boss attacks the kid),
+    // so we display the monster's CORE HP in its place — gives kids the same
+    // "am I about to die?" glance value, but on the stat that actually matters.
+    const isPvp = (players || []).some(p => p && p.monster);
     const playerTiles = (players||[]).map(p => {
+      if (isPvp && p.monster) {
+        const core = p.monster.parts.find(x => x.effect === "win");
+        const coreHp = core ? Math.max(0, core.hp) : 0;
+        const coreMax = core ? core.maxHP : 1;
+        const corePct = coreMax > 0 ? coreHp / coreMax : 0;
+        const lowCore = !p.dead && corePct <= 0.3;
+        return `
+        <div class="player ${currentPlayer && p.id===currentPlayer.id?'active':''} ${p.dead?'dead':''} ${lowCore?'low-hp':''}">
+          <div class="name">${p.avatar?p.avatar+' ':''}${escapeHTML(p.name)}</div>
+          <div class="hp ${corePct<=0.2?'low':''}">💎 ${coreHp}/${coreMax}</div>
+          <div class="energy">⚡ ${p.energy} 🎴 ${p.hand?p.hand.length:0}${p.combo>=2?` 🔥×${p.combo}`:''}</div>
+        </div>`;
+      }
       const lowHp = !p.dead && p.maxHp && p.hp <= p.maxHp * 0.3;
       return `
       <div class="player ${currentPlayer && p.id===currentPlayer.id?'active':''} ${p.dead?'dead':''} ${lowHp?'low-hp':''}">
