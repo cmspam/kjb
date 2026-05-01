@@ -1101,7 +1101,13 @@ window.UI = (() => {
       const m = fac();
       return !!(window.Progress && Progress.isDefeated && Progress.isDefeated(m.id));
     });
-    const factories = (finalFactory && allDefeated) ? normalFactories.concat([finalFactory]) : normalFactories;
+    // Dev: ?dev=1 unlocks the final boss (and any future secret) in the
+    // picker regardless of defeat progress. Useful for testing.
+    let devUnlock = false;
+    try { devUnlock = new URLSearchParams(window.location.search).get("dev") === "1"; } catch(_) {}
+    const factories = (finalFactory && (allDefeated || devUnlock))
+      ? normalFactories.concat([finalFactory])
+      : normalFactories;
     const samples = factories.map(f => f());
     const tilesHTML = samples.map((m, i) => {
       const defeated = !!(window.Progress && Progress.isDefeated && Progress.isDefeated(m.id));
@@ -2756,6 +2762,33 @@ window.UI = (() => {
     // teammate fires "support" for heroes (+HP boost) or "sabotage" for spies
     // (damage) — game.js routes by role, the UI doesn't know which is which.
     const showTeammates = !!(extras && extras.jinro) && hasAtk;
+    // Explain why the kid can't attack this turn — was the most-confusing
+    // state in playtests ("I got it right, why can't I attack?"). The
+    // common causes:
+    //   1. They got the answer WRONG (handleAnswer routes to renderResult,
+    //      attackPower stays 0)
+    //   2. They were stunned by a previous opponent's stun-type attack
+    //      (handleAnswer zeroed it AND showed a toast, but the toast may
+    //      have been missed)
+    //   3. They already attacked this turn (attackPower zeroed by
+    //      doAttack)
+    let noAttackReason = "ターンを おわるよ";
+    let noAttackHint = "";
+    if (!hasAtk) {
+      const reason = extras && extras.attackBlockedReason;
+      if (reason === "stunned") {
+        noAttackReason = "❄️ スタン中！ こうげき できない";
+        noAttackHint = "つぎの ターンには もどるよ。 カードは つかえる";
+      } else if (reason === "wrong") {
+        noAttackReason = "❌ こたえが ちがった";
+        noAttackHint = "こうげきは できないけど カードは つかえる";
+      } else if (reason === "soft-fail") {
+        noAttackReason = "✏️ スペル ミス";
+        noAttackHint = "ほうしゅう なし。 コンボは キープ！";
+      } else {
+        noAttackHint = "カードを つかうか ターンを おわってね";
+      }
+    }
     s.appendChild(el(`
       <div class="center" style="width:100%;">
         ${hasAtk ? `
@@ -2764,8 +2797,9 @@ window.UI = (() => {
           <div class="subtle">${showTeammates ? "こうげき または サポート する あいてを タップ！" : "こうげきしたい パーツを タップ！"}</div>
           <div class="parts-pick" id="parts"></div>
         ` : `
-          <h3>ターンを おわるよ</h3>
+          <h3>${noAttackReason}</h3>
           <div class="subtle">⚡ ${player.energy}</div>
+          ${noAttackHint ? `<div class="subtle" style="margin-top:6px; color:#cfcfcf;">${noAttackHint}</div>` : ""}
         `}
         <h3 style="margin-top:14px; font-size:18px;">カード</h3>
         <div id="hand-area"></div>
@@ -2830,15 +2864,38 @@ window.UI = (() => {
     const speakHTML = (ptarget && SND.isSpeechSupported && SND.isSpeechSupported())
       ? `<button class="btn cool" id="speak-bonus" style="font-size:14px; min-height:44px; min-width:0; padding: 8px 14px; margin: 8px 0;">🎤 「${escapeHTML(ptarget)}」 を いって +2 ボーナス！</button>`
       : ``;
+    // Explain why attack isn't available — uses extras.attackBlockedReason
+    // which game.js sets in handleAnswer (wrong / soft-fail / stunned).
+    let pvpHeading;
+    let pvpHint;
+    if (hasAtk) {
+      pvpHeading = `⚔️ こうげきパワー ${player.attackPower} ／ ⚡ ${player.energy}`;
+      pvpHint = "こうげきする モンスターを タップ！";
+    } else {
+      const reason = extras && extras.attackBlockedReason;
+      if (reason === "stunned") {
+        pvpHeading = `❄️ スタン中！ こうげき できない ／ ⚡ ${player.energy}`;
+        pvpHint = "つぎの ターンには もどる。 カードは つかえる";
+      } else if (reason === "wrong") {
+        pvpHeading = `❌ こたえが ちがった ／ ⚡ ${player.energy}`;
+        pvpHint = "こうげきは できないけど カードは つかえる";
+      } else if (reason === "soft-fail") {
+        pvpHeading = `✏️ スペル ミス ／ ⚡ ${player.energy}`;
+        pvpHint = "ほうしゅう なし。 コンボは キープ！";
+      } else {
+        pvpHeading = `こうげき できない ／ ⚡ ${player.energy}`;
+        pvpHint = "カードを つかうか ターンを おわってね";
+      }
+    }
     s.appendChild(el(`
       <div class="center" style="width:100%; position:relative;">
         <button id="pvp-music" class="btn ghost" title="テーマソング ON/OFF"
                 style="position:absolute; right:6px; top:0; padding:6px 10px; font-size:18px; min-height:0;">
           ${themePlaying ? '🎵' : '🔇'}
         </button>
-        <h3 style="margin:6px 0;">${hasAtk?`⚔️ こうげきパワー ${player.attackPower}`:'こうげき できない'} ／ ⚡ ${player.energy}</h3>
+        <h3 style="margin:6px 0;">${pvpHeading}</h3>
         ${speakHTML}
-        <div class="subtle">${hasAtk?'こうげきする モンスターを タップ！':'カードを つかうか ターンを おわってね'}</div>
+        <div class="subtle">${pvpHint}</div>
         <div id="pvp-field" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 10px 0; max-width: 760px; width:100%;"></div>
         <h3 style="margin-top:14px; font-size:18px;">カード</h3>
         <div id="hand-area"></div>

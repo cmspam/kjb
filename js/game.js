@@ -210,10 +210,28 @@ window.Game = (() => {
     UI.renderTitle({ onStart: ({ count, mode }) => showSetup(count, mode) });
   }
 
+  // Dev URL params:
+  //   ?boss=<id>       — directly start vs that boss (skips picker map gating)
+  //   ?dev=1           — picker shows the final boss + future-secret
+  //                      bosses regardless of unlock state
+  // Useful for testing without grinding through 6 boss kills first.
+  function devParams() {
+    try { return new URLSearchParams(window.location.search); } catch(_) { return new URLSearchParams(""); }
+  }
   function showSetup(count, mode) {
     UI.renderSetup({ count, onConfirm: (opts) => {
       opts.mode = mode;  // Pipe through from title
       newGame(opts);
+      // Dev: ?boss=<id> overrides the random boss pick before beginMatch.
+      const forcedBossId = devParams().get("boss");
+      if (forcedBossId && S.mode !== "pvp") {
+        const allFactories = (Monsters.listAllFactories ? Monsters.listAllFactories() : Monsters.listFactories());
+        const match = allFactories.map(f => f()).find(m => m.id === forcedBossId);
+        if (match) {
+          S.boss = match;
+          if (S.scaling) S.boss.attacksPerRound = S.scaling.attacks;
+        }
+      }
       // Boss picker (map view). Replaces the one-step "cycle through bosses"
       // button with a grid showing all 6 with progress badges. Tap a tile to
       // pick that boss; the bossIntro then shows for them.
@@ -262,6 +280,24 @@ window.Game = (() => {
     UI.renderPass(p, () => {
       UI.renderRole(p, p.role === "spy", () => revealRolesSequentially(idx+1, done));
     });
+  }
+
+  // Re-render the on-screen boss/opponent SVG so damaged or destroyed parts
+  // update their drawing in place, without waiting for a full screen
+  // re-render. Called from each per-hit damage application.
+  function refreshStageSVG(monster) {
+    if (!monster || !window.Monsters || !Monsters.renderBossSVG) return;
+    const stageSvgEl = document.querySelector(".stage .stage-svg");
+    if (!stageSvgEl) {
+      // Legacy direct-child fallback (boss intro / KO / defeat-cinematic
+      // render the SVG outside .stage-svg).
+      const stage = document.querySelector(".stage");
+      if (stage && stage.firstElementChild && stage.firstElementChild.tagName === "svg") {
+        stage.innerHTML = Monsters.renderBossSVG(monster);
+      }
+      return;
+    }
+    stageSvgEl.innerHTML = Monsters.renderBossSVG(monster);
   }
 
   // Snapshot HP / part HP at the start of a jinro round so finishBossTurn can
@@ -538,7 +574,10 @@ window.Game = (() => {
       if (p._stunnedNextTurn) {
         p.attackPower = 0;
         p._stunnedNextTurn = false;
+        p._attackBlockedReason = "stunned";  // surfaced on action screen
         UI.toast(`❄️ ${p.name} は スタン中… こうげき できない！`, 1500);
+      } else {
+        p._attackBlockedReason = null;
       }
       drawCard(p);
       // Pronunciation challenge: if the answer is a single short English word
@@ -582,9 +621,11 @@ window.Game = (() => {
       // a wrong answer). No reward, but combo is preserved — typing speed
       // shouldn't ruin a streak the kid earned with comprehension.
       if (softFail) {
+        p._attackBlockedReason = "soft-fail";
         UI.toast(`✏️ おしい！ スペル ミス。 コンボは キープ！ 🔥×${p.combo}`, 1800);
       } else {
         p.combo = 0; // streak broken
+        p._attackBlockedReason = "wrong";
       }
       // Wrong answers still go through the result screen so kids see the correct
       // answer + explanation.
@@ -609,7 +650,10 @@ window.Game = (() => {
       goAction();
     };
     const taunt = (S.mode !== "pvp") ? pickBossTaunt(p) : null;
-    const extras = { pronounceTarget: S.pronounceTarget, onSpeak, taunt, jinro: !!S.jinro };
+    const extras = {
+      pronounceTarget: S.pronounceTarget, onSpeak, taunt, jinro: !!S.jinro,
+      attackBlockedReason: p._attackBlockedReason,  // why no attack power this turn
+    };
     if (S.mode === "pvp") {
       UI.renderPvpAction(p, S.players,
         (opp) => goPvpPickAttack(p, opp),
@@ -773,6 +817,7 @@ window.Game = (() => {
             S.battleStats.biggestHit = hitDmg;
             S.battleStats.biggestHitBy = p ? p.name : null;
           }
+          refreshStageSVG(opMon);
           SND.sfxHit();
           const stage = document.querySelector(".stage");
           if (stage) {
@@ -942,6 +987,12 @@ window.Game = (() => {
       S.battleStats.biggestHit = dmg;
       S.battleStats.biggestHitBy = p ? p.name : null;
     }
+    // Re-render the boss SVG in place so the part's damaged/destroyed
+    // visual state updates as the attack connects (each part's draw fn
+    // branches on partState which reads .hp/.maxHP). Without this, kids
+    // saw the dmg-num float but the boss looked unchanged until the
+    // next full screen transition.
+    refreshStageSVG(S.boss);
     SND.sfxHit();
     const stage = document.querySelector(".stage");
     if (stage) {
@@ -1032,6 +1083,7 @@ window.Game = (() => {
     S.pronounceTarget = null; // bonus is one-shot per turn
     // Discard unspent attackPower; leftover energy stays (banked for cards next turn)
     currentPlayer().attackPower = 0;
+    currentPlayer()._attackBlockedReason = null;
     // Bug fix: doubleNextAttack used to leak across rounds — if a player
     // played `combo` and ended turn without attacking, the flag persisted and
     // the NEXT-NEXT player's first attack would unexpectedly double. Now
