@@ -6,7 +6,16 @@
 
   function mc(answer, pool, count=4) {
     const distract = [];
-    while (distract.length < count-1) { const x = pool[(Math.random()*pool.length)|0]; if (x!==answer && !distract.includes(x)) distract.push(x); }
+    let g = 0;
+    while (distract.length < count-1) {
+      if (g++ > 500) {
+        try { console.warn("mc: pool too small, padding —", { answer, pool }); } catch(_){}
+        while (distract.length < count-1) distract.push(answer);
+        break;
+      }
+      const x = pool[(Math.random()*pool.length)|0];
+      if (x!==answer && !distract.includes(x)) distract.push(x);
+    }
     const opts = distract.slice(); const pos = (Math.random()*count)|0; opts.splice(pos, 0, answer);
     return { opts, pos };
   }
@@ -691,6 +700,113 @@
     Q({ stars:1, ptype:"adj_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
     m = mc(jp, adjectives.map(a=>a[1]));
     Q({ stars:1, ptype:"adj_en2jp", prompt_jp:`「${en}」の いみ は？`, prompt:en, audio:en, options: m.opts, answer: m.pos });
+  });
+
+  // ===== EXPANSION =====
+
+  // Bigger jobs/people list
+  const jobs2 = [
+    ["lawyer","べんごし","⚖️"],["judge","さいばんかん","👩‍⚖️"],["engineer","エンジニア","🧑‍🔧"],
+    ["programmer","プログラマー","👨‍💻"],["designer","デザイナー","🎨"],["author","さっか","✍️"],
+    ["actor","はいゆう","🎭"],["actress","じょゆう","🎭"],["model","モデル","💃"],
+    ["coach","コーチ","🧑‍🏫"],["soldier","へいし","🪖"],["sailor","ふなのり","⚓"],
+    ["athlete","アスリート","🏃"],["referee","しんぱん","🟨"],["barber","とこや","💈"],
+  ];
+  vocabBundle(jobs2, "job2");
+  // More house things
+  const houseStuff2 = [
+    ["lamp","ランプ","💡"],["pillow","まくら","🛏️"],["blanket","ブランケット","🧣"],
+    ["mirror","かがみ","🪞"],["shelf","たな","📚"],["closet","クローゼット","🚪"],
+    ["fan","せんぷうき","🌀"],["heater","ヒーター","🔥"],["sink","ながしだい","🚰"],
+    ["stove","コンロ","🍳"],["oven","オーブン","🍞"],["microwave","でんしレンジ","🔌"],
+    ["washing machine","せんたくき","🧺"],["vacuum","そうじき","🧹"],
+  ];
+  vocabBundle(houseStuff2, "house2");
+  // More transport
+  const transport2 = [
+    ["subway","ちかてつ","🚇"],["van","バン","🚐"],["scooter","スクーター","🛵"],
+    ["skateboard","スケボー","🛹"],["yacht","ヨット","⛵"],["submarine","せんすいかん","🚢"],
+    ["balloon","ききゅう","🎈"],["sled","そり","🛷"],["ambulance","きゅうきゅうしゃ","🚑"],
+    ["tram","ろめんでんしゃ","🚊"],
+  ];
+  vocabBundle(transport2, "trans2");
+  // Body & Health
+  const health = [
+    ["headache","ずつう","🤕"],["fever","ねつ","🤒"],["cough","せき","😷"],
+    ["sneeze","くしゃみ","🤧"],["stomachache","ふくつう","🤢"],["toothache","はいた","🦷"],
+    ["dizzy","めまい","😵"],["allergy","アレルギー","🤧"],["medicine","くすり","💊"],
+    ["doctor","いしゃ","🧑‍⚕️"],["nurse","かんごし","👩‍⚕️"],["hospital","びょういん","🏥"],
+  ];
+  vocabBundle(health, "health");
+  // Time & Schedule
+  const sched = [
+    ["meeting","かいぎ","📋"],["appointment","よやく","📅"],["holiday","しゅくじつ","🎉"],
+    ["vacation","きゅうか","🏖️"],["birthday","たんじょうび","🎂"],["festival","おまつり","🎏"],
+    ["wedding","けっこんしき","💒"],["graduation","そつぎょう","🎓"],["picnic","ピクニック","🧺"],
+    ["party","パーティー","🎉"],
+  ];
+  vocabBundle(sched, "event");
+
+  // ★1 More past tense practice
+  const easyPast2 = [
+    ["She ___ a letter.","wrote",["write","wrote","writes","writing"]],
+    ["I ___ to the park.","walked",["walk","walked","walks","walking"]],
+    ["He ___ his bike.","rode",["ride","rode","rides","riding"]],
+    ["We ___ a great time.","had",["have","has","had","having"]],
+    ["They ___ at home all day.","stayed",["stay","stayed","stays","staying"]],
+    ["My mom ___ a cake.","baked",["bake","baked","bakes","baking"]],
+    ["The cat ___ on the bed.","slept",["sleep","slept","sleeps","sleeping"]],
+    ["He ___ to a song.","listened",["listen","listened","listens","listening"]],
+    ["I ___ my keys.","found",["find","found","finds","finding"]],
+    ["The dog ___ the ball.","caught",["catch","caught","catches","catching"]],
+    ["She ___ her homework.","finished",["finish","finished","finishes","finishing"]],
+    ["We ___ a movie last night.","watched",["watch","watched","watches","watching"]],
+  ];
+  easyPast2.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"past_easy", prompt_jp:"きのうの こと (かこけい)", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ★1 More future tense
+  const easyFuture2 = [
+    ["I ___ help you tomorrow.","will",["will","do","is","am"]],
+    ["My family ___ travel next month.","will",["will","do","does","is"]],
+    ["Tom ___ play soccer next Saturday.","will",["will","do","is","does"]],
+    ["I ___ call you tonight.","will",["will","does","is","do"]],
+    ["She ___ buy a gift.","will",["will","do","does","is"]],
+    ["We ___ have a party tomorrow.","will",["will","does","is","do"]],
+    ["The bus ___ arrive soon.","will",["will","do","is","does"]],
+  ];
+  easyFuture2.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"future_easy", prompt_jp:"あしたのこと (みらい)", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // More should sentences
+  const easyShould2 = [
+    ["You ___ go to bed early.","should",["should","shouldn't","can","can't"]],
+    ["You ___ touch hot stoves.","shouldn't",["should","shouldn't","can","can't"]],
+    ["We ___ recycle paper.","should",["should","shouldn't","can","can't"]],
+    ["You ___ tell lies.","shouldn't",["should","shouldn't","can","can't"]],
+    ["You ___ practice every day.","should",["should","shouldn't","can","can't"]],
+  ];
+  easyShould2.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"should_easy", prompt_jp:"should / shouldn't?", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // More past+future fills
+  const tense = [
+    ["Yesterday I ___ tired.","was",["am","is","are","was"]],
+    ["They ___ at the park last weekend.","were",["am","is","are","were"]],
+    ["She ___ here tomorrow.","will be",["will be","is","was","were"]],
+    ["I ___ a book yesterday.","read",["read","reads","reading","will read"]],
+    ["He ___ to America next year.","will go",["go","goes","went","will go"]],
+    ["We ___ pizza last night.","ate",["eat","ate","eaten","eating"]],
+  ];
+  tense.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:2, ptype:"past_easy", prompt_jp:"いつの こと？", prompt:s, options: m.opts, answer: m.pos });
   });
 
   window.QUESTIONS_LEVEL3 = all;

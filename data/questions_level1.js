@@ -210,5 +210,164 @@
     Q({ stars:1, ptype:"greet_listen", prompt_jp:`きこえた あいさつ の いみは？ 🔊`, audio: en, options: m.opts, answer: m.pos });
   });
 
+  // ===== EXPANSION =====
+
+  // More picture vocab — covers many more emoji/word pairs.
+  const pics2 = [
+    ["🦓","zebra"],["🐊","crocodile"],["🦛","hippo"],["🦏","rhino"],
+    ["🐢","turtle"],["🐳","whale"],["🐬","dolphin"],["🦑","squid"],
+    ["🦞","lobster"],["🦀","crab"],["🐝","bee"],["🦋","butterfly"],
+    ["🐌","snail"],["🐛","caterpillar"],["🐞","ladybug"],["🕷️","spider"],
+    ["🦒","giraffe"],["🐘","elephant"],["🦘","kangaroo"],["🐼","panda"],
+    ["🍒","cherry"],["🍑","peach"],["🍐","pear"],["🍋","lemon"],
+    ["🥭","mango"],["🍍","pineapple"],["🥥","coconut"],["🥝","kiwi"],
+    ["🍅","tomato"],["🥕","carrot"],["🥔","potato"],["🥒","cucumber"],
+    ["🌽","corn"],["🍆","eggplant"],["🥦","broccoli"],["🌶️","pepper"],
+    ["🍣","sushi"],["🍙","rice ball"],["🥪","sandwich"],["🍟","fries"],
+    ["🍿","popcorn"],["🍪","cookie"],["🍫","chocolate"],["🍩","donut"],
+    ["🥛","milk"],["🧃","juice"],["💧","water"],["🍵","tea"],
+    ["🌍","earth"],["🪐","planet"],["🌈","rainbow"],["☃️","snowman"],
+    ["🌪️","tornado"],["🌋","volcano"],["🏝️","island"],["🏔️","mountain"],
+    ["🚆","train"],["✈️","airplane"],["🚢","ship"],["🚲","bike"],
+    ["🚓","police car"],["🚑","ambulance"],["🚒","fire truck"],["🚀","rocket"],
+    ["🪁","kite"],["🎈","balloon"],["🧸","teddy bear"],["🎁","present"],
+    ["⚾","baseball"],["🏀","basketball"],["🎾","tennis ball"],["🏐","volleyball"],
+    ["🎤","mic"],["🎵","music"],["🎹","piano"],["🥁","drum"],
+    ["📺","TV"],["💻","computer"],["📱","phone"],["📚","books"],
+    ["🛏️","bed"],["🚪","door"],["🪟","window"],["🚿","shower"],
+  ];
+  const all2Emoji = pics2.map(p => p[0]);
+  const all2EN    = pics2.map(p => p[1]);
+  pics2.forEach(([emoji, en]) => {
+    const m = withInsert(emoji, pickDistract(emoji, all2Emoji));
+    Q({ stars:1, ptype:"vocab_listen_pic", prompt_jp:`きこえた えいごの えを タップ！ 🔊`, audio: en, options: m.opts, answer: m.pos });
+  });
+  pics2.forEach(([emoji, en]) => {
+    const m = withInsert(en, pickDistract(en, all2EN));
+    Q({ stars:2, ptype:"vocab_pic2en", prompt_jp:`これは えいごで なに？ 🔊`, promptImage: emoji, audio: en, options: m.opts, answer: m.pos });
+  });
+  pics2.forEach(([emoji, en]) => {
+    const m = withInsert(emoji, pickDistract(emoji, all2Emoji));
+    Q({ stars:2, ptype:"vocab_word2pic", prompt_jp:`「${en}」の えを タップ！`, prompt: en, audio: en, options: m.opts, answer: m.pos });
+  });
+
+  // More sight words — common high-frequency words kids meet first.
+  const sight2 = [
+    ["this","これ"],["that","あれ"],["here","ここ"],["there","あそこ"],
+    ["one","ひとつ"],["two","ふたつ"],["three","みっつ"],["new","あたらしい"],
+    ["old","ふるい"],["like","すき"],["love","だいすき"],["want","ほしい"],
+    ["have","もつ"],["eat","たべる"],["drink","のむ"],["play","あそぶ"],
+    ["read","よむ"],["write","かく"],["sing","うたう"],["dance","おどる"],
+    ["make","つくる"],["take","とる"],["give","あげる"],["help","てつだう"],
+    ["wash","あらう"],["open","あける"],["close","しめる"],["start","はじめる"],
+    ["my","わたしの"],["your","あなたの"],["his","かれの"],["her","かのじょの"],
+  ];
+  sight2.forEach(([en, jp]) => {
+    const m = withInsert(jp, pickDistract(jp, sight2.map(s=>s[1])));
+    Q({ stars:1, ptype:"sight", prompt_jp:`「${en}」の いみは？`, prompt:en, audio:en, options: m.opts, answer: m.pos });
+  });
+  sight2.forEach(([en, jp]) => {
+    const m = withInsert(en, pickDistract(en, sight2.map(s=>s[0])));
+    Q({ stars:2, ptype:"sight_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+  });
+
+  // More verbs (action)
+  const verbs2 = [
+    ["swim","およぐ","🏊"],["fly","とぶ","🪁"],["climb","のぼる","🧗"],
+    ["throw","なげる","🤾"],["catch","つかまえる","🥎"],["kick","ける","🦵"],
+    ["push","おす","✊"],["pull","ひく","✊"],["fall","ころぶ","🤕"],
+    ["wash","あらう","🚿"],["brush","みがく","🪥"],["wave","てをふる","👋"],
+    ["clap","てをたたく","👏"],["smile","ほほえむ","😊"],["cry","なく","😭"],
+    ["laugh","わらう","😂"],["wait","まつ","⏳"],["hug","だきしめる","🤗"],
+  ];
+  verbs2.forEach(([en, jp, emoji]) => {
+    const m = withInsert(emoji, pickDistract(emoji, verbs2.map(v=>v[2])));
+    Q({ stars:1, ptype:"verb_listen", prompt_jp:`きこえた どうさを タップ！ 🔊`, audio: en, options: m.opts, answer: m.pos });
+  });
+  verbs2.forEach(([en, jp, emoji]) => {
+    const m = withInsert(en, pickDistract(en, verbs2.map(v=>v[0])));
+    Q({ stars:2, ptype:"verb_pic2en", prompt_jp:`この どうさは えいごで？ 🔊`, promptImage: emoji, audio: en, options: m.opts, answer: m.pos });
+  });
+
+  // More body parts
+  const body2 = [
+    ["face","かお","😀"],["chin","あご","🤔"],["chest","むね","🫀"],
+    ["back","せなか","🦴"],["knee","ひざ","🦵"],["elbow","ひじ","💪"],
+    ["shoulder","かた","🤷"],["neck","くび","🤏"],["heart","しんぞう","🫀"],
+    ["brain","のう","🧠"],["thumb","おやゆび","👍"],
+  ];
+  body2.forEach(([en, jp, emoji]) => {
+    const m = withInsert(en, pickDistract(en, body2.map(b=>b[0])));
+    Q({ stars:2, ptype:"body_pic2en", prompt_jp:`これは えいごで？ 🔊`, promptImage: emoji, audio: en, options: m.opts, answer: m.pos });
+  });
+
+  // More greetings + polite phrases
+  const greet2 = [
+    ["see you","じゃあね"],["welcome","ようこそ"],["excuse me","すみません"],
+    ["nice to meet you","はじめまして"],["how are you","げんき？"],
+    ["I'm fine","げんきです"],["have fun","たのしんで"],["take care","きをつけて"],
+    ["good luck","がんばって"],["congratulations","おめでとう"],
+  ];
+  greet2.forEach(([en, jp]) => {
+    const m = withInsert(jp, pickDistract(jp, greet2.map(g=>g[1])));
+    Q({ stars:1, ptype:"greet_listen", prompt_jp:`きこえた あいさつ の いみは？ 🔊`, audio: en, options: m.opts, answer: m.pos });
+  });
+
+  // Numbers 11-20 (listen)
+  const nums2 = [["11","eleven"],["12","twelve"],["13","thirteen"],["14","fourteen"],
+    ["15","fifteen"],["16","sixteen"],["17","seventeen"],["18","eighteen"],
+    ["19","nineteen"],["20","twenty"]];
+  nums2.forEach(([n, en]) => {
+    const m = withInsert(n, pickDistract(n, nums2.map(x=>x[0])));
+    Q({ stars:1, ptype:"num_listen", prompt_jp:`きこえた すうじを タップ！ 🔊`, audio: en, options: m.opts, answer: m.pos });
+  });
+  nums2.forEach(([n, en]) => {
+    const m = withInsert(en, pickDistract(en, nums2.map(x=>x[1])));
+    Q({ stars:2, ptype:"num_jp2en", prompt_jp:`「${n}」は えいごで？`, prompt: n, options: m.opts, answer: m.pos });
+  });
+
+  // Opposites — very basic adjective contrast
+  const opps = [
+    ["big","おおきい"],["small","ちいさい"],["fast","はやい"],["slow","おそい"],
+    ["hot","あつい"],["cold","つめたい"],["new","あたらしい"],["old","ふるい"],
+    ["good","いい"],["bad","わるい"],["happy","うれしい"],["sad","かなしい"],
+    ["tall","せがたかい"],["short","せがひくい"],["long","ながい"],["short","みじかい"],
+    ["clean","きれい"],["dirty","きたない"],["loud","うるさい"],["quiet","しずか"],
+    ["easy","やさしい"],["hard","むずかしい"],["full","いっぱい"],["empty","からっぽ"],
+  ];
+  opps.forEach(([en, jp]) => {
+    const m = withInsert(en, pickDistract(en, opps.map(o=>o[0])));
+    Q({ stars:2, ptype:"adj_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+  });
+  opps.forEach(([en, jp]) => {
+    const m = withInsert(jp, pickDistract(jp, opps.map(o=>o[1])));
+    Q({ stars:1, ptype:"adj_en2jp", prompt_jp:`「${en}」の いみ は？`, prompt:en, audio:en, options: m.opts, answer: m.pos });
+  });
+
+  // Feelings (basic feelings list with audio)
+  const feels = [
+    ["happy","うれしい"],["sad","かなしい"],["angry","おこっている"],["sleepy","ねむい"],
+    ["tired","つかれた"],["hungry","おなかすいた"],["thirsty","のどかわいた"],
+    ["scared","こわい"],["excited","わくわく"],["bored","たいくつ"],
+  ];
+  feels.forEach(([en, jp]) => {
+    const m = withInsert(en, pickDistract(en, feels.map(f=>f[0])));
+    Q({ stars:1, ptype:"feel_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+  });
+  feels.forEach(([en, jp]) => {
+    const m = withInsert(jp, pickDistract(jp, feels.map(f=>f[1])));
+    Q({ stars:1, ptype:"feel_en2jp", prompt_jp:`「${en}」の いみ は？`, prompt:en, audio:en, options: m.opts, answer: m.pos });
+  });
+
+  // More colors (extended)
+  const colors2 = [
+    ["gold","きんいろ"],["silver","ぎんいろ"],["light blue","みずいろ"],
+    ["dark green","ふかみどり"],["gray","グレー"],
+  ];
+  colors2.forEach(([en, jp]) => {
+    const m = withInsert(en, pickDistract(en, colors2.map(c=>c[0]).concat(["red","blue","yellow","green"])));
+    Q({ stars:2, ptype:"color_pic2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+  });
+
   window.QUESTIONS_LEVEL1 = all;
 })();

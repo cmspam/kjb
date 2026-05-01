@@ -6,7 +6,16 @@
   const Q = (o) => { all.push({ id: "L4-" + (++nid).toString().padStart(3,"0"), level:4, type:"mc", ...o }); };
   function mc(answer, pool, count=4) {
     const distract = [];
-    while (distract.length < count-1) { const x = pool[(Math.random()*pool.length)|0]; if (x!==answer && !distract.includes(x)) distract.push(x); }
+    let g = 0;
+    while (distract.length < count-1) {
+      if (g++ > 500) {
+        try { console.warn("mc: pool too small, padding —", { answer, pool }); } catch(_){}
+        while (distract.length < count-1) distract.push(answer);
+        break;
+      }
+      const x = pool[(Math.random()*pool.length)|0];
+      if (x!==answer && !distract.includes(x)) distract.push(x);
+    }
     const opts = distract.slice(); const pos = (Math.random()*count)|0; opts.splice(pos, 0, answer);
     return { opts, pos };
   }
@@ -449,6 +458,106 @@
   idioms.forEach(([s, ans, opts]) => {
     const m = mc(ans, opts);
     Q({ stars:3, ptype:"idiom", prompt_jp:"イディオム / じゅくご", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // ===== EXPANSION =====
+
+  // Additional Eiken-3-grade vocab (continues the same vocab_jp2en/en2jp/listen pattern)
+  const vocab2 = [
+    ["election","せんきょ"],["government","せいふ"],["president","だいとうりょう"],
+    ["prime minister","しゅしょう"],["citizen","こくみん"],["population","じんこう"],
+    ["culture","ぶんか"],["religion","しゅうきょう"],["tradition","でんとう"],
+    ["technology","ぎじゅつ"],["invention","はつめい"],["discovery","はっけん"],
+    ["research","けんきゅう"],["experiment","じっけん"],["solution","かいけつ"],
+    ["pollution","おせん"],["recycling","リサイクル"],["volunteer","ボランティア"],
+    ["donation","きふ"],["charity","じぜん"],
+    ["argument","ぎろん"],["opinion","いけん"],["fact","じじつ"],
+    ["statement","せいめい"],["evidence","しょうこ"],["rumor","うわさ"],
+    ["advice","アドバイス"],["suggestion","ていあん"],["request","リクエスト"],
+    ["complaint","くじょう"],["compliment","ほめことば"],
+    ["earthquake","じしん"],["typhoon","たいふう"],["flood","こうずい"],
+    ["fire","かじ"],["accident","じこ"],["emergency","きんきゅう"],
+    ["rescue","きゅうじょ"],["safety","あんぜん"],["risk","リスク"],
+    ["benefit","めりっと"],["advantage","ゆうり"],["disadvantage","ふり"],
+    ["choice","せんたく"],["decision","けってい"],["plan","けいかく"],
+    ["goal","もくひょう"],["dream","ゆめ"],["wish","ねがい"],
+    ["effort","どりょく"],["practice","れんしゅう"],
+    // verbs
+    ["develop","はったつする"],["improve","じょうたつする"],
+    ["invent","はつめいする"],["discover","はっけんする"],
+    ["solve","かいけつする"],["respect","そんけい"],
+    ["realize","じつげんする"],["communicate","つたえる"],
+    ["translate","ほんやくする"],["calculate","けいさんする"],
+    ["measure","はかる"],["compare","くらべる"],
+    ["compete","きそう"],["celebrate","いわう"],
+    ["gather","あつまる"],["disappear","きえる"],
+    ["produce","せいさんする"],["consume","しょうひする"],
+    ["import","ゆにゅう"],["export","ゆしゅつ"],
+    // adjectives
+    ["natural","しぜんな"],["artificial","じんこうの"],
+    ["original","オリジナル"],["typical","ふつうの"],
+    ["unique","ゆいつ"],["complex","ふくざつ"],
+    ["simple","かんたん"],["common","ふつう"],
+    ["rare","めずらしい"],["valuable","かちある"],
+    ["useful","やくにたつ"],["useless","やくにたたない"],
+    ["available","つかえる"],["impossible","ふかのう"],
+    ["possible","かのう"],["necessary","ひつよう"],
+  ];
+  vocab2.forEach(([en, jp]) => {
+    let m = mc(en, vocab2.map(v=>v[0]));
+    Q({ stars:2, ptype:"vocab_jp2en", prompt_jp:`「${jp}」は えいごで？`, options: m.opts, answer: m.pos });
+    m = mc(jp, vocab2.map(v=>v[1]));
+    Q({ stars:2, ptype:"vocab_en2jp", prompt_jp:`「${en}」の いみは？`, prompt: en, audio: en, options: m.opts, answer: m.pos });
+    m = mc(en, vocab2.map(v=>v[0]));
+    Q({ stars:2, ptype:"vocab_listen", prompt_jp:"きこえた えいたんは？ 🔊", audio: en, options: m.opts, answer: m.pos });
+  });
+
+  // More phrasal verbs
+  const phrasal2 = [
+    ["I ___ at 7 every morning.","get up",["get up","wake up","look up","stand up"]],
+    ["Please ___ your shoes inside.","take off",["take off","put on","get off","go off"]],
+    ["I'm ___ my keys.","looking for",["looking for","looking at","looking up","looking out"]],
+    ["Don't ___ in the library.","run around",["run around","look around","sit down","stand up"]],
+    ["Can you ___ the light?","turn on",["turn on","turn off","turn up","turn into"]],
+    ["I'll ___ you ___ at 8.","pick / up",["pick / up","get / on","take / off","look / for"]],
+    ["I ___ by accident.","fell down",["fell down","stood up","sat down","got up"]],
+    ["Don't ___! You can do it.","give up",["give up","grow up","look up","sit up"]],
+    ["___ for the bus, please.","Wait",["Wait","Look","Get","Take"]],
+    ["She always ___ early.","wakes up",["wakes up","gets up","stays up","sits up"]],
+  ];
+  phrasal2.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:2, ptype:"phrasal", prompt_jp:"句動詞[くどうし]", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // More idioms (high-frequency)
+  const idioms2 = [
+    ["He's a piece of ___ in the kitchen. (とくい)","cake",["cake","fish","bread","apple"]],
+    ["Once in a blue ___. (めったに ない)","moon",["moon","sun","star","sky"]],
+    ["It's raining cats and ___. (ものすごい雨)","dogs",["dogs","cats","frogs","birds"]],
+    ["Break a ___! (がんばって！)","leg",["leg","arm","head","hand"]],
+    ["You're pulling my ___. (うそでしょ)","leg",["leg","arm","head","hand"]],
+    ["I'm under the ___ today. (ちょうしわるい)","weather",["weather","table","cloud","sky"]],
+    ["Hit the ___! (ねよう)","sack",["sack","road","books","bottle"]],
+    ["Hit the ___! (べんきょう しよう)","books",["books","sack","road","bottle"]],
+  ];
+  idioms2.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:3, ptype:"idiom", prompt_jp:"イディオム", prompt:s, options: m.opts, answer: m.pos });
+  });
+
+  // More easy modals
+  const easyModal2 = [
+    ["You ___ wear a helmet on a bike.","must",["must","may","might","could"]],
+    ["___ I borrow your pen?","May",["May","Must","Should","Will"]],
+    ["It ___ rain later.","might",["must","might","should","would"]],
+    ["You ___ smoke here.","mustn't",["must","mustn't","may","might"]],
+    ["___ you tell me the time?","Could",["Could","Must","May","Will"]],
+    ["I ___ stay home tonight.","might",["may","might","must","should"]],
+  ];
+  easyModal2.forEach(([s, ans, opts]) => {
+    const m = mc(ans, opts);
+    Q({ stars:1, ptype:"modal_easy", prompt_jp:"ほじょどうし", prompt:s, options: m.opts, answer: m.pos });
   });
 
   window.QUESTIONS_LEVEL4 = all;

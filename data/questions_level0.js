@@ -131,5 +131,92 @@
     Q({ stars:1, ptype:"alphabet_lower", prompt_jp:"きこえた もじを タップ！ 🔊", audio: letter.toUpperCase(), options: opts, answer: pos });
   });
 
+  // ===== EXPANSION (3× the per-theme variety) =====
+  // Larger pools for each theme so a kid playing several rounds doesn't loop
+  // through the same dozen items. Also adds three new themes (sports, drinks,
+  // school stuff). Same listen-and-tap mechanic.
+
+  makeListenSet("animal2", [
+    ["🦓","zebra"],["🦒","giraffe"],["🐊","crocodile"],["🦖","T-Rex"],
+    ["🦕","dinosaur"],["🐉","dragon"],["🐧","penguin"],["🦉","owl"],
+    ["🦅","eagle"],["🦆","duck"],["🦢","swan"],["🐳","whale"],
+    ["🐬","dolphin"],["🦈","shark"],["🐙","octopus"],["🦀","crab"],
+    ["🦞","lobster"],["🐌","snail"],["🐛","caterpillar"],["🐞","ladybug"],
+    ["🦗","cricket"],["🕷️","spider"],["🦂","scorpion"],
+  ]);
+
+  makeListenSet("food2", [
+    ["🍎","apple"],["🍇","grapes"],["🍓","strawberry"],["🍒","cherry"],
+    ["🥭","mango"],["🍍","pineapple"],["🥥","coconut"],["🥝","kiwi"],
+    ["🍑","peach"],["🍐","pear"],["🍋","lemon"],["🥕","carrot"],
+    ["🥔","potato"],["🍅","tomato"],["🥒","cucumber"],["🌽","corn"],
+    ["🍆","eggplant"],["🥦","broccoli"],["🌭","hot dog"],["🥪","sandwich"],
+    ["🍟","fries"],["🍝","spaghetti"],["🥗","salad"],["🍣","sushi"],
+    ["🍙","rice ball"],["🍡","dango"],["🥨","pretzel"],["🍯","honey"],
+  ]);
+
+  // Drinks
+  makeListenSet("drink", [
+    ["💧","water"],["🥛","milk"],["🧃","juice"],["☕","coffee"],
+    ["🍵","tea"],["🥤","soda"],["🍶","sake"],["🧋","milk tea"],
+    ["🍺","beer"],["🍷","wine"],
+  ]);
+
+  // Sports
+  makeListenSet("sport", [
+    ["⚽","soccer"],["⚾","baseball"],["🏀","basketball"],["🎾","tennis"],
+    ["🏈","football"],["🏐","volleyball"],["🏓","ping pong"],["🏸","badminton"],
+    ["🏊","swim"],["⛸️","skate"],["🎿","ski"],["🏃","run"],
+    ["🚴","bike"],["🤸","gym"],["🥊","box"],["🏌️","golf"],
+  ]);
+
+  // School things
+  makeListenSet("school", [
+    ["📚","books"],["✏️","pencil"],["🖊️","pen"],["🖍️","crayon"],
+    ["📓","notebook"],["📒","binder"],["📝","paper"],["✂️","scissors"],
+    ["📐","ruler"],["🧽","eraser"],["🎒","backpack"],["🪑","desk"],
+    ["🖼️","picture"],["🌍","globe"],["📊","chart"],
+  ]);
+
+  // Feelings (basic)
+  makeListenSet("feel", [
+    ["😀","happy"],["😢","sad"],["😡","angry"],["😴","sleepy"],
+    ["😊","smile"],["😱","scared"],["🤒","sick"],["😎","cool"],
+    ["🥰","love"],["🤔","think"],
+  ]);
+
+  // House
+  makeListenSet("home", [
+    ["🏠","house"],["🛏️","bed"],["🚪","door"],["🪟","window"],
+    ["🛋️","sofa"],["🪑","chair"],["🍽️","dish"],["🛁","bath"],
+    ["🚽","toilet"],["💡","light"],["🪞","mirror"],
+  ]);
+
+  // More vehicles
+  makeListenSet("vehicle2", [
+    ["🚕","taxi"],["🚙","SUV"],["🚐","van"],["🚒","fire truck"],
+    ["🚜","tractor"],["🛵","scooter"],["🛴","kick scooter"],["🛹","skateboard"],
+    ["🚁","helicopter"],["🛸","UFO"],
+  ]);
+
+  // More body
+  makeListenSet("body2", [
+    ["🧠","brain"],["💪","muscle"],["🤚","palm"],["☝️","finger"],
+    ["👅","tongue"],["🫀","heart"],["🫁","lungs"],
+  ]);
+
+  // More nature
+  makeListenSet("nature2", [
+    ["🌲","forest"],["🏞️","valley"],["🏝️","island"],["🌋","volcano"],
+    ["🏜️","desert"],["🌅","sunrise"],["🌇","sunset"],["⚡","thunder"],
+    ["🌪️","tornado"],["🔥","fire"],
+  ]);
+
+  // More family
+  makeListenSet("family2", [
+    ["👨‍👩‍👧","family"],["🧑","person"],["👫","couple"],["🧑‍🤝‍🧑","friends"],
+    ["👼","angel"],["🤴","prince"],["👸","princess"],["🦸","hero"],
+  ]);
+
   window.QUESTIONS_LEVEL0 = all;
 })();
