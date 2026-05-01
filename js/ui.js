@@ -672,14 +672,19 @@ window.UI = (() => {
     renderHandInto($("hand-area"), player, /*beforeQ*/true, onCard);
   }
 
-  // -------- QUESTION --------
+  // -------- QUESTION (N7 — quiz IS the battle) --------
+  // Restructured so the screen reads as a battle stage with the question
+  // floating over it, not "header + form panel". The boss is large, central,
+  // and reactive (see reactStage()); the question card overlays it as a
+  // translucent floating panel; the answer options sit immediately beneath.
+  // The same data flow as before — onAnswer(correct, i, softFail).
   function renderQuestion(player, question, boss, players, opts, onAnswer, onUseHint) {
     show("question");
     const s = $("screen-question"); s.innerHTML = "";
     s.appendChild(el(buildHeader(boss, players, player)));
     const stars = "★".repeat(question.stars);
     let displayPrompt = "";
-    if (question.promptImage) displayPrompt += `<div style="font-size:120px;line-height:1;">${question.promptImage}</div>`;
+    if (question.promptImage) displayPrompt += `<div style="font-size:96px;line-height:1;">${question.promptImage}</div>`;
     if (question.prompt) displayPrompt += `<div class="question-prompt-en">${escapeHTML(question.prompt).replace(/\n/g,"<br>")}</div>`;
     if (!question.prompt && !question.promptImage && question.audio) {
       displayPrompt += `<button class="listen-btn" id="listen-btn">🔊</button>`;
@@ -690,14 +695,17 @@ window.UI = (() => {
 
     const timerSec = (opts && opts.timerSec) || 0;
     const timerHtml = timerSec > 0 ? `<div class="q-timer" id="q-timer">⏱️ <span id="q-timer-num">${timerSec}</span></div>` : "";
+    // Translucent overlay card sits ON the stage so the boss SVG remains
+    // the dominant visual. options[] inside the card; tap commits answer
+    // and triggers reactStage() before the result transition.
     s.appendChild(el(`
-      <div class="question-card">
+      <div class="question-card question-overlay">
         ${timerHtml}
         <div class="stars">${stars}</div>
         <div class="question-prompt-jp">${question.prompt_jp}</div>
         ${displayPrompt}
         <div class="options" id="opts"></div>
-        ${question.audio ? `<div class="row" style="margin-top:12px;"><button class="btn ghost" id="say-again">🔊 もういっかい</button></div>` : ``}
+        ${question.audio ? `<div class="row" style="margin-top:8px;"><button class="btn ghost" id="say-again" style="font-size:13px; min-height:36px; padding:6px 10px;">🔊 もういっかい</button></div>` : ``}
       </div>
     `));
     let timerHandle = null;

@@ -184,6 +184,32 @@ h3 { font-size: 28px; margin: 4px 0; }
 @keyframes pulse { 0%{transform:scale(1);} 100%{transform:scale(1.1);} }
 .question-card { position: relative; }
 
+/* Question-as-overlay styling (N7) — translucent card sitting on the
+   stage so the boss SVG remains the dominant visual instead of a small
+   header decoration. The kid sees a battle stage with the question
+   floating over it, not a quiz form on a separate screen. */
+.question-overlay {
+  background: linear-gradient(160deg, rgba(40, 26, 60, 0.94), rgba(20, 10, 30, 0.96));
+  border: 2px solid rgba(255, 204, 0, 0.4);
+  backdrop-filter: blur(6px);
+  margin-top: -40px;          /* tuck the card up so it overlaps the stage */
+  padding: 18px 20px 16px;
+  position: relative;
+  z-index: 5;
+}
+.question-overlay .question-prompt-jp { font-size: 18px; margin-bottom: 4px; }
+.question-overlay .question-prompt-en { font-size: 30px; margin: 8px 0; }
+.question-overlay .stars { font-size: 22px; }
+.question-overlay .options { gap: 10px; margin-top: 10px; }
+.question-overlay .opt {
+  font-size: 24px; padding: 14px; min-height: 64px; border-radius: 12px;
+}
+@media (max-width: 600px) {
+  .question-overlay { margin-top: -24px; padding: 14px 14px 12px; }
+  .question-overlay .question-prompt-en { font-size: 22px; }
+  .question-overlay .opt { font-size: 18px; padding: 10px; min-height: 54px; }
+}
+
 /* Stars */
 .stars { font-size: 28px; color: var(--accent); letter-spacing: 4px; }
 .wager-grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; max-width: 720px; width:100%; margin: 0 auto; }
