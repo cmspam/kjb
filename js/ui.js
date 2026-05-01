@@ -727,9 +727,68 @@ window.UI = (() => {
         <div class="question-prompt-jp">${question.prompt_jp}</div>
         ${displayPrompt}
         <div class="options" id="opts"></div>
-        ${question.audio ? `<div class="row" style="margin-top:8px;"><button class="btn ghost" id="say-again" style="font-size:13px; min-height:36px; padding:6px 10px;">🔊 もういっかい</button></div>` : ``}
+        <div class="row" style="margin-top:8px; gap:6px; flex-wrap:wrap; justify-content:center;">
+          ${question.audio ? `<button class="btn ghost" id="say-again" style="font-size:13px; min-height:36px; padding:6px 10px;">🔊 もういっかい</button>` : ``}
+          <button class="btn ghost" id="lesson-btn" style="font-size:13px; min-height:36px; padding:6px 10px;">💡 おしえて！</button>
+        </div>
       </div>
     `));
+    // 💡 おしえて! — opens a lesson overlay tailored to this question's
+    // ptype. Reveals the correct answer up front and walks through the
+    // words / grammar so even a kid who has no idea can answer correctly
+    // and learn at the same time. Pauses the question timer while the
+    // lesson is open so reading the lesson doesn't burn the clock.
+    const lbtnHook = $("lesson-btn");
+    if (lbtnHook && window.Lessons && Lessons.buildHTML) {
+      tap(lbtnHook, () => {
+        if (answered) return;
+        // Pause: stop the timer interval; we'll restart it when the
+        // overlay closes so the kid keeps whatever time was left.
+        const wasTimed = !!timerHandle;
+        if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+        const overlay = document.createElement("div");
+        overlay.className = "lesson-overlay";
+        overlay.innerHTML = Lessons.buildHTML(question);
+        document.body.appendChild(overlay);
+        const closeFns = [];
+        const close = () => {
+          closeFns.forEach(fn => { try { fn(); } catch(_){} });
+          try { overlay.remove(); } catch(_){}
+          // Resume timer with remaining seconds if the question is timed.
+          if (wasTimed && !answered) {
+            const tn = $("q-timer-num");
+            let remaining = tn ? (parseInt(tn.textContent, 10) || 0) : 0;
+            if (remaining > 0) {
+              timerHandle = setInterval(() => {
+                if (answered) { clearInterval(timerHandle); return; }
+                if (typeof speechSynthesis !== "undefined" && speechSynthesis.speaking) return;
+                remaining--;
+                if (tn) tn.textContent = remaining;
+                if (remaining <= 0) {
+                  clearInterval(timerHandle);
+                  if (!answered) {
+                    answered = true;
+                    const right = optsEl.querySelector(`[data-i="${question.answer}"]`);
+                    if (right) right.classList.add("right");
+                    optsEl.querySelectorAll(".opt").forEach(x => x.classList.add("disabled"));
+                    SND.sfxWrong();
+                    setTimeout(() => onAnswer(false, -1), 850);
+                  }
+                }
+              }, 1000);
+            }
+          }
+        };
+        const closeBtn = overlay.querySelector("#lesson-close");
+        if (closeBtn) tap(closeBtn, close);
+        // Tap outside the card to close
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+        // Block scroll on the body while the lesson is up
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        closeFns.push(() => { document.body.style.overflow = prevOverflow; });
+      });
+    }
     let timerHandle = null;
     let answered = false;
     if (timerSec > 0) {
