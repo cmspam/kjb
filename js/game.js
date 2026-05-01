@@ -1325,8 +1325,18 @@ window.Game = (() => {
     });
   }
 
+  // Maximum number of rounds before the spy wins by clock-pressure timeout.
+  // If the team can't kill the boss by then, the spy "escapes with the boss"
+  // and wins. Combined with hidden HP and the soft skip-vote, this creates
+  // a real urgency that the spy can play around.
+  const JINRO_MAX_ROUND = 10;
+
   function showVoteOption() {
-    // Only call vote if any unscanned-as-spy player remains
+    // Skip-vote: if the round timeout is reached, spy wins immediately.
+    if (S.round >= JINRO_MAX_ROUND) {
+      UI.toast(`⏰ ラウンド ${JINRO_MAX_ROUND} タイムアップ！ スパイの しょうり！`, 3000);
+      return doDefeat();
+    }
     const candidates = S.players.filter(p=>!p.dead);
     if (candidates.length <= 1) {
       S.round++; return startRound();
@@ -1334,17 +1344,15 @@ window.Game = (() => {
     UI.renderVote(S.players, (target) => {
       S.voteUsedThisRound = true;
       const isSpy = target.role === "spy";
-      UI.toast(isSpy ? JP.vote_result_spy(target.name) : JP.vote_result_innocent(target.name), 2400);
-      if (isSpy) {
-        S.revealedThisGame.push(target.id);
-        // Team wins jinro game
-        return doVictory({jinroForced:true});
-      } else {
-        // small penalty to encourage caution
-        target.hp = Math.max(0, target.hp - 2);
-        S.log.push(`${target.name}: -2HP (まちがった とうひょう)`);
-        S.round++; startRound();
-      }
+      // Skip-vote semantics: the voted player's NEXT TURN forfeits attack
+      // power (cards still work). No instant-win on correct vote, no -HP on
+      // wrong vote. Soft tactical pressure both ways.
+      target._stunnedNextTurn = true;
+      // Identical toast/log regardless of role — the team has to deduce from
+      // later play whether the suspicion stuck on the spy. No instant-reveal.
+      UI.toast(`🌀 ${target.name} は あやしまれた… つぎの ターン こうげき できない！`, 2400);
+      S.log.push(`とうひょう → ${target.name}: こうげき ふうじ ×1ターン (じっさい: ${isSpy ? "スパイ" : "ヒーロー"})`);
+      S.round++; startRound();
     }, () => {
       S.voteUsedThisRound = true;
       S.round++; startRound();
