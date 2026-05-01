@@ -499,7 +499,7 @@ window.Game = (() => {
       () => {});
   }
 
-  function handleAnswer(correct, chosen) {
+  function handleAnswer(correct, chosen, softFail) {
     const p = currentPlayer();
     // Battle stats + cross-session history. Use the English answer text as the
     // "word" so the end-of-battle recap is useful as a vocabulary list.
@@ -553,7 +553,14 @@ window.Game = (() => {
     } else {
       const t = S.currentQuestion?.ptype;
       if (t) p.misses[t] = (p.misses[t] || 0) + 1;
-      p.combo = 0; // streak broken
+      // Spelling-mode soft fail: kid was off-by-one Levenshtein (a typo, not
+      // a wrong answer). No reward, but combo is preserved — typing speed
+      // shouldn't ruin a streak the kid earned with comprehension.
+      if (softFail) {
+        UI.toast(`✏️ おしい！ スペル ミス。 コンボは キープ！ 🔥×${p.combo}`, 1800);
+      } else {
+        p.combo = 0; // streak broken
+      }
       // Wrong answers still go through the result screen so kids see the correct
       // answer + explanation.
       UI.renderResult({

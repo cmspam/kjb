@@ -692,6 +692,11 @@ window.UI = (() => {
       const tn = $("q-timer-num");
       timerHandle = setInterval(() => {
         if (answered) { clearInterval(timerHandle); return; }
+        // Pause countdown while listening audio is playing — listening
+        // questions used to eat ~3s of timer just on the audio clip, leaving
+        // a short timer with almost no thinking time. Now the kid only loses
+        // ticks during silence.
+        if (typeof speechSynthesis !== "undefined" && speechSynthesis.speaking) return;
         remaining--;
         if (tn) tn.textContent = remaining;
         const t = $("q-timer");
@@ -798,12 +803,16 @@ window.UI = (() => {
         if (built.length !== target.length) return;
         const guess = built.map(b => b.char).join("").toLowerCase();
         const ok = guess === target;
+        // Soft-fail: a single typo (Levenshtein distance 1) is not really a
+        // comprehension error. Counts as wrong (no reward) but the combo is
+        // preserved — keeps fast-typing kids from losing streaks to a misclick.
+        const softFail = !ok && levenshtein1(guess, target);
         answered = true;
         if (timerHandle) clearInterval(timerHandle);
         if (ok) SND.sfxCorrect(); else SND.sfxWrong();
         // Visual feedback on the slots
         builtEl.querySelectorAll(".spell-slot").forEach(slot => {
-          slot.classList.add(ok ? "right" : "wrong");
+          slot.classList.add(ok ? "right" : (softFail ? "soft" : "wrong"));
         });
         if (!ok) {
           const hint = el(`<div style="margin-top:8px; color: var(--good); font-weight:900; font-size:20px;">→ ${escapeHTML(ans).toUpperCase()}</div>`);
@@ -812,7 +821,7 @@ window.UI = (() => {
         // Lock the tiles
         tilesEl.querySelectorAll(".spell-tile").forEach(t => t.classList.add("used"));
         goBtn.disabled = true;
-        setTimeout(() => onAnswer(ok, ok ? question.answer : -1), 1300);
+        setTimeout(() => onAnswer(ok, ok ? question.answer : -1, softFail), 1300);
       };
       tap(goBtn, submit);
     } else {
