@@ -1521,6 +1521,17 @@ window.Game = (() => {
     }
     let spyWins = false;
     if (S.jinro) spyWins = false;
+    // Lifetime stats for the title-screen rank.
+    if (Progress.recordBattle) {
+      Progress.recordBattle({
+        won: true,
+        bossId: S.boss && S.boss.id,
+        questionsRight: (S.battleStats && S.battleStats.right ? S.battleStats.right.length : 0),
+        questionsWrong: (S.battleStats && S.battleStats.wrong ? S.battleStats.wrong.length : 0),
+        biggestHit: S.battleStats && S.battleStats.biggestHit,
+        bestCombo: S.players.reduce((m, p) => Math.max(m, p.bestCombo || 0), 0),
+      });
+    }
     UI.renderVictory({
       players: S.players, jinro: S.jinro, spyWins, boss: S.boss,
       stats: S.battleStats,
@@ -1529,6 +1540,16 @@ window.Game = (() => {
   }
   function doDefeat() {
     let spyWins = S.jinro;
+    if (Progress.recordBattle) {
+      Progress.recordBattle({
+        won: false,
+        bossId: S.boss && S.boss.id,
+        questionsRight: (S.battleStats && S.battleStats.right ? S.battleStats.right.length : 0),
+        questionsWrong: (S.battleStats && S.battleStats.wrong ? S.battleStats.wrong.length : 0),
+        biggestHit: S.battleStats && S.battleStats.biggestHit,
+        bestCombo: S.players.reduce((m, p) => Math.max(m, p.bestCombo || 0), 0),
+      });
+    }
     UI.renderDefeat({
       players: S.players, jinro: S.jinro, spyWins, boss: S.boss,
       stats: S.battleStats,

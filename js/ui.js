@@ -316,6 +316,17 @@ window.UI = (() => {
           <div class="kaiju-row" style="font-size: 56px; margin: 8px 0;">
             <span class="kaiju-emoji" style="animation-delay: 0.0s;">🐙</span><span class="kaiju-emoji" style="animation-delay: 0.4s;">💩</span><span class="kaiju-emoji" style="animation-delay: 0.8s;">👾</span><span class="kaiju-emoji" style="animation-delay: 1.2s;">🦑</span>
           </div>
+          ${(() => {
+            // Lifetime rank line — shows once any battles have been played.
+            if (!window.Progress || !Progress.getStats) return "";
+            const stats = Progress.getStats();
+            const totalBattles = stats.battles || 0;
+            if (totalBattles === 0) return "";
+            const r = Progress.rankFor(stats);
+            const winsTxt = stats.wins ? ` ${stats.wins}しょうり` : "";
+            const nextTxt = r.next ? ` (つぎ ${r.next.name_jp.replace(/[^a-zア-ヶー]/g,'').slice(0,8)} まで ${r.toNext})` : "";
+            return `<div class="title-rank">${r.rank.name_jp}${winsTxt}${nextTxt}</div>`;
+          })()}
           <div class="subtle" style="margin-top: 4px;">なんにん で あそぶ？</div>
           <div class="row" id="t-count-row" style="margin: 6px 0 10px;"></div>
           <div class="subtle">${JP.mode_label}</div>
