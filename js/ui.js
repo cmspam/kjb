@@ -1424,11 +1424,12 @@ window.UI = (() => {
       try { overlay.remove(); } catch(_){}
       onDone();
     }
-    // Skip button — appears ~1300ms in (after the WARNING beat). Tapping it
-    // fast-forwards to onDone immediately. Repetition was the #1 audit
-    // complaint about boss attacks (4-player party = up to 12 cinematics
-    // per round). The skip lets kids take the cinematic for the first one
-    // and dismiss the rest.
+    // Skip button — appended AFTER the charge stage (T.charge) since that
+    // stage rewrites overlay.innerHTML and would wipe the button if it
+    // were added before. Once added, it persists through the remaining
+    // emoji-burst / bang / reveal stages until finish() removes the
+    // overlay. Tapping fast-forwards. ~80ms buffer past T.charge so the
+    // innerHTML rewrite has definitely settled.
     setTimeout(() => {
       if (finished) return;
       const skipBtn = document.createElement("button");
@@ -1437,7 +1438,7 @@ window.UI = (() => {
       overlay.appendChild(skipBtn);
       // Use the project's tap helper so iOS pointer/click are handled.
       tap(skipBtn, finish);
-    }, byPlayer ? 900 : 1500);
+    }, T.charge + 80);
   }
 
   // -------- RARE EVENT HYPE INTRO --------
