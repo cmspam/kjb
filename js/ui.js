@@ -1320,16 +1320,28 @@ window.UI = (() => {
 
   // -------- RARE EVENT HYPE INTRO --------
   // Big "★ レアイベント ★" splash to hype the player before any random pop-in.
-  function showRareEventIntro(onDone) {
+  // Per-event color/icon tints — keyed by an `eventType` string the caller
+  // optionally passes. Defaults to the original gold splash if no key.
+  const RARE_EVENT_TINTS = {
+    fairy:   { stars: "✨🧚‍♀️✨", glow: "rgba(255,180,255,0.5)", sub: "FAIRY!" },
+    bomb:    { stars: "💣💥💣",   glow: "rgba(255,180,80,0.55)", sub: "BOMB!" },
+    thief:   { stars: "🐈‍⬛💰🐈‍⬛", glow: "rgba(160,180,255,0.5)", sub: "THIEF!" },
+    rush:    { stars: "🌀🌀🌀",   glow: "rgba(255,90,140,0.55)", sub: "RUSH!" },
+    gambler: { stars: "🎰🎲🎰",   glow: "rgba(255,220,80,0.55)", sub: "GAMBLE!" },
+    janken:  { stars: "✊✋✌️",     glow: "rgba(180,255,200,0.55)", sub: "JANKEN!" },
+    ninja:   { stars: "🥷⚔️🥷",   glow: "rgba(180,180,180,0.55)", sub: "NINJA!" },
+  };
+  function showRareEventIntro(onDone, eventType) {
     SND.unlock();
+    const tint = RARE_EVENT_TINTS[eventType] || { stars: "✨⭐✨", glow: "rgba(255,255,255,0.5)", sub: "RARE!" };
     const overlay = document.createElement("div");
     overlay.className = "rare-event-overlay";
     overlay.innerHTML = `
       <div class="rare-flash"></div>
       <div class="rare-content">
-        <div class="rare-stars">✨⭐✨</div>
+        <div class="rare-stars">${tint.stars}</div>
         <div class="rare-title">レアイベント！</div>
-        <div class="rare-sub">RARE!</div>
+        <div class="rare-sub">${tint.sub}</div>
       </div>`;
     document.body.appendChild(overlay);
     SND.sfxVictory();
@@ -1345,7 +1357,7 @@ window.UI = (() => {
     overlay.querySelector(".rare-flash").animate(
       [
         { background: "rgba(255, 255, 255, 0)" },
-        { background: "rgba(255, 255, 255, 0.5)", offset: 0.5 },
+        { background: tint.glow, offset: 0.5 },
         { background: "rgba(255, 255, 255, 0)" }
       ],
       { duration: 500, iterations: 2 }
@@ -1598,15 +1610,27 @@ window.UI = (() => {
 
   function showRoundIntro(round, onDone) {
     SND.unlock();
-    const big = round >= 5;
+    // Per-round tier so rounds 2/3/4 don't all flash identically.
+    let label, sub, color;
+    if (round >= 8) {
+      label = "💀 FINAL ROUND"; sub = "けっちゃく！"; color = "#ff3b6b";
+    } else if (round >= 5) {
+      label = "🔥 ROUND";        sub = "きょくげん！"; color = "#ffcc00";
+    } else if (round >= 4) {
+      label = "⚡ ROUND";         sub = "ヒートアップ！"; color = "#ff9933";
+    } else if (round >= 3) {
+      label = "ROUND";            sub = "もうおどる！";   color = "#ffeb44";
+    } else {
+      label = "ROUND";            sub = "";              color = "#ffeb44";
+    }
     const overlay = document.createElement("div");
     overlay.className = "round-intro-overlay";
     overlay.innerHTML = `
       <div class="round-flash"></div>
       <div class="round-content">
-        <div class="round-label">${big ? "🔥 ROUND" : "ROUND"}</div>
-        <div class="round-num">${round}</div>
-        ${big ? `<div class="round-sub">きょくげん！</div>` : ``}
+        <div class="round-label" style="color:${color};">${label}</div>
+        <div class="round-num" style="color:${color}; text-shadow: 0 8px 0 #000, 0 0 30px ${color};">${round}</div>
+        ${sub ? `<div class="round-sub">${sub}</div>` : ``}
       </div>`;
     document.body.appendChild(overlay);
     SND.sfxBoss();

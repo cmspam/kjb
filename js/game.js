@@ -355,7 +355,8 @@ window.Game = (() => {
     const events = ["fairy", "bomb", "thief", "rush", "gambler", "janken", "ninja"];
     const which = events[Math.floor(Math.random() * events.length)];
     // Hype splash first, then run the event.
-    UI.showRareEventIntro(() => runEvent(which, p, onContinue));
+    // Pass event type so the splash takes a per-event color/icon tint.
+    UI.showRareEventIntro(() => runEvent(which, p, onContinue), which);
   }
 
   function runEvent(which, p, onContinue) {
