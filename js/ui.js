@@ -1539,6 +1539,39 @@ window.UI = (() => {
     setTimeout(() => overlay.remove(), 1000);
   }
 
+  // Round 1 "FIGHT!" stinger — fills the awkward silence between the boss
+  // intro and the first question. Ported pattern from showRoundIntro.
+  function showFightStinger(onDone) {
+    SND.unlock();
+    const overlay = document.createElement("div");
+    overlay.className = "round-intro-overlay";
+    overlay.innerHTML = `
+      <div class="round-flash"></div>
+      <div class="round-content">
+        <div class="round-label" style="color:#ff3b6b;">⚔ ROUND 1 ⚔</div>
+        <div class="round-num" style="font-size:88px;color:var(--bad); text-shadow:0 8px 0 #000, 0 0 30px var(--bad);">FIGHT!</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxBoss();
+    overlay.querySelector(".round-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.25) rotate(8deg)", opacity: 1, offset: 0.55 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1 }
+      ],
+      { duration: 520, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".round-flash").animate(
+      [
+        { background: "rgba(255, 59, 107, 0)" },
+        { background: "rgba(255, 59, 107, 0.5)", offset: 0.5 },
+        { background: "rgba(255, 59, 107, 0)" }
+      ],
+      { duration: 440, iterations: 2 }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 1500);
+  }
+
   function showRoundIntro(round, onDone) {
     SND.unlock();
     const big = round >= 5;
@@ -3019,7 +3052,7 @@ window.UI = (() => {
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
            renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
-           showRoundIntro, showRageIntro, showKO, spawnConfetti,
+           showRoundIntro, showRageIntro, showKO, showFightStinger, spawnConfetti,
            showComboSplash, showFirstBloodSplash, showPartDestroyedSplash, showSpeechBonusSplash,
            showCompendium, runSpeechChallenge,
            menuModal, showPvpFaceoff, showCliffhanger };

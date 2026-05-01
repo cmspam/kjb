@@ -289,10 +289,11 @@ window.Game = (() => {
         return;
       }
     }
-    // Boxing-card "ROUND N" splash from round 2 onward (round 1 just had the
-    // boss intro). PvP gets it from round 2+ since round 1 used the face-off.
-    const showIntro = S.round >= 2;
-    if (showIntro) UI.showRoundIntro(S.round, () => nextTurn());
+    // Boxing-card "ROUND N" splash from round 2 onward; round 1 hero-mode
+    // gets a "FIGHT!" stinger between the boss intro and the first question
+    // so the action starts with a beat.
+    if (S.round >= 2) UI.showRoundIntro(S.round, () => nextTurn());
+    else if (UI.showFightStinger && S.mode !== "pvp") UI.showFightStinger(() => nextTurn());
     else nextTurn();
   }
 
