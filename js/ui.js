@@ -2250,13 +2250,24 @@ window.UI = (() => {
       const totalHp = monster ? monster.parts.reduce((s,part) => s + Math.max(0, part.hp), 0) : 0;
       const maxHp = monster ? monster.parts.reduce((s,part) => s + part.maxHP, 0) : 1;
       const core = monster ? monster.parts.find(x => x.effect === "win") : null;
-      const coreHp = core ? `${Math.max(0, core.hp)}/${core.maxHP}` : "?";
+      const coreHp = core ? Math.max(0, core.hp) : 0;
+      const coreMax = core ? core.maxHP : 1;
+      const corePct = coreMax > 0 ? Math.round((coreHp / coreMax) * 100) : 0;
       const tile = el(`
         <button class="part-btn ${isDead?'dead':''}" style="${isSelf?'border-color: var(--accent); background: linear-gradient(160deg, #5a3a00, #2a1500);':''}padding:8px;">
           <div class="pn" style="font-size:14px;color:${isSelf?'var(--accent)':'#fff'};">${pp.avatar?pp.avatar+' ':''}${escapeHTML(pp.name)}${isSelf?' (じぶん)':''}${isDead?' 💀':''}</div>
           <div style="height:90px;">${monster ? Monsters.renderBossSVG(monster) : ''}</div>
           <div class="ph" style="font-size:11px;">${monster ? escapeHTML(monster.name_jp) : ''}</div>
-          <div class="ph" style="font-size:11px;">HP ${totalHp}/${maxHp} ／ コア ${coreHp}</div>
+          ${monster ? `
+            <div class="core-bar-row">
+              <div class="core-bar-label">💎 コア</div>
+              <div class="core-bar-track">
+                <div class="core-bar-fill ${corePct<=20?'crit':corePct<=50?'warn':'ok'}" style="width:${corePct}%;"></div>
+                <div class="core-bar-text">${coreHp}/${coreMax}</div>
+              </div>
+            </div>
+            <div class="ph" style="font-size:10px; color:#aaa;">ぜんしん HP ${totalHp}/${maxHp}</div>
+          ` : ''}
         </button>`);
       if (!isSelf && !isDead && hasAtk) {
         tap(tile, () => { SND.sfxPop(); onPickOpponent(pp); });
