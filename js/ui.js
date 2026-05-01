@@ -3171,10 +3171,16 @@ window.UI = (() => {
           </div>`;
       }
     }
+    // Stage background — themed scene per boss, layered behind the SVG.
+    // Decorative only; gives each fight a sense of place instead of the
+    // same purple void.
+    const stageBgHTML = (boss && boss.id && window.Stages && Stages.exists(boss.id))
+      ? `<div class="stage-bg">${Stages.render(boss.id)}</div>`
+      : "";
     return `
       <div class="header-wrap">
         ${bossCoreBar}
-        <div class="stage${ragedClass}">${svg}</div>
+        <div class="stage${ragedClass}">${stageBgHTML}<div class="stage-svg">${svg}</div></div>
         <div class="boss-name">${boss ? `${boss.name_jp}${boss.raged?' 😡':''}` : ""}</div>
         <div class="players">${playerTiles}</div>
       </div>

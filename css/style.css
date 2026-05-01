@@ -77,7 +77,21 @@ h3 { font-size: 28px; margin: 4px 0; }
   display:flex; align-items:center; justify-content:center;
   position: relative;
 }
-.stage svg { width: 100%; height: 100%; max-height: 380px; animation: stage-idle 4.5s ease-in-out infinite; transform-origin: center; }
+/* Per-boss themed background scene, behind the boss SVG. */
+.stage-bg {
+  position: absolute; inset: 0;
+  z-index: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  opacity: 0.92;
+}
+.stage-bg svg { width: 100%; height: 100%; }
+.stage-svg { position: relative; z-index: 1; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.stage-svg svg { width: 100%; height: 100%; max-height: 380px; animation: stage-idle 4.5s ease-in-out infinite; transform-origin: center; }
+/* Legacy direct-child selector kept so other contexts (boss intro, KO,
+   defeat cinematic) that still render an svg directly inside .stage
+   keep their idle animation. */
+.stage > svg { width: 100%; height: 100%; max-height: 380px; animation: stage-idle 4.5s ease-in-out infinite; transform-origin: center; }
 /* Subtle idle motion so the stage isn't dead during 30s of question-reading.
    Suppressed during shake / rage / hit-stop so action animations don't
    stack with the breathing loop. */
