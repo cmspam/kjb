@@ -544,6 +544,15 @@ window.Game = (() => {
       let bonusCard = false;
       if (p.combo >= 3) { p.attackPower += 1; bonusDmg = 1; }
       if (p.combo >= 5) { drawCard(p);          bonusCard = true; }
+      // First-blood splash on the very first correct of the battle (this
+      // is correct #1 since we just pushed to battleStats.right above).
+      if (S.battleStats.right.length === 1 && UI.showFirstBloodSplash) {
+        UI.showFirstBloodSplash();
+      }
+      // Combo-tier banners at 3 / 5 / 7 / 10 — shows above the toast.
+      if ((p.combo === 3 || p.combo === 5 || p.combo === 7 || p.combo === 10) && UI.showComboSplash) {
+        UI.showComboSplash(p.combo);
+      }
       const cheer = pickRand(JP.correct_cheer || ["ナイス〜！"]);
       const comboTxt = p.combo >= 2 ? ` 🔥×${p.combo}` : "";
       const bonusTxt = (bonusDmg||bonusCard) ? ` (+${bonusDmg?'⚔️':''}${bonusCard?'🎴':''} ボーナス！)` : "";
@@ -759,7 +768,9 @@ window.Game = (() => {
           S.log.push(`${p.name} → ${opponent.name}.${hitPart.name_jp}: ${hitDmg}${ev.ignoreArmor ? ' (pierce)' : ''}`);
           if (hitPart.hp === 0) {
             S.log.push(`${opponent.name} の ${hitPart.name_jp} を こわした！`);
-            SND.sfxPop();
+            if (UI.showPartDestroyedSplash) UI.showPartDestroyedSplash(`${opponent.name} の ${hitPart.name_jp}`);
+            else if (SND.sfxBreak) SND.sfxBreak();
+            else SND.sfxPop();
           }
           // 220ms gap between hits — feels like a beat without dragging.
           setTimeout(nextHit, 220);
@@ -930,7 +941,10 @@ window.Game = (() => {
     // shaking would be added with animation; we re-render to update HP.
     if (part.hp === 0) {
       S.log.push(`${part.name_jp} を こわした！`);
-      SND.sfxPop();
+      // Don't sfxPop on part destroy anymore — sfxBreak is a glass-shatter
+      // chord that actually feels like something broke. Splash overlay too.
+      if (UI.showPartDestroyedSplash) UI.showPartDestroyedSplash(part.name_jp);
+      else SND.sfxBreak ? SND.sfxBreak() : SND.sfxPop();
       S.boss._lostPartTaunt = true; // one-shot: next taunt reflects this loss
     }
     // Check win — doVictory wraps the K.O. cinematic so all kill paths

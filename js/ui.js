@@ -1403,6 +1403,99 @@ window.UI = (() => {
   // -------- ROUND ANNOUNCEMENT --------
   // Boxing-card style "ROUND N" splash. Round 5+ gets extra flair so long
   // battles feel like the stakes are climbing.
+  // -------- COMBO TIER SPLASH --------
+  // Brief banner when a kid hits combo 3 / 5 / 7 / 10 — turns a "+1 dmg
+  // bonus" toast into a real moment. Reuses round-intro-overlay styling
+  // for free, with tier-specific copy and color.
+  function showComboSplash(combo, onDone) {
+    const tiers = {
+      3:  { label: "🔥 COMBO ×3",   sub: "ナイス れんぞく！",      color: "#ff8844" },
+      5:  { label: "🔥🔥 COMBO ×5", sub: "もえてる！",              color: "#ff5511" },
+      7:  { label: "💥 COMBO ×7",   sub: "とまらない！",            color: "#ffcc00" },
+      10: { label: "⚡ ON FIRE ⚡",  sub: "でんせつ！ COMBO ×10",   color: "#ffeb44" },
+    };
+    const t = tiers[combo];
+    if (!t) { if (onDone) onDone(); return; }
+    SND.unlock();
+    const overlay = document.createElement("div");
+    overlay.className = "round-intro-overlay";
+    overlay.innerHTML = `
+      <div class="round-flash" style="background:rgba(0,0,0,0);"></div>
+      <div class="round-content">
+        <div class="round-label" style="color:${t.color};">${t.label}</div>
+        <div class="round-sub" style="color:#fff;">${t.sub}</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxCorrect();
+    overlay.querySelector(".round-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0) rotate(-12deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.15) rotate(4deg)", opacity: 1, offset: 0.55 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1 }
+      ],
+      { duration: 400, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    overlay.querySelector(".round-flash").animate(
+      [
+        { background: "rgba(255, 200, 80, 0)" },
+        { background: "rgba(255, 200, 80, 0.35)", offset: 0.5 },
+        { background: "rgba(255, 200, 80, 0)" }
+      ],
+      { duration: 400, iterations: 1 }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 900);
+  }
+
+  // -------- FIRST BLOOD SPLASH --------
+  // Fired on the first correct answer of the battle.
+  function showFirstBloodSplash(onDone) {
+    SND.unlock();
+    const overlay = document.createElement("div");
+    overlay.className = "round-intro-overlay";
+    overlay.innerHTML = `
+      <div class="round-flash" style="background:rgba(0,0,0,0);"></div>
+      <div class="round-content">
+        <div class="round-label" style="color:#ff3b6b;">FIRST BLOOD</div>
+        <div class="round-sub" style="color:#fff;">バトル スタート！</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    SND.sfxVictory();
+    overlay.querySelector(".round-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.2) rotate(5deg)", opacity: 1, offset: 0.55 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0)", opacity: 1 }
+      ],
+      { duration: 450, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 1100);
+  }
+
+  // -------- PART DESTROYED SPLASH --------
+  // Fired when a boss/opponent monster part hp hits 0.
+  function showPartDestroyedSplash(partName) {
+    const overlay = document.createElement("div");
+    overlay.className = "round-intro-overlay";
+    overlay.innerHTML = `
+      <div class="round-flash" style="background:rgba(0,0,0,0);"></div>
+      <div class="round-content">
+        <div class="round-label" style="color:#7ff0a0;">💥 BROKEN!</div>
+        <div class="round-sub" style="color:#fff; font-size:24px;">${escapeHTML(partName||"パーツ")} を こわした！</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    // Distinct, satisfying break SFX — three descending tones ≠ sfxPop.
+    if (SND.sfxBreak) SND.sfxBreak(); else SND.sfxHit();
+    overlay.querySelector(".round-content").animate(
+      [
+        { transform: "translate(-50%, -50%) scale(0)",    opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1.2)", opacity: 1, offset: 0.55 },
+        { transform: "translate(-50%, -50%) scale(1)",    opacity: 1 }
+      ],
+      { duration: 350, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+    );
+    setTimeout(() => overlay.remove(), 1000);
+  }
+
   function showRoundIntro(round, onDone) {
     SND.unlock();
     const big = round >= 5;
@@ -2831,6 +2924,7 @@ window.UI = (() => {
            renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim,
            renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
            showRoundIntro, showRageIntro, showKO, spawnConfetti,
+           showComboSplash, showFirstBloodSplash, showPartDestroyedSplash,
            showCompendium, runSpeechChallenge,
            menuModal, showPvpFaceoff, showCliffhanger };
 })();

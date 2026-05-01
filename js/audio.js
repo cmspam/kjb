@@ -181,6 +181,20 @@ window.SND = (() => {
   function sfxVictory() { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.18, "triangle",.18), i*120)); }
   function sfxDefeat()  { [392,330,262,196].forEach((f,i)=>setTimeout(()=>tone(f,.25,"sawtooth",.18), i*180)); }
   function sfxPop()     { tone(440,.05,"square",.18); setTimeout(()=>tone(220,.1,"sawtooth",.2),60); }
+  // Distinct sfx for "I broke an enemy part" — three descending tones with
+  // a snare-like attack so it feels like glass shattering, not a menu bleep.
+  function sfxBreak()   { tone(880,.05,"square",.22); setTimeout(()=>tone(440,.07,"square",.22),50); setTimeout(()=>tone(220,.18,"sawtooth",.25),130); }
+  // Crit-hit sting: a quick rising chord that lands hard. Hooked from
+  // applyDamageTier when tier === "crit" for satisfying big-damage feedback.
+  function sfxCrit()    { tone(660,.04,"square",.22); setTimeout(()=>tone(880,.05,"square",.24),40); setTimeout(()=>tone(1320,.1,"sawtooth",.28),100); setTimeout(()=>tone(1760,.18,"triangle",.3),200); }
+  // Subtle confirm tone for "I committed to an action" — distinct from
+  // sfxPop's menu-tap timbre. Replaces sfxPop on wager-pick / target-pick /
+  // attack-fire so kids hear an action complete vs a UI navigation.
+  function sfxConfirm() { tone(550,.06,"sine",.22); setTimeout(()=>tone(770,.09,"sine",.22),50); }
+  // Light "navigated to a sub-menu" tone — soft, brief.
+  function sfxNav()     { tone(330,.05,"triangle",.16); }
+  // "I picked an option" — same family as sfxPop but a slightly higher pair.
+  function sfxSelect()  { tone(620,.04,"square",.18); setTimeout(()=>tone(770,.05,"square",.18),40); }
   function sfxFart()    {
     const a = ctx(); if (!a) return;
     const o = a.createOscillator(); const g = a.createGain();
@@ -884,7 +898,8 @@ window.SND = (() => {
     });
   }
 
-  return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat, sfxPop, sfxFart,
+  return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat,
+           sfxPop, sfxFart, sfxBreak, sfxCrit, sfxConfirm, sfxNav, sfxSelect,
            setMuted, isMuted, setVoice, listVoices,
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
            getThemes, setThemes, getSpellMode, setSpellMode, getA11y, setA11y,
