@@ -986,6 +986,13 @@ window.Game = (() => {
     try {
       if (p.energy < card.cost) return;
       const ef = card.effect;
+      // ACCUSE card: gated to round ≥ 4 and not yet locked. One-shot per game
+      // — locked after first play (right or wrong). Right = team wins +
+      // cinematic; wrong = -5HP to accuser + lock.
+      if (card.id === "accuse") {
+        if (S.round < 4) { UI.toast("ラウンド 4 まで まちなさい！", 1800); return; }
+        if (S.accuseLocked) { UI.toast("もう こくはつ できない！", 1800); return; }
+      }
       // Cards that need a target
       if (card.needsTarget && card.targetType === "player") {
         // In PvP, heal cards target the kid's OWN monster's parts (no team
@@ -1004,8 +1011,19 @@ window.Game = (() => {
         pickPlayer(p, (target) => {
           try {
             p.energy -= card.cost; p.hand.splice(idx,1); S.discard.push(card);
-            applyCardEffect(p, card, target);
             SND.sfxCard();
+            // Reveal and Accuse drive their own continuation flow (private
+            // overlay / cinematic toast → goAction). applyCardEffect's
+            // branches for these are no-ops; we route directly.
+            if (card.id === "reveal") {
+              handleReveal(p, target, () => goAction());
+              return;
+            }
+            if (card.id === "accuse") {
+              handleAccuse(p, target, () => goAction());
+              return;
+            }
+            applyCardEffect(p, card, target);
             goAction();
           } catch (e) {
             console.error("targeted card play failed:", e, "card:", card, "target:", target);
@@ -1148,13 +1166,42 @@ window.Game = (() => {
       }
       UI.toast(`ベロ ビーム！${oppName?` ${oppName} に`:''} ${ef.v}ダメ ×${n}`);
     } else if (ef.type === C.REVEAL_ROLE) {
-      const isSpy = target.role === "spy";
-      UI.toast(isSpy ? `${target.name} は スパイ！` : `${target.name} は シロ！`, 2400);
-      target.scanned = true;
-      if (isSpy) {
-        // Reveal publicly
-        S.revealedThisGame.push(target.id);
+      // Private reveal handled at playCardInAction level — see below — so the
+      // overlay can drive its own continuation cleanly. Should not be reached
+      // here; if it is, fall back to a silent log.
+      S.log.push(`(ひみつ) ${p.name} が ${target.name} を スキャン: ${target.role==="spy"?"スパイ":"シロ"}`);
+    } else if (ef.type === C.ACCUSE_PLAYER) {
+      // Same: handled at playCardInAction level.
+    }
+  }
+  function handleReveal(asker, target, onDone) {
+    target.scanned = true;
+    const isSpy = target.role === "spy";
+    S.log.push(`(ひみつ) ${asker.name} → ${target.name}: ${isSpy?"スパイ":"シロ"}`);
+    if (UI.renderPrivateScan) {
+      UI.renderPrivateScan(asker, target, isSpy, onDone);
+    } else {
+      UI.toast("ひみつ スキャン!", 1500);
+      onDone();
+    }
+  }
+  function handleAccuse(asker, target, onDone) {
+    S.accuseLocked = true;
+    const isSpy = target.role === "spy";
+    if (isSpy) {
+      UI.toast(`⚖️ ${asker.name} が ${target.name} を こくはつ… せいかい！ チームの しょうり！`, 3200);
+      S.revealedThisGame.push(target.id);
+      S.log.push(`${asker.name} → ${target.name}: ACCUSE 成功 (スパイ)`);
+      setTimeout(() => doVictory({ jinroForced: true, accusedSpy: target.name }), 1200);
+    } else {
+      UI.toast(`⚖️ ${asker.name} の こくはつ… はずれ！ ${target.name} は シロ。 −5 HP & ロック！`, 3200);
+      asker.hp = Math.max(0, asker.hp - 5);
+      S.log.push(`${asker.name} → ${target.name}: ACCUSE 失敗 (-5HP, ロック)`);
+      if (asker.hp === 0) {
+        asker.dead = true;
+        if (S.players.every(x => x.dead)) { setTimeout(doDefeat, 800); return; }
       }
+      setTimeout(onDone, 1500);
     }
   }
 

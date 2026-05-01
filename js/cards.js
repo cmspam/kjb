@@ -19,6 +19,7 @@ window.Cards = (() => {
     DOUBLE_NEXT: "double_next",  // next teammate hit ×2
     HIT_RANDOM_2: "hit_random_2",// hits 2 random parts for 2 each
     REVEAL_ROLE: "reveal_role",
+    ACCUSE_PLAYER: "accuse_player",  // jinro one-shot accusation
     SKIP_BOSS_ATK: "skip_boss_atk",
     REROLL_Q: "reroll_q",
     HINT: "hint",                // remove one wrong answer
@@ -37,7 +38,8 @@ window.Cards = (() => {
     { id:"draw_two",   icon:"🎴", cost:1, effect:{type:C.DRAW, v:2},          needsTarget:false },
     { id:"combo",      icon:"🔥", cost:1, effect:{type:C.DOUBLE_NEXT},        needsTarget:false },
     { id:"spread",     icon:"👅", cost:2, effect:{type:C.HIT_RANDOM_2, v:2},  needsTarget:false, attackMod:false },
-    { id:"reveal",     icon:"🔍", cost:1, effect:{type:C.REVEAL_ROLE},        needsTarget:true, targetType:"player" },
+    { id:"reveal",     icon:"🔍", cost:1, effect:{type:C.REVEAL_ROLE},        needsTarget:true, targetType:"player", jinroOnly:true },
+    { id:"accuse",     icon:"⚖️", cost:2, effect:{type:C.ACCUSE_PLAYER},      needsTarget:true, targetType:"player", jinroOnly:true },
     { id:"escape",     icon:"🏃", cost:1, effect:{type:C.SKIP_BOSS_ATK},      needsTarget:false },
     { id:"hint",       icon:"💡", cost:0, effect:{type:C.HINT},               needsTarget:false, beforeQ:true },
     { id:"reroll",     icon:"💪", cost:1, effect:{type:C.REROLL_Q},           needsTarget:false, beforeQ:true },
@@ -66,6 +68,7 @@ window.Cards = (() => {
   const ALWAYS_UNLOCKED = new Set([
     "fart_bomb", "mega_punch", "unko_shield",
     "energy", "draw_two", "escape", "hint", "reveal",
+    "accuse",  // jinro-only — pool count of 0 in non-jinro deck so still gated
   ]);
   // Each boss defeat unlocks one card. Mapping picked for thematic flavor:
   //   tako (8-legged)         → spread     (multi-target tongue)
@@ -113,7 +116,8 @@ window.Cards = (() => {
     const counts = {
       fart_bomb: 6, mega_punch: 3, unko_shield: 4, team_shield: 2, heal: 4,
       team_heal: 2, energy: 4, draw_two: 3, combo: 3, spread: 2,
-      reveal: jinroMode ? 3 : 0, escape: 3, hint: 4, reroll: 0
+      reveal: jinroMode ? 3 : 0, accuse: jinroMode ? 2 : 0,
+      escape: 3, hint: 4, reroll: 0
     };
     for (const c of POOL_BASE) {
       if (!isUnlocked(c.id)) continue; // locked until the right boss is defeated

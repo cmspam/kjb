@@ -513,7 +513,8 @@ window.I18N.register("ja", {
     draw_two:    { name_jp: "カードドロー",       text_jp: "カードを 2まい ひく！" },
     combo:       { name_jp: "チーム コンボ！",    text_jp: "つぎの なかまの こうげきが ×2！" },
     spread:      { name_jp: "ベロ ビーム",       text_jp: "ランダムな パーツに 2ダメ ×2！" },
-    reveal:      { name_jp: "スパイ チェック",   text_jp: "だれかの ロールを みる！" },
+    reveal:      { name_jp: "スパイ チェック",   text_jp: "だれかの ロールを みる！(ひみつ)" },
+    accuse:      { name_jp: "こくはつ ⚖️",         text_jp: "うらぎりを こくはつ！ せいかい→チームしょうり！はずれ→−5HP+ロック (ラウンド4から)" },
     escape:      { name_jp: "にげる！",           text_jp: "つぎの ボスこうげきを かわす！" },
     hint:        { name_jp: "ヒント！",           text_jp: "まちがいを 1つ けす！" },
     reroll:      { name_jp: "きあいだ！",         text_jp: "もんだいを やりなおす！" }

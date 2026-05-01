@@ -573,6 +573,36 @@ window.UI = (() => {
     tap($("ready"), () => { SND.sfxPop(); onReady(); });
   }
 
+  // -------- PRIVATE SCAN (jinro reveal card) --------
+  // Two-stage flow that mimics the role-reveal: a hand-off prompt so the
+  // device can be passed to the asker alone, then the reveal card. Uses the
+  // pass screen to keep neighbors from peeking.
+  function renderPrivateScan(asker, target, isSpy, onDone) {
+    show("pass");
+    const s = $("screen-pass");
+    s.innerHTML = `
+      <div class="center" style="margin-top: 16vh;">
+        <div class="pass-big bob">${asker && asker.avatar || "🔍"}</div>
+        <h2>${escapeHTML((asker && asker.name) || "")} だけ みて！</h2>
+        <div class="pass-instr" style="white-space: pre-line;">スキャンの けっか… ほかのひとには みせないでね</div>
+        <button class="btn huge cool" id="reveal">${JP.ok}</button>
+      </div>`;
+    tap($("reveal"), () => {
+      SND.sfxPop();
+      // Stage 2: show the actual scan result.
+      s.innerHTML = `
+        <div class="center" style="margin-top:14vh;">
+          <div class="role-card ${isSpy?'spy':'hero'}">
+            <div class="role-name">🔍 スキャン: ${escapeHTML(target.name)}</div>
+            <div style="font-size:36px;margin:14px 0;">${isSpy ? "🕵️ スパイ" : "⚔️ ヒーロー"}</div>
+            <div style="font-size:14px;color:#bbb;">この じょうほう は ひみつ。<br>ほかの プレイヤーに おしえるか、 ないしょに するか…</div>
+          </div>
+          <button class="btn huge ghost" id="scanok">${JP.ok}</button>
+        </div>`;
+      tap($("scanok"), () => onDone());
+    });
+  }
+
   // -------- ROLE REVEAL (Jinro) --------
   function renderRole(player, isSpy, onDone) {
     show("role");
@@ -2790,7 +2820,7 @@ window.UI = (() => {
            renderFairyEvent, renderBombEvent, renderThiefEvent,
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
            renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim,
-           renderMonsterPick, renderPvpAction, showRareEventIntro,
+           renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
            showRoundIntro, showRageIntro, showKO, spawnConfetti,
            showCompendium, runSpeechChallenge,
            menuModal, showPvpFaceoff, showCliffhanger };
