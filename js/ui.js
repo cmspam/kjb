@@ -2276,14 +2276,17 @@ window.UI = (() => {
   function showPhase2Intro(boss, onDone) {
     SND.unlock();
     const overlay = document.createElement("div");
-    overlay.className = "round-intro-overlay";
-    // Use a hits-pool line for the phase-2 phrase. Both hits and taunts are
-    // pre-rendered now, but hits give bigger variety and the kid hears one
-    // shouted line punching through the sting.
+    overlay.className = "round-intro-overlay phase2-intro";
     const phrase = (boss && Array.isArray(boss.hits) && boss.hits.length)
       ? boss.hits[(Math.random()*boss.hits.length)|0]
       : "まだまだ！";
+    // Per-monster background floods the screen during the phase shift —
+    // reuses the same .boss-anim-bg-layer.bg-<id> system from the attack
+    // cinematic. Fades in during the first ~600ms via the .charging class.
+    const KNOWN_BG_IDS = ["tako","unko","tral","pamp","parfait","anpan","brainrot"];
+    const bgKey = (boss && KNOWN_BG_IDS.indexOf(boss.id) >= 0) ? boss.id : "default";
     overlay.innerHTML = `
+      <div class="boss-anim-bg-layer bg-${bgKey}"></div>
       <div class="round-flash" style="background:rgba(255,80,200,0)"></div>
       <div class="round-content">
         <div class="round-label" style="color:#ff66cc;">⚡ PHASE 2 ⚡</div>
@@ -2291,10 +2294,17 @@ window.UI = (() => {
         <div class="round-sub" style="color:#fff;">${escapeHTML(phrase)}</div>
       </div>`;
     document.body.appendChild(overlay);
+    const bgLayer = overlay.querySelector(".boss-anim-bg-layer");
+    if (bgLayer) requestAnimationFrame(() => bgLayer.classList.add("charging"));
+    // Particle storm — same converging-energy pattern from the attack
+    // cinematic, sized for the splash overlay.
+    spawnPhaseParticles(overlay, "#ff66cc", 14);
+    // Camera shake on the overlay during the splash.
+    overlay.classList.add("shaking");
+    setTimeout(() => overlay.classList.remove("shaking"), 900);
     SND.sfxBoss();
     if (boss && boss.id && boss.hits && boss.hits.length) SND.playBossLine(boss.id, phrase);
-    // Brief duck so the phase-2 sting reads.
-    if (SND.duckTheme) SND.duckTheme(1100, 0.30);
+    if (SND.duckTheme) SND.duckTheme(1500, 0.30);
     overlay.querySelector(".round-content").animate(
       [
         { transform: "translate(-50%, -50%) scale(0) rotate(-15deg)", opacity: 0 },
@@ -2306,12 +2316,36 @@ window.UI = (() => {
     overlay.querySelector(".round-flash").animate(
       [
         { background: "rgba(255, 80, 200, 0)" },
-        { background: "rgba(255, 80, 200, 0.5)", offset: 0.5 },
+        { background: "rgba(255, 80, 200, 0.55)", offset: 0.5 },
         { background: "rgba(255, 80, 200, 0)" }
       ],
-      { duration: 460, iterations: 2 }
+      { duration: 460, iterations: 3 }
     );
-    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 1700);
+    setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 2200);
+  }
+
+  // Spawn N type-colored particles converging from screen edges to center.
+  // Used by phase-2 and rage intros for the same energy-gathering feel as
+  // the attack cinematic. Particles auto-cleanup via animation; no need to
+  // remove them manually before overlay teardown.
+  function spawnPhaseParticles(parent, color, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.4;
+      const dist = 280 + Math.random() * 180;
+      const fx = Math.cos(angle) * dist;
+      const fy = Math.sin(angle) * dist;
+      const p = document.createElement("div");
+      p.className = "boss-anim-particle flying";
+      p.style.setProperty("--from-x", fx + "px");
+      p.style.setProperty("--from-y", fy + "px");
+      p.style.setProperty("--anim-color", color);
+      p.style.setProperty("--duration", "850ms");
+      p.style.setProperty("--delay", Math.floor(Math.random() * 600) + "ms");
+      const sz = 12 + Math.random() * 14;
+      p.style.width = sz + "px";
+      p.style.height = sz + "px";
+      parent.appendChild(p);
+    }
   }
 
   // -------- COMBO TIER SPLASH --------
@@ -2588,7 +2622,13 @@ window.UI = (() => {
     const phrase = ragePool[(Math.random()*ragePool.length)|0];
     const overlay = document.createElement("div");
     overlay.className = "rage-overlay";
+    // Per-monster bg-layer floods the rage splash — same system as
+    // phase-2 + the attack cinematic, but rage gets it with full brightness
+    // and a heavier red overlay tint for the fury energy.
+    const KNOWN_BG_IDS = ["tako","unko","tral","pamp","parfait","anpan","brainrot"];
+    const bgKey = (boss && KNOWN_BG_IDS.indexOf(boss.id) >= 0) ? boss.id : "default";
     overlay.innerHTML = `
+      <div class="boss-anim-bg-layer bg-${bgKey}"></div>
       <div class="rage-flash"></div>
       <div class="rage-content">
         <div class="rage-label">⚠ RAGE ⚠</div>
@@ -2597,6 +2637,13 @@ window.UI = (() => {
         <div class="rage-phrase">${furigana(phrase)}</div>
       </div>`;
     document.body.appendChild(overlay);
+    const bgLayer = overlay.querySelector(".boss-anim-bg-layer");
+    if (bgLayer) requestAnimationFrame(() => bgLayer.classList.add("charging"));
+    // Heavy particle storm in red — more particles than phase 2, denser.
+    spawnPhaseParticles(overlay, "#ff3b3b", 20);
+    // Stronger camera shake during rage — runs the full duration.
+    overlay.classList.add("shaking");
+    setTimeout(() => overlay.classList.remove("shaking"), 1800);
     SND.sfxBoss();
     // Restart theme at a random offset to ramp up the energy.
     if (boss && boss.id) SND.playThemeSnippet(boss.id, 2400, 0.55);
