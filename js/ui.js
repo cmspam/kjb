@@ -1343,7 +1343,7 @@ window.UI = (() => {
         <div class="sling-target-svg" id="sling-target-svg">${bossSvg}</div>
         <div class="sling-target-name">${escapeHTML(partName||"")}</div>
       </div>
-      <svg viewBox="0 0 400 500" id="sling-svg" preserveAspectRatio="xMidYEnd meet">
+      <svg viewBox="0 0 400 500" id="sling-svg" preserveAspectRatio="xMidYMax meet">
         <line x1="200" y1="500" x2="200" y2="280" stroke="#7a4520" stroke-width="22" stroke-linecap="round"/>
         <line x1="200" y1="290" x2="120" y2="190" stroke="#7a4520" stroke-width="20" stroke-linecap="round"/>
         <line x1="200" y1="290" x2="280" y2="190" stroke="#7a4520" stroke-width="20" stroke-linecap="round"/>

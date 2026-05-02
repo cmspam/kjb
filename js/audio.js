@@ -305,7 +305,10 @@ window.SND = (() => {
     const startT = performance.now();
     function tick(t) {
       const p = ms <= 0 ? 1 : Math.min(1, (t - startT) / ms);
-      audio.volume = startVol + (targetVol - startVol) * p;
+      // Clamp to [0, 1]; floating-point drift on the fade math can leave a
+      // tiny negative epsilon (e.g. -0.00024) which throws IndexSizeError.
+      const v = startVol + (targetVol - startVol) * p;
+      audio.volume = v < 0 ? 0 : (v > 1 ? 1 : v);
       if (p < 1) audioFadeRAF.set(audio, requestAnimationFrame(tick));
       else { audioFadeRAF.delete(audio); if (onDone) onDone(); }
     }
