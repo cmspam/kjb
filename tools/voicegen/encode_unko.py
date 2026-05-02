@@ -137,8 +137,12 @@ for i, text in enumerate(LINES, start=1):
              "-i", str(src),
              "-c:a", "libopus", "-b:a", "32k", "-ac", "1", "-ar", "48000",
              # Trim leading/trailing silence — Voice Recorder leaves dead air.
-             "-af", "silenceremove=start_periods=1:start_duration=0.1:start_threshold=-50dB:"
-                    "stop_periods=1:stop_duration=0.5:stop_threshold=-50dB",
+             # Keep 80ms of leading silence (start_silence=0.08) so soft
+             # initial consonants like "F" in "Fuhgeddaboudit" or "T" in
+             # "Try me" don't get clipped. Stop_threshold tightened to -42dB
+             # so quiet ambient noise doesn't get treated as speech.
+             "-af", "silenceremove=start_periods=1:start_silence=0.08:start_duration=0.15:start_threshold=-42dB:"
+                    "stop_periods=1:stop_silence=0.15:stop_duration=0.5:stop_threshold=-42dB",
              str(dst)],
             check=True,
         )
