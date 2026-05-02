@@ -227,13 +227,38 @@ window.Game = (() => {
     UI.renderSetup({ count, onConfirm: (opts) => {
       opts.mode = mode;  // Pipe through from title
       newGame(opts);
+      // ---- SHINY ENCOUNTER ROLL ----
+      // Single-pass shiny upgrade applied right after newGame. Rolls 10%
+      // for unbeaten bosses, 20% for beaten (the kid is stronger now —
+      // more replay value). ?shiny=1 forces shiny on; ?shiny=0 forces off
+      // so we can test both paths during dev. Feature-flagged behind
+      // SHINIES_ENABLED until the audio/translations land.
+      const SHINIES_ENABLED = false;
+      const shinyParam = devParams().get("shiny");
+      const forceShiny = shinyParam === "1";
+      const forceNoShiny = shinyParam === "0";
+      function maybeShiny(boss) {
+        if (!boss) return boss;
+        if (forceNoShiny) return boss;
+        if (!forceShiny && !SHINIES_ENABLED) return boss;
+        let chance = 0;
+        if (forceShiny) chance = 1;
+        else if (Progress.isDefeated && Progress.isDefeated(boss.id)) chance = 0.20;
+        else chance = 0.10;
+        if (Math.random() < chance) {
+          Monsters.applyShiny(boss);
+          if (Progress.recordShinyEncounter) Progress.recordShinyEncounter(boss.id);
+        }
+        return boss;
+      }
+      if (S.boss && S.mode !== "pvp") maybeShiny(S.boss);
       // Dev: ?boss=<id> overrides the random boss pick before beginMatch.
       const forcedBossId = devParams().get("boss");
       if (forcedBossId && S.mode !== "pvp") {
         const allFactories = (Monsters.listAllFactories ? Monsters.listAllFactories() : Monsters.listFactories());
         const match = allFactories.map(f => f()).find(m => m.id === forcedBossId);
         if (match) {
-          S.boss = match;
+          S.boss = maybeShiny(match);
           if (S.scaling) S.boss.attacksPerRound = S.scaling.attacks;
         }
       }
@@ -242,7 +267,7 @@ window.Game = (() => {
       // pick that boss; the bossIntro then shows for them.
       const openMap = () => {
         UI.renderBossPickerMap(S.boss && S.boss.id, (factory) => {
-          S.boss = factory();
+          S.boss = maybeShiny(factory());
           if (S.scaling) S.boss.attacksPerRound = S.scaling.attacks;
           beginMatch();
         }, () => beginMatch());
@@ -1543,7 +1568,10 @@ window.Game = (() => {
     S.boss.ultCharge = (S.boss.ultCharge || 0) + 1;
     let ultimateThisTurn = false;
     let ultimateInterrupted = false;
-    if (S.boss.ultCharge >= 3) {
+    // Shiny bosses charge ultimates faster (every 2 turns vs 3) for more
+    // pressure during the harder fight.
+    const ultThreshold = S.boss._shinyUltThreshold || 3;
+    if (S.boss.ultCharge >= ultThreshold) {
       const mouthPart = S.boss.parts.find(p => p.type === "mouth");
       if (mouthPart && mouthPart.hp === 0) {
         ultimateInterrupted = true;
@@ -1615,6 +1643,10 @@ window.Game = (() => {
         // ULTIMATE bonus: +50% damage on the ultimate attack (first of the turn).
         const isUlt = ultimateThisTurn && i === 0;
         if (isUlt) dmg = Math.max(dmg + 3, Math.round(dmg * 1.5));
+        // SHINY: 1.3× damage across the board (ultimate AND normal attacks).
+        // Combined with HP boosts on shiny bosses and faster ultimate cadence,
+        // this brings the fight to roughly 40-50% harder feel.
+        if (S.boss._shinyDmgMult) dmg = Math.max(1, Math.round(dmg * S.boss._shinyDmgMult));
         queue.push({ target, dmg, atk, def, isUltimate: isUlt });
       }
     }
@@ -1784,9 +1816,13 @@ window.Game = (() => {
     // on first defeat. The victory screen will show the unlock banner.
     let unlockedCardId = null;
     let firstDefeat = false;
+    let firstShinyDefeat = false;
     if (S.boss && S.boss.id) {
       firstDefeat = Progress.recordDefeat(S.boss.id);
       if (firstDefeat) unlockedCardId = Cards.unlockCardForBoss(S.boss.id);
+      if (S.boss.shiny && Progress.recordShinyDefeat) {
+        firstShinyDefeat = Progress.recordShinyDefeat(S.boss.id);
+      }
     }
     let spyWins = false;
     if (S.jinro) spyWins = false;
@@ -1804,7 +1840,7 @@ window.Game = (() => {
     UI.renderVictory({
       players: S.players, jinro: S.jinro, spyWins, boss: S.boss,
       stats: S.battleStats,
-      firstDefeat, unlockedCardId,
+      firstDefeat, unlockedCardId, firstShinyDefeat,
     }, () => location.reload(), () => location.reload());
   }
   function doDefeat() {

@@ -131,6 +131,28 @@ window.UI = (() => {
   }
   function clear(id) { $("screen-"+id).innerHTML = ""; }
 
+  // Shiny sparkle spawner — fires every 650ms, drops a single ✨ at a random
+  // position into every visible .shiny-sparkle-layer. Each sparkle has its
+  // own --drift / --rot CSS vars so they fly in random directions, and self-
+  // remove after the animation completes (2.4s). Cheap idle work; only runs
+  // when at least one shiny stage is mounted.
+  setInterval(() => {
+    const layers = document.querySelectorAll(".shiny-sparkle-layer");
+    if (!layers.length) return;
+    const SPARKLES = ["✨","⭐","💫","🌟"];
+    layers.forEach(layer => {
+      const sp = document.createElement("div");
+      sp.className = "shiny-sparkle";
+      sp.textContent = SPARKLES[Math.floor(Math.random() * SPARKLES.length)];
+      sp.style.left = Math.floor(Math.random() * 90 + 5) + "%";
+      sp.style.top  = Math.floor(Math.random() * 60 + 30) + "%";
+      sp.style.setProperty("--drift", (Math.random() * 60 - 30) + "px");
+      sp.style.setProperty("--rot", (Math.random() * 720 - 360) + "deg");
+      layer.appendChild(sp);
+      setTimeout(() => { try { sp.remove(); } catch(_){} }, 2500);
+    });
+  }, 650);
+
   let toastTimer = null;
   function toast(msg, ms=1400) {
     const t = $("toast");
@@ -1172,8 +1194,14 @@ window.UI = (() => {
       const defeated = !!(window.Progress && Progress.isDefeated && Progress.isDefeated(m.id));
       const isCurrent = m.id === currentBossId;
       const isFinal = !!m.isFinalBoss;
+      // Shiny defeat marker — gold ✨ in the corner of the tile if the kid
+      // has ever beaten this boss in shiny form. Just visual; doesn't
+      // affect the encounter roll for this fight.
+      const shinyMark = (window.Progress && Progress.hasShinyDefeated && Progress.hasShinyDefeated(m.id))
+        ? `<div class="boss-picker-shiny-mark">✨</div>` : '';
       return `
-        <button class="map-tile ${defeated?'map-defeated':''} ${isCurrent?'map-current':''} ${isFinal?'map-final':''}" data-idx="${i}">
+        <button class="map-tile ${defeated?'map-defeated':''} ${isCurrent?'map-current':''} ${isFinal?'map-final':''}" data-idx="${i}" style="position:relative;">
+          ${shinyMark}
           <div class="map-tile-svg">${Monsters.renderBossSVG(m)}</div>
           <div class="map-tile-name">${escapeHTML(m.name_jp)}${isFinal?' 👑':''}</div>
           <div class="map-tile-status">${isFinal ? '⚡ ファイナル ボス！' : (defeated ? '✅ たおした' : (isCurrent ? '⚔️ せんちゅう' : 'たたかう？'))}</div>
@@ -1214,11 +1242,20 @@ window.UI = (() => {
     const weaknessHint = boss.weakness_label
       ? `<div style="background:#3a1a4a; border:2px solid var(--accent); color:var(--accent); border-radius:10px; padding:8px 12px; margin: 10px auto; max-width:520px; font-weight:900;">⚡ よわてん: ${boss.weakness_label} で ×1.5 ダメージ！</div>`
       : "";
+    // Shiny variant: pulsing rainbow banner + warning subtitle so the kid
+    // knows this fight is going to be tougher BEFORE they tap start.
+    const shinyBanner = boss.shiny
+      ? `<div style="text-align:center; margin: 6px auto;">
+           <div class="shiny-warn-banner">✨ シャイニー ✨</div>
+         </div>
+         <div class="shiny-warn-sub" style="text-align:center;">⚠ つよく なってる！きをつけて！</div>`
+      : "";
     s.appendChild(el(`
       <div class="center" style="max-width: 720px; margin: 12px auto; padding: 0 12px;">
         <div class="subtle" style="color:var(--accent); letter-spacing:4px;">★ きょうの あいて ★</div>
         <h2 style="margin: 4px 0; color: var(--accent);">${escapeHTML(boss.name_jp)}</h2>
         <div class="subtle" style="font-size: 13px; opacity: .7;">${escapeHTML(boss.name_en||"")}</div>
+        ${shinyBanner}
         <div class="stage" style="height:280px; max-width:520px; margin: 8px auto;">${Monsters.renderBossSVG(boss)}</div>
         ${weaknessHint}
         <div style="background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow); text-align:left; max-width:520px; margin: 0 auto; line-height: 2.2;">
@@ -3937,7 +3974,7 @@ window.UI = (() => {
       </div>` : ''}`;
   }
 
-  function renderVictory({ players, jinro, spyWins, mode, winner, boss, stats, firstDefeat, unlockedCardId }, onAgain, onTitle) {
+  function renderVictory({ players, jinro, spyWins, mode, winner, boss, stats, firstDefeat, unlockedCardId, firstShinyDefeat }, onAgain, onTitle) {
     show("victory");
     const s = $("screen-victory"); s.innerHTML = "";
     SND.sfxVictory();
@@ -3984,6 +4021,17 @@ window.UI = (() => {
           <div class="true-ending-sub">きみは ほんとうの チャンピオンだ！🏆 ぜんセカイの きぼう！</div>
         </div>`;
     }
+    // First-shiny-defeat banner — fires once per boss when the kid beats
+    // the shiny variant for the first time. Sits ABOVE the regular card-
+    // unlock banner so it reads as the bigger achievement.
+    let shinyBanner = "";
+    if (firstShinyDefeat && boss && boss.name_jp) {
+      shinyBanner = `
+        <div class="shiny-warn-banner" style="margin: 14px auto; display:block; max-width: 520px; padding: 14px 18px;">
+          ✨ FIRST SHINY DEFEAT！ ✨<br/>
+          <span style="font-size:18px; letter-spacing:2px;">${escapeHTML(boss.name_jp)} (シャイニー)</span>
+        </div>`;
+    }
     // Card-unlock banner — first time this boss has been defeated.
     let unlockBanner = "";
     if (unlockedCardId && Cards.byId) {
@@ -4008,6 +4056,7 @@ window.UI = (() => {
         ${winnerMonster}
         <div style="font-size:22px;color:var(--good);">${mode==='pvp'?'チャンピオン！':JP.victory_sub}</div>
         ${endingHTML}
+        ${shinyBanner}
         ${unlockBanner}
         <div style="margin-top:18px;">
           ${players.map(p => `<div>${p.avatar?p.avatar+' ':''}${p.name}${p.dead?' 💀':''} ${p.role==='spy'?'🕵️':''}${p.bestCombo>=3?` 🔥 さいこう ×${p.bestCombo}`:''}</div>`).join("")}
@@ -4232,11 +4281,15 @@ window.UI = (() => {
         debuffRowHTML = `<div class="boss-debuffs">${debuffs.map(d => `<span class="boss-debuff-pill">${d.icon} ${escapeHTML(d.label)}</span>`).join("")}</div>`;
       }
     }
+    // Shiny: continuous sparkle layer on the stage. JS spawns ✨ particles
+    // on a timer (driven by the periodic refresh loop or manually via
+    // setInterval). Layer paints above the stage-bg + svg.
+    const sparkleLayer = (boss && boss.shiny) ? `<div class="shiny-sparkle-layer" data-shiny-stage="1"></div>` : "";
     return `
       <div class="header-wrap">
         ${bossCoreBar}
-        <div class="stage${ragedClass}">${stageBgHTML}<div class="stage-svg">${svg}</div></div>
-        <div class="boss-name">${boss ? `${boss.name_jp}${boss.raged?' 😡':''}` : ""}</div>
+        <div class="stage${ragedClass}">${stageBgHTML}<div class="stage-svg">${svg}</div>${sparkleLayer}</div>
+        <div class="boss-name">${boss ? `${boss.shiny?'✨ ':''}${boss.name_jp}${boss.raged?' 😡':''}${boss.shiny?' ✨':''}` : ""}</div>
         ${debuffRowHTML}
         <div class="players">${playerTiles}</div>
       </div>

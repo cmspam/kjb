@@ -822,11 +822,19 @@ window.Monsters = (() => {
         <text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="20" font-weight="900" fill="#fff">よわてん！</text>
       </g>`;
     }
-    return `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;">
+    const svg = `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;">
       ${boss.bodySVG()}
       ${partsSVG}
       ${armorOverlay}
     </svg>`;
+    // Shiny variant: wrap in a div that picks up the per-boss .shiny-boss-svg.<id>
+    // CSS filter (palette swap to the shiny color scheme). Render sites don't
+    // need to know about shiny — they just call this and the wrapper handles
+    // it. Non-shiny bosses get the SVG raw, no wrapper, so layout is unchanged.
+    if (boss.shiny) {
+      return `<div class="shiny-boss-svg ${boss.id}" style="width:100%;height:100%;">${svg}</div>`;
+    }
+    return svg;
   }
 
   function alive(boss) { return boss.parts.filter(p => p.hp > 0); }
@@ -866,6 +874,38 @@ window.Monsters = (() => {
     return m;
   }
 
+  // ---- SHINY VARIANT ----
+  // Mutates a freshly-built boss into its shiny form: stronger stats + a
+  // .shiny flag the rest of the engine reads to swap palette / sparkle /
+  // warning UI / stronger ultimate cadence. The flag is the single source
+  // of truth — render code adds CSS class, attack code multiplies damage.
+  // Stats:
+  //   • core HP × 1.25
+  //   • all non-core part HP × 1.15 (longer fight = more drama)
+  //   • damage multiplier set on the boss itself; bossTurn / damage code
+  //     multiplies attacks by 1.3 when boss.shiny is true
+  //   • ultimate charge threshold drops 3 → 2 (faster ultimates)
+  function applyShiny(boss) {
+    if (!boss || boss.shiny) return boss;
+    boss.shiny = true;
+    for (const p of boss.parts) {
+      if (p.effect === "win") {
+        p.maxHP = Math.round(p.maxHP * 1.25);
+        p.hp = p.maxHP;
+      } else {
+        p.maxHP = Math.round(p.maxHP * 1.15);
+        p.hp = p.maxHP;
+      }
+    }
+    // Damage / cadence flags read by game.js. Don't mutate damage upfront
+    // — it's calculated per attack roll in bossTurn() — just expose the
+    // multiplier so the formula stays in one place.
+    boss._shinyDmgMult = 1.3;
+    boss._shinyUltThreshold = 2;
+    return boss;
+  }
+
   return { randomBoss, listFactories, listAllFactories, getFinalBossFactory,
-           renderBossSVG, alive, aliveTargets, partById, bossModifiers, damageMultiplier, coreArmor };
+           renderBossSVG, alive, aliveTargets, partById, bossModifiers, damageMultiplier, coreArmor,
+           applyShiny };
 })();

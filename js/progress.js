@@ -32,6 +32,48 @@ window.Progress = (() => {
   // from the console.
   function reset() { try { localStorage.removeItem(KEY); } catch(_) {} }
 
+  // ---------- SHINY TRACKING ----------
+  // Persistent log of shiny encounters and defeats per boss id. Drives the
+  // ✨ marker on the boss-picker map and unlocks the shiny variant card on
+  // first defeat. Stored separately from defeated/stats so resetting one
+  // doesn't blow away the others.
+  const SHINY_KEY = "kjb_shiny";
+  function loadShiny() {
+    try { return JSON.parse(localStorage.getItem(SHINY_KEY) || "{}") || {}; }
+    catch(_) { return {}; }
+  }
+  function saveShiny(s) {
+    try { localStorage.setItem(SHINY_KEY, JSON.stringify(s)); } catch(_) {}
+  }
+  function recordShinyEncounter(bossId) {
+    if (!bossId) return;
+    const s = loadShiny();
+    if (!s[bossId]) s[bossId] = { firstSeen: Date.now(), defeated: 0 };
+    s[bossId].lastSeen = Date.now();
+    s[bossId].seen = (s[bossId].seen || 0) + 1;
+    saveShiny(s);
+  }
+  function recordShinyDefeat(bossId) {
+    if (!bossId) return false;
+    const s = loadShiny();
+    if (!s[bossId]) s[bossId] = { firstSeen: Date.now(), seen: 1 };
+    const isFirst = !s[bossId].defeated;
+    s[bossId].defeated = (s[bossId].defeated || 0) + 1;
+    if (isFirst) s[bossId].firstDefeated = Date.now();
+    saveShiny(s);
+    return isFirst;
+  }
+  function hasShinyDefeated(bossId) {
+    const s = loadShiny();
+    return !!(s[bossId] && s[bossId].defeated > 0);
+  }
+  function hasShinyEncountered(bossId) {
+    const s = loadShiny();
+    return !!s[bossId];
+  }
+  function getAllShiny() { return loadShiny(); }
+  function resetShiny() { try { localStorage.removeItem(SHINY_KEY); } catch(_) {} }
+
   // ---------- LIFETIME STATS (N5) ----------
   // Persistent across sessions: aggregate stats kids accumulate over many
   // battles. Drives rank progression (NOVICE → LEGEND) and the title-screen
@@ -102,5 +144,7 @@ window.Progress = (() => {
   return {
     recordDefeat, isDefeated, getDefeatedAt, getAllDefeated, totalDefeated, reset,
     recordBattle, getStats, rankFor, getFavoriteBoss, resetStats, RANKS,
+    recordShinyEncounter, recordShinyDefeat, hasShinyDefeated, hasShinyEncountered,
+    getAllShiny, resetShiny,
   };
 })();
