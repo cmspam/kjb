@@ -2454,6 +2454,118 @@ rt {
   100% { transform: translate(0, 0); }
 }
 
+/* ===== ATTACK-TYPE-SPECIFIC IMPACT VISUALS =====
+ * The charge side differentiates per attack type already; these classes
+ * give the IMPACT moment its own visual language too. Layered on top of
+ * the standard 💥 bang in runBangStage().
+ *
+ *   heavy  → screen hit-stop + big crack + thicker bang shadow
+ *   quick  → 3 rapid bang pulses in succession
+ *   pierce → horizontal streak line punching through the target
+ *   stun   → icy ring expanding outward + target frozen-tint
+ *   wild   → chaotic spark scatter
+ */
+/* Hit-stop: pause the boss SVG mid-impact for ~180ms. Used by heavy. */
+.boss-anim-overlay.hitstop .boss-anim-svg-wrap,
+.boss-anim-overlay.hitstop .boss-anim-stage {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+/* Heavy crack — a giant cracked-glass emoji floods the impact frame. */
+.boss-anim-impact-heavy {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 320px;
+  pointer-events: none;
+  z-index: 4;
+  filter: drop-shadow(0 0 32px rgba(255, 80, 80, 0.9));
+  animation: bossanim-impact-heavy 0.6s cubic-bezier(.18,.89,.32,1.28) forwards;
+}
+@keyframes bossanim-impact-heavy {
+  0%   { transform: translate(-50%, -50%) scale(0) rotate(-20deg); opacity: 0; }
+  20%  { transform: translate(-50%, -50%) scale(1.6) rotate(8deg); opacity: 1; }
+  60%  { transform: translate(-50%, -50%) scale(1.3) rotate(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.5) rotate(0); opacity: 0; }
+}
+/* Quick: same .boss-anim-bang but with rapid-fire siblings at offsets. */
+.boss-anim-impact-quick {
+  position: absolute; top: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 180px;
+  pointer-events: none;
+  z-index: 3;
+  animation: bossanim-impact-quick 0.4s ease-out forwards;
+}
+@keyframes bossanim-impact-quick {
+  0%   { transform: translate(-50%, -50%) scale(0) rotate(-30deg); opacity: 1; }
+  40%  { transform: translate(-50%, -50%) scale(1.5) rotate(20deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.2) rotate(0); opacity: 0; }
+}
+/* Pierce: a horizontal streak line punches through the target. */
+.boss-anim-impact-pierce {
+  position: absolute; left: 0; top: 50%;
+  width: 100%; height: 18px;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(68, 221, 238, 0.4) 10%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(68, 221, 238, 0.4) 90%,
+    transparent 100%);
+  filter: drop-shadow(0 0 24px #44ddee) blur(1px);
+  pointer-events: none;
+  z-index: 4;
+  animation: bossanim-impact-pierce 0.45s cubic-bezier(.55,.05,.85,.4) forwards;
+}
+@keyframes bossanim-impact-pierce {
+  0%   { transform: translateY(-50%) scaleX(0); opacity: 0; }
+  25%  { transform: translateY(-50%) scaleX(0.5); opacity: 1; }
+  100% { transform: translateY(-50%) scaleX(1); opacity: 0; }
+}
+/* Stun: icy ring expanding from impact + the target SVG gets a frozen tint. */
+.boss-anim-impact-stun-ring {
+  position: absolute; left: 50%; top: 50%;
+  width: 80px; height: 80px;
+  transform: translate(-50%, -50%) scale(0);
+  border: 6px solid rgba(160, 230, 255, 0.95);
+  border-radius: 50%;
+  filter: drop-shadow(0 0 24px #88ddff) blur(1px);
+  pointer-events: none;
+  z-index: 4;
+  animation: bossanim-impact-stun 0.6s ease-out forwards;
+}
+@keyframes bossanim-impact-stun {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; border-width: 8px; }
+  100% { transform: translate(-50%, -50%) scale(8); opacity: 0; border-width: 1px; }
+}
+.boss-anim-svg-wrap.frozen {
+  filter: brightness(1.1) saturate(0.5) hue-rotate(180deg)
+          drop-shadow(0 0 24px rgba(160, 230, 255, 0.9)) !important;
+  animation: bossanim-frozen-shake 1.5s ease-in-out;
+}
+@keyframes bossanim-frozen-shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-1px, 0); }
+  75% { transform: translate(1px, 0); }
+}
+/* Wild: scattered spark emoji at random offsets. JS sets per-spark
+ * --offset-x / --offset-y CSS vars so each one flies a different direction. */
+.boss-anim-impact-spark {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 80px;
+  pointer-events: none;
+  z-index: 3;
+  animation: bossanim-impact-spark 0.55s ease-out forwards;
+  filter: drop-shadow(0 0 12px #ff8ec7);
+}
+@keyframes bossanim-impact-spark {
+  0%   { transform: translate(-50%, -50%) scale(0) rotate(0); opacity: 0; }
+  20%  { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--off-x, 0px)), calc(-50% + var(--off-y, 0px))) scale(0.6) rotate(var(--rot, 360deg)); opacity: 0; }
+}
+
 /* Generic fallback — used when boss.id doesn't match any of the above. */
 .boss-anim-bg-layer.bg-default {
   background: radial-gradient(circle at center,

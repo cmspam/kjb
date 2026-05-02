@@ -1840,6 +1840,9 @@ window.UI = (() => {
           if (SND.sfxPop) SND.sfxPop();
         }
       } else {
+        // Standard bang first (always shows the 💥), then layer
+        // attack-type-specific impact effects on top so the IMPACT moment
+        // reads as distinctly as the charge already does.
         const bang = document.createElement("div");
         bang.className = "boss-anim-bang";
         bang.textContent = "💥";
@@ -1853,6 +1856,68 @@ window.UI = (() => {
           { duration: 500, easing: "ease-out", fill: "forwards" }
         );
         SND.sfxHit();
+        addAttackTypeImpact(overlay, attack && attack.type);
+      }
+    }
+
+    // Layers attack-type-specific impact visuals on top of the standard 💥.
+    // Heavy: hit-stop on the boss SVG + giant 🔥 crack overlay.
+    // Quick: 2 follow-up smaller bangs at +120ms / +240ms for rapid-fire feel.
+    // Pierce: a streaking horizontal line punches through the target.
+    // Stun: an icy ring expands + the boss SVG goes blue-frozen.
+    // Wild: 6 scattered ✨ sparks fly out in random directions.
+    function addAttackTypeImpact(overlay, type) {
+      if (type === "heavy") {
+        const crack = document.createElement("div");
+        crack.className = "boss-anim-impact-heavy";
+        crack.textContent = "💢";
+        overlay.appendChild(crack);
+        // 180ms hit-stop so the impact frame "sticks". Reverts via
+        // setTimeout so subsequent stages animate normally again.
+        overlay.classList.add("hitstop");
+        if (SND.sfxBreak) SND.sfxBreak();
+        setTimeout(() => overlay.classList.remove("hitstop"), 200);
+      } else if (type === "quick") {
+        // 2 echo bangs at slightly offset positions, smaller scale, staggered.
+        [{ delay: 120, x: -8 }, { delay: 240, x: 12 }].forEach(({ delay, x }) => {
+          setTimeout(() => {
+            const echo = document.createElement("div");
+            echo.className = "boss-anim-impact-quick";
+            echo.textContent = "💥";
+            echo.style.left = `calc(50% + ${x}%)`;
+            overlay.appendChild(echo);
+            if (SND.sfxHit) SND.sfxHit();
+          }, delay);
+        });
+      } else if (type === "pierce") {
+        const streak = document.createElement("div");
+        streak.className = "boss-anim-impact-pierce";
+        overlay.appendChild(streak);
+        if (SND.sfxCrit) SND.sfxCrit();
+      } else if (type === "stun") {
+        const ring = document.createElement("div");
+        ring.className = "boss-anim-impact-stun-ring";
+        overlay.appendChild(ring);
+        const svgWrap = overlay.querySelector(".boss-anim-svg-wrap");
+        if (svgWrap) {
+          svgWrap.classList.add("frozen");
+          setTimeout(() => svgWrap.classList.remove("frozen"), 1500);
+        }
+        if (SND.sfxPop) SND.sfxPop();
+      } else if (type === "wild") {
+        // 6 sparks scattering outward. Per-spark CSS var sets the direction.
+        const SPARKS = ["✨","💫","⭐","🌟","✨","💥"];
+        for (let i = 0; i < SPARKS.length; i++) {
+          const spark = document.createElement("div");
+          spark.className = "boss-anim-impact-spark";
+          spark.textContent = SPARKS[i];
+          const angle = (i / SPARKS.length) * Math.PI * 2 + Math.random() * 0.3;
+          const dist = 160 + Math.random() * 100;
+          spark.style.setProperty("--off-x", Math.cos(angle) * dist + "px");
+          spark.style.setProperty("--off-y", Math.sin(angle) * dist + "px");
+          spark.style.setProperty("--rot", (Math.random() * 720 - 360) + "deg");
+          overlay.appendChild(spark);
+        }
       }
     }
 
