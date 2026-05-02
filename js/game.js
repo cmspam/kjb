@@ -663,6 +663,21 @@ window.Game = (() => {
       goAction();
     };
     const taunt = (S.mode !== "pvp") ? pickBossTaunt(p) : null;
+    // Boss ultimate telegraph: when charge has reached 2 (next boss turn
+    // will fire the ultimate unless interrupted), surface a one-shot
+    // warning toast on the FIRST player action of the round so the kid
+    // sees it before they pick their target. Breaking the boss's mouth
+    // before the boss turn cancels it.
+    if (S.mode !== "pvp" && S.boss && (S.boss.ultCharge || 0) >= 2 && !S.boss._ultWarnShown) {
+      S.boss._ultWarnShown = true;
+      const mouthPart = S.boss.parts.find(p => p.type === "mouth");
+      const tip = (mouthPart && mouthPart.hp > 0)
+        ? "くち を こわせば しっぱい させられる！"
+        : "くち は すでに こわれてる！しっぱい する！";
+      UI.toast(`⚠ つぎの ターン ボスの 大技[おおわざ]！ ${tip}`, 3200);
+    }
+    // Reset the once-per-round guard when ultCharge drops back to 0/1.
+    if (S.boss && (S.boss.ultCharge || 0) < 2) S.boss._ultWarnShown = false;
     const extras = {
       pronounceTarget: S.pronounceTarget, onSpeak, taunt, jinro: !!S.jinro,
       attackBlockedReason: p._attackBlockedReason,  // why no attack power this turn
@@ -1475,6 +1490,31 @@ window.Game = (() => {
     // if a boss is missing them.
     const bossAttacks = (S.boss.attacks && S.boss.attacks.length) ? S.boss.attacks : JP.boss_atk_words;
 
+    // ---- ULTIMATE ATTACK (telegraph + interrupt) ----
+    // Every 3rd boss turn, the boss launches its strongest attack as an
+    // "ULTIMATE" with extra drama, +50% damage, and a special cinematic.
+    // Players can INTERRUPT it by breaking the mouth before it fires (each
+    // boss has a mouth part — boss.parts entry with effect "weaken-attack").
+    // If the kid sees the warning at charge 2 and breaks the mouth on
+    // their next turn, the ultimate fizzles harmlessly.
+    S.boss.ultCharge = (S.boss.ultCharge || 0) + 1;
+    let ultimateThisTurn = false;
+    let ultimateInterrupted = false;
+    if (S.boss.ultCharge >= 3) {
+      const mouthPart = S.boss.parts.find(p => p.type === "mouth");
+      if (mouthPart && mouthPart.hp === 0) {
+        ultimateInterrupted = true;
+        S.boss.ultCharge = 0;
+        UI.toast(`💢 くち が こわれていて 大技[おおわざ]が しっぱい！`, 2400);
+        // Show a small celebratory splash so the kid sees the interrupt
+        // payoff. Reuses the part-destroyed splash style (compact banner).
+        if (UI.showPartDestroyedSplash) UI.showPartDestroyedSplash("大技[おおわざ] しっぱい！");
+      } else {
+        ultimateThisTurn = true;
+        S.boss.ultCharge = 0;
+      }
+    }
+
     const queue = [];
     {
       // Pre-determine the targeted attacks (without yet applying damage). All
@@ -1487,7 +1527,18 @@ window.Game = (() => {
         if (stillAlive.length === 0) break;
         // Pick the attack first so we can read its type and apply type effects
         // (×1.5 for heavy, ×0.7 for stun, ignore shield for pierce, etc.).
-        const atk = bossAttacks[(Math.random()*bossAttacks.length)|0];
+        // ULTIMATE: first attack of an ultimate turn picks the heaviest hit
+        // available (heavy > pierce > wild > others) and gets marked
+        // .isUltimate so the cinematic adds extra drama.
+        let atk;
+        if (ultimateThisTurn && i === 0) {
+          const TYPE_PRIORITY = { heavy: 4, pierce: 3, wild: 2, quick: 1, stun: 1 };
+          atk = bossAttacks.slice().sort((a, b) =>
+            (TYPE_PRIORITY[b.type] || 0) - (TYPE_PRIORITY[a.type] || 0)
+          )[0] || bossAttacks[0];
+        } else {
+          atk = bossAttacks[(Math.random()*bossAttacks.length)|0];
+        }
         const def = attackTypeDef(atk && atk.type);
         // Wild attacks pick a fresh random target each time; others pick once.
         const target = def.randomTarget
@@ -1518,7 +1569,10 @@ window.Game = (() => {
         // 0.7×, Wild 0.5×). Pure single-hit for boss-side; the multi-hit
         // mechanic is left for the player-side PvP path.
         dmg = Math.max(1, Math.round(dmg * def.mult));
-        queue.push({ target, dmg, atk, def });
+        // ULTIMATE bonus: +50% damage on the ultimate attack (first of the turn).
+        const isUlt = ultimateThisTurn && i === 0;
+        if (isUlt) dmg = Math.max(dmg + 3, Math.round(dmg * 1.5));
+        queue.push({ target, dmg, atk, def, isUltimate: isUlt });
       }
     }
     // Defensive fallback: if the loop produced nothing (all heroes died
@@ -1591,7 +1645,10 @@ window.Game = (() => {
       processBossAttack(queue, idx+1, lines);
     };
     if (SND.getBossAnim && SND.getBossAnim()) {
-      UI.showBossAttackAnim(S.boss, atk, target.name, dmg, !!missed, apply, missReason, { typeLabel: def.label });
+      UI.showBossAttackAnim(S.boss, atk, target.name, dmg, !!missed, apply, missReason, {
+        typeLabel: def.label,
+        ultimate: !!entry.isUltimate,
+      });
     } else {
       apply();
     }

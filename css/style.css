@@ -2641,6 +2641,28 @@ rt {
   100% { transform: translate(calc(-50% + var(--off-x, 0px)), calc(-50% + var(--off-y, 0px))) scale(0.6) rotate(var(--rot, 360deg)); opacity: 0; }
 }
 
+/* ===== ULTIMATE attack styling =====
+ * Ultimates fire every 3rd boss turn and deliver +50% damage. The cinematic
+ * already runs longer (~25%) for ultimates; these CSS tweaks dial up the
+ * intensity to match.
+ */
+.boss-anim-overlay.ultimate {
+  background: radial-gradient(ellipse at center,
+    rgba(180, 0, 60, .98) 0%,
+    rgba(60, 0, 30, .99) 70%,
+    rgba(15, 0, 5, 1) 100%);
+}
+.boss-anim-orb.ultimate {
+  width: 280px; height: 280px;
+  filter: blur(12px) brightness(1.7) saturate(1.3);
+  animation: bossanim-orb-grow var(--charge-dur, 1700ms) cubic-bezier(.55,.05,.68,.53) forwards,
+             bossanim-orb-pulse 0.4s ease-in-out infinite alternate;
+}
+@keyframes bossanim-orb-pulse {
+  0%   { box-shadow: 0 0 0 rgba(255,255,255,0); }
+  100% { box-shadow: 0 0 80px rgba(255,200,80,0.6); }
+}
+
 /* Generic fallback — used when boss.id doesn't match any of the above. */
 .boss-anim-bg-layer.bg-default {
   background: radial-gradient(circle at center,

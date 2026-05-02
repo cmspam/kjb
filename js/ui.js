@@ -1538,19 +1538,21 @@ window.UI = (() => {
     // attackTypeBadge supplies the optional emoji-coded type readout under the
     // attack name on the reveal stage ("💪 ヘビー" / "⚡ クイック" / etc.).
     const attackerLabel = opts.attackerName || (boss && boss.name_jp) || "";
-    // Stage timings — compact for PvP, longer for PvE drama.
-    // The new pipeline is: warning → charge (aura+particles) → hold+flash →
-    // emoji-launch → bang → reveal. For fizzle the launch and bang are
-    // replaced by the orb-sputter+smoke-puff at the bang slot.
+    // Stage timings — compact for PvP, longer for PvE drama. ULTIMATE
+    // attacks use the PvE timings stretched ~25% to give the bigger
+    // charge a real beat to land.
     //   charge:  start of charge stage (boss SVG appears, aura/particles begin)
     //   hold:    aura orb peaks, screen flash punches white
     //   burst:   attack emoji launches from boss center
     //   bang:    impact (or miss-specific outcome — shield/escape/dodge/fizzle)
     //   reveal:  attack-name + damage/miss-reveal text
     //   end:     overlay teardown
+    const isUltimate = !!opts.ultimate;
     const T = byPlayer
       ? { charge: 600,  hold: 1900, burst: 2150, bang: 2900, reveal: 3500, end: 5800 }
-      : { charge: 1500, hold: 3000, burst: 3300, bang: 4250, reveal: 4900, end: 7800 };
+      : (isUltimate
+          ? { charge: 1900, hold: 3700, burst: 4000, bang: 4950, reveal: 5600, end: 8800 }
+          : { charge: 1500, hold: 3000, burst: 3300, bang: 4250, reveal: 4900, end: 7800 });
     // Fizzle skips burst and bang; the sputter+puff happens at the bang slot.
     const isFizzle = missed && missReason === "fizzle";
     const phrase = pickRand(attack.phrases || [attack.name]);
@@ -1594,15 +1596,22 @@ window.UI = (() => {
         </div>`;
       SND.sfxBoss();
     } else {
+      // Ultimate gets a stronger warning headline + double siren.
+      const headline = isUltimate ? "✦ 大技[おおわざ] ✦" : "⚠ WARNING ⚠";
+      const headColor = isUltimate ? "#ffe85a" : "#ff8888";
+      const titleColor = isUltimate ? "#ff3b6b" : "var(--bad)";
+      const titleText = isUltimate ? "ULTIMATE ATTACK！" : "てきの こうげき！";
       overlay.innerHTML = `
         <div class="boss-warn-flash"></div>
         <div class="boss-warn-text">
-          <div style="font-size: 18px; color: #ff8888; letter-spacing: 6px;">⚠ WARNING ⚠</div>
-          <div style="font-size: 56px; font-weight: 900; color: var(--bad); text-shadow: 0 6px 0 #000, 0 0 30px var(--bad); margin-top: 4px;">てきの こうげき！${typeLabel ? `<div style="font-size:24px;color:#ffcc44;margin-top:4px;letter-spacing:3px;">${escapeHTML(typeLabel)}</div>` : ""}</div>
+          <div style="font-size: 18px; color: ${headColor}; letter-spacing: 6px;">${headline}</div>
+          <div style="font-size: 56px; font-weight: 900; color: ${titleColor}; text-shadow: 0 6px 0 #000, 0 0 30px ${titleColor}; margin-top: 4px;">${titleText}${typeLabel ? `<div style="font-size:24px;color:#ffcc44;margin-top:4px;letter-spacing:3px;">${escapeHTML(typeLabel)}</div>` : ""}</div>
           <div style="font-size: 22px; color: #fff; margin-top: 6px;">${escapeHTML(targetName)} ねらわれた！</div>
         </div>`;
       SND.sfxBoss();
-      if (SND.playSiren) SND.playSiren(1200);
+      if (SND.playSiren) SND.playSiren(isUltimate ? 1800 : 1200);
+      // Tag the overlay so charge/orb stages can dial up density.
+      if (isUltimate) overlay.classList.add("ultimate");
     }
     // Keep translate(-50%, -50%) in every keyframe so the centering transform
     // isn't clobbered by the scale/rotate keyframes (the bug where it slid right).
@@ -1670,10 +1679,12 @@ window.UI = (() => {
       );
       // Energy orb (behind boss SVG, type-colored). Both PvE and PvP get this;
       // duration shorter for PvP so it's still over before the slingshot
-      // hand-off in Phase 2.
-      const orbDur = byPlayer ? 900 : 1300;
+      // hand-off in Phase 2. Ultimates get a longer charge so the buildup
+      // matches the +50% damage they're about to deliver.
+      const orbDur = byPlayer ? 900 : (isUltimate ? 1700 : 1300);
       const orb = document.createElement("div");
       orb.className = "boss-anim-orb charging";
+      if (isUltimate) orb.classList.add("ultimate");
       orb.style.setProperty("--anim-color", telegraphColor);
       orb.style.setProperty("--charge-dur", orbDur + "ms");
       stage.appendChild(orb);
@@ -1681,8 +1692,9 @@ window.UI = (() => {
       // edge offset (variant per particle so they fly in from all directions)
       // and animates back to (0, 0) — the stage center, which is the boss.
       // Staggered delays so the energy gathers gradually, not all at once.
-      const PARTICLE_COUNT = byPlayer ? 8 : 14;
-      const PARTICLE_DUR = byPlayer ? 600 : 850;
+      // Ultimates double the particle density.
+      const PARTICLE_COUNT = byPlayer ? 8 : (isUltimate ? 28 : 14);
+      const PARTICLE_DUR = byPlayer ? 600 : (isUltimate ? 1100 : 850);
       const PARTICLE_WINDOW = orbDur - PARTICLE_DUR;
       for (let i = 0; i < PARTICLE_COUNT; i++) {
         const angle = (i / PARTICLE_COUNT) * Math.PI * 2 + Math.random() * 0.4;
