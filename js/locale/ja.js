@@ -616,6 +616,8 @@ window.I18N.register("ja", {
     draw_two:    { name_jp: "カードドロー",       text_jp: "カードを 2まい ひく！" },
     combo:       { name_jp: "チーム コンボ！",    text_jp: "つぎの なかまの こうげきが ×2！" },
     spread:      { name_jp: "ベロ ビーム",       text_jp: "ランダムな パーツに 2ダメ ×2！" },
+    barrage:     { name_jp: "バーレッジ 🌪️",     text_jp: "ランダムな パーツに 2ダメ ×3！(コアは ねらえない)" },
+    shockwave:   { name_jp: "ショックウェーブ ⚡", text_jp: "すべての パーツに 1ダメ！(コアは ねらえない)" },
     reveal:      { name_jp: "スパイ チェック",   text_jp: "だれかの ロールを みる！(ひみつ)" },
     accuse:      { name_jp: "こくはつ ⚖️",         text_jp: "うらぎりを こくはつ！ せいかい→チームしょうり！はずれ→−5HP+ロック (ラウンド4から)" },
     escape:      { name_jp: "にげる！",           text_jp: "つぎの ボスこうげきを かわす！" },

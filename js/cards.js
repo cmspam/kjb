@@ -17,7 +17,9 @@ window.Cards = (() => {
     ENERGY: "energy",
     DRAW: "draw",
     DOUBLE_NEXT: "double_next",  // next teammate hit ×2
-    HIT_RANDOM_2: "hit_random_2",// hits 2 random parts for 2 each
+    HIT_RANDOM_2: "hit_random_2",// hits 2 random parts for 2 each (legacy)
+    HIT_RANDOM:   "hit_random",  // hits ef.n random non-core parts for ef.v each
+    HIT_ALL:      "hit_all",     // hits every alive non-core part for ef.v each
     REVEAL_ROLE: "reveal_role",
     ACCUSE_PLAYER: "accuse_player",  // jinro one-shot accusation
     SKIP_BOSS_ATK: "skip_boss_atk",
@@ -44,6 +46,10 @@ window.Cards = (() => {
     { id:"draw_two",   icon:"🎴", cost:1, effect:{type:C.DRAW, v:2},          needsTarget:false },
     { id:"combo",      icon:"🔥", cost:1, effect:{type:C.DOUBLE_NEXT},        needsTarget:false },
     { id:"spread",     icon:"👅", cost:2, effect:{type:C.HIT_RANDOM_2, v:2},  needsTarget:false, attackMod:false },
+    // Multi-part attacks — target body parts (NOT the core), so they're
+    // part-breakers complementing direct slingshot hits on the core.
+    { id:"barrage",    icon:"🌪️", cost:3, effect:{type:C.HIT_RANDOM, v:2, n:3}, needsTarget:false, attackMod:false },
+    { id:"shockwave",  icon:"⚡", cost:3, effect:{type:C.HIT_ALL,    v:1},     needsTarget:false, attackMod:false },
     { id:"reveal",     icon:"🔍", cost:1, effect:{type:C.REVEAL_ROLE},        needsTarget:true, targetType:"player", jinroOnly:true },
     { id:"accuse",     icon:"⚖️", cost:2, effect:{type:C.ACCUSE_PLAYER},      needsTarget:true, targetType:"player", jinroOnly:true },
     { id:"escape",     icon:"🏃", cost:1, effect:{type:C.SKIP_BOSS_ATK},      needsTarget:false },
@@ -80,6 +86,7 @@ window.Cards = (() => {
     "fart_bomb", "mega_punch", "unko_shield",
     "energy", "draw_two", "escape", "hint", "reveal",
     "accuse",  // jinro-only — pool count of 0 in non-jinro deck so still gated
+    "barrage", "shockwave",  // multi-part attack cards (always-on)
   ]);
   // Each boss defeat unlocks one card. Mapping picked for thematic flavor:
   //   tako (8-legged)         → spread     (multi-target tongue)
@@ -127,6 +134,8 @@ window.Cards = (() => {
     const counts = {
       fart_bomb: 6, mega_punch: 3, unko_shield: 4, team_shield: 2, heal: 4,
       team_heal: 2, energy: 4, draw_two: 3, combo: 3, spread: 2,
+      // Multi-part attacks: low counts since 3⚡ cost makes them rare plays.
+      barrage: 2, shockwave: 1,
       reveal: jinroMode ? 3 : 0, accuse: jinroMode ? 2 : 0,
       escape: 3, hint: 3, reroll: 2,
     };

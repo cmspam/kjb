@@ -1407,33 +1407,70 @@ window.Game = (() => {
       // queued (that one wins for projectile identity).
       if (!S.pendingCardId) S.pendingCardId = card.id;
       UI.toast(`つぎの こうげき ×2！`);
-    } else if (ef.type === C.HIT_RANDOM_2) {
+    } else if (ef.type === C.HIT_RANDOM_2 || ef.type === C.HIT_RANDOM) {
       // PvP: hit a random opponent's parts. Hero: hit boss parts.
+      // HIT_RANDOM_2 is the legacy spread card (n=2 hardcoded). HIT_RANDOM
+      // reads ef.n and (for new cards) excludes the core so it's a pure
+      // body-part breaker. Visual updates fire after every part hit so the
+      // damage flashes register in sequence.
+      const excludeCore = (ef.type === C.HIT_RANDOM);
       let aliveParts; let oppName = "";
       if (S.mode === "pvp") {
         const opps = S.players.filter(pp => !pp.dead && pp.id !== p.id && pp.monster);
         if (!opps.length) return;
         const opp = opps[(Math.random()*opps.length)|0];
         oppName = opp.name;
-        aliveParts = opp.monster.parts.filter(pp => pp.hp > 0);
+        aliveParts = opp.monster.parts.filter(pp => pp.hp > 0 && (!excludeCore || pp.effect !== "win"));
       } else {
-        aliveParts = S.boss.parts.filter(pp => pp.hp > 0);
+        aliveParts = S.boss.parts.filter(pp => pp.hp > 0 && (!excludeCore || pp.effect !== "win"));
       }
-      const n = Math.min(2, aliveParts.length);
+      const wantN = ef.n || 2;
+      const n = Math.min(wantN, aliveParts.length);
       const used = [];
       for (let i = 0; i < n; i++) {
         let pick;
         do { pick = aliveParts[(Math.random()*aliveParts.length)|0]; } while (used.includes(pick) && used.length < aliveParts.length);
         used.push(pick);
         pick.hp = Math.max(0, pick.hp - ef.v);
+        if (S.mode !== "pvp" && pick.hp === 0 && S.battleStats) {
+          S.battleStats.partsBroken = (S.battleStats.partsBroken || 0) + 1;
+        }
         SND.sfxHit();
       }
-      // Generalized toast — the previous "ベロ ビーム" copy was tako-themed
-      // even when the boss was a different monster. Now uses the card's name
-      // ("ベロ ビーム" / "Whip Splash" / etc. depending on locale) so flavor
-      // matches the played card.
+      // Refresh the boss SVG so the kid sees parts visibly broken.
+      if (S.mode !== "pvp") refreshStageSVG(S.boss);
       const cardName = card && (card.name_jp || card.id) || "スプレッド";
       UI.toast(`${cardName}！${oppName?` ${oppName} に`:''} ${ef.v}ダメ ×${n}`);
+    } else if (ef.type === C.HIT_ALL) {
+      // Shockwave-style: chip every alive non-core part for ef.v damage.
+      // Doesn't break the core directly (you still need a slingshot for that)
+      // but softens up every limb / eye / mouth in one play. Best when many
+      // parts are still up; ramps in value the bigger the boss is.
+      let aliveParts; let oppName = "";
+      if (S.mode === "pvp") {
+        const opps = S.players.filter(pp => !pp.dead && pp.id !== p.id && pp.monster);
+        if (!opps.length) return;
+        const opp = opps[(Math.random()*opps.length)|0];
+        oppName = opp.name;
+        aliveParts = opp.monster.parts.filter(pp => pp.hp > 0 && pp.effect !== "win");
+      } else {
+        aliveParts = S.boss.parts.filter(pp => pp.hp > 0 && pp.effect !== "win");
+      }
+      let breaks = 0;
+      for (const pick of aliveParts) {
+        pick.hp = Math.max(0, pick.hp - ef.v);
+        if (pick.hp === 0) {
+          breaks++;
+          if (S.mode !== "pvp" && S.battleStats) {
+            S.battleStats.partsBroken = (S.battleStats.partsBroken || 0) + 1;
+          }
+        }
+      }
+      if (S.mode !== "pvp") refreshStageSVG(S.boss);
+      if (SND.sfxBreak && breaks > 0) SND.sfxBreak();
+      else SND.sfxHit();
+      const cardName = card && (card.name_jp || card.id) || "ショックウェーブ";
+      UI.toast(`${cardName}！${oppName?` ${oppName} に`:''} ぜんパーツに ${ef.v}ダメ ×${aliveParts.length}${breaks > 0 ? ` (こわした: ${breaks})` : ''}`);
     } else if (ef.type === C.REVEAL_ROLE) {
       // Private reveal handled at playCardInAction level — see below — so the
       // overlay can drive its own continuation cleanly. Should not be reached
