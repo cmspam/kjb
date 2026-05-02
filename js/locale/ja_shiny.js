@@ -1,10 +1,12 @@
 // Shiny boss overrides — alternate-language voiced lines for the rare shiny
-// variants. Each boss gets a complete pool covering the lines a player will
-// hear most often during a fight: catchphrase, attack names+phrases, hit
-// reactions, slingshot heckle, rage cry. Other taunt categories (healthy /
-// hurt / desperate / etc.) fall through to the normal Japanese pool — that
-// keeps the shiny feeling like a "language overlay" rather than requiring
-// 7× more writing for context-specific lines kids rarely hear.
+// variants. Each boss gets a FULL pool covering every category the engine
+// might pick from during a fight: catchphrase, attack names+phrases, hit
+// reactions, and ALL nine taunt categories (slingshot / rage / healthy /
+// hurt / desperate / raged / player_low_hp / high_combo / part_lost).
+//
+// Audio path: when the runtime detects shiny mode it looks in
+// assets/voices/<bossId>_shiny/<hash>.opus first; if missing it falls back
+// to the normal-language opus so the kid never hits a silent line.
 //
 // Voice/language per boss (rendered with Edge TTS). Voices match the
 // gender of the original Japanese ずんだもん / 春日部つむぎ / etc. casting:
@@ -37,8 +39,15 @@ window.I18N.shinyOverrides = {
       "¡Adiós!", "¡Qué pasa!", "¡Soy un pulpo!", "¡Dios mío!"
     ],
     taunts: {
-      slingshot: ["¡Tira ya!", "¡A ver si me das!", "¡Fácil, fácil!", "¡Soy bonito!", "¡Mira mis ojos!", "¡Lánzala!", "¡Vamos vamos!", "¡No puedes!"],
-      rage:      ["¡AHORA SÍ!", "¡MODO PULPO!", "¡FURIA TOTAL!", "¡INFERNO!", "¡VENGANZA!"],
+      slingshot:     ["¡Tira ya!", "¡A ver si me das!", "¡Fácil, fácil!", "¡Soy bonito!", "¡Mira mis ojos!", "¡Lánzala!", "¡Vamos vamos!", "¡No puedes!"],
+      rage:          ["¡AHORA SÍ!", "¡MODO PULPO!", "¡FURIA TOTAL!", "¡INFERNO!", "¡VENGANZA!"],
+      healthy:       ["¡Soy fuerte!", "¡No me ganas!", "¡Más preguntas!", "¡Tan fácil!", "¡Vamos chico!", "¡Sigue intentando!"],
+      hurt:          ["¡Ay, eso duele!", "¡Casi, casi!", "¡No pares!", "¡Buena!", "¡Bien jugado!", "¡Me cuesta!"],
+      desperate:     ["¡Mamá!", "¡Ay no, perdón!", "¡Tengo hambre!", "¡Quiero dormir!", "¡Adiós, mundo!", "¡No puedo más!"],
+      raged:         ["¡FURIA PULPO!", "¡AHORA EN SERIO!", "¡INFERNO TOTAL!", "¡8 PATAS RAGE!", "¡VENGANZA YA!"],
+      player_low_hp: ["¡Casi tuyo!", "¡Te debilitas!", "¡Adiós chico!", "¡Cobarde!"],
+      high_combo:    ["¡Para ya!", "¡Combo loco!", "¡Qué pánico!", "¡No es justo!"],
+      part_lost:     ["¡Mi parte!", "¡Tramposo!", "¡Ay no!", "¡Devuélvemela!", "¡Aaah!"],
     },
   },
 
@@ -64,9 +73,28 @@ window.I18N.shinyOverrides = {
       "Yer kiddin' me!", "Mama mia!", "Don't poke the bomba!", "Give me a break!",
       "I oughta!", "Ya killin' me here!", "Brooklyn baby!", "Robot crocodile, ay!"
     ],
+    // The healthy/hurt/desperate/raged/player_low_hp/high_combo/part_lost
+    // categories all draw from lines already in the user's recording pool
+    // (catchphrase + attack phrases + hits + slingshot + rage), picked to
+    // fit each emotional context. No extra recording needed — these strings
+    // hash to existing assets/voices/unko_shiny/<hash>.opus files.
     taunts: {
-      slingshot: ["Try me, kid!", "Bring it!", "Take ya shot!", "Aim, will ya?", "I'm waitin'!", "Whatcha got?", "Ya kiddin'?", "Show me whatcha got!"],
-      rage:      ["BADA-BOOM!", "I'M MAD NOW!", "FUHGEDDABOUDIT!", "BROOKLYN RAGE!", "DROP DEAD MODE!"],
+      slingshot:     ["Try me, kid!", "Bring it!", "Take ya shot!", "Aim, will ya?", "I'm waitin'!", "Whatcha got?", "Ya kiddin'?", "Show me whatcha got!"],
+      rage:          ["BADA-BOOM!", "I'M MAD NOW!", "FUHGEDDABOUDIT!", "BROOKLYN RAGE!", "DROP DEAD MODE!"],
+      // boss confident / dismissive — reuse slingshot taunts (cocky energy)
+      healthy:       ["Try me, kid!", "Bring it!", "Whatcha got?", "Show me whatcha got!", "Ya kiddin'?", "Forget about it!"],
+      // boss took some damage — defiant hit reactions
+      hurt:          ["Ay you!", "Yer kiddin' me!", "Give me a break!", "I oughta!", "Capisce?", "I'm walkin' here!"],
+      // boss almost dead — panicky hit reactions
+      desperate:     ["Mama mia!", "Don't poke the bomba!", "Ya killin' me here!", "This stinks!", "Inside? POOP!", "Forget about it!"],
+      // rage mode active — same as rage cries
+      raged:         ["BADA-BOOM!", "I'M MAD NOW!", "FUHGEDDABOUDIT!", "BROOKLYN RAGE!", "DROP DEAD MODE!"],
+      // gloating at weak player
+      player_low_hp: ["Brooklyn baby!", "Bada bing!", "Get outta here!", "Ya kiddin'?"],
+      // rattled by a high combo
+      high_combo:    ["Yer kiddin' me!", "Bada bing!", "Ya killin' me here!", "Whatcha lookin' at?"],
+      // boss lost a body part — complaining
+      part_lost:     ["Mama mia!", "Yer kiddin' me!", "Ya killin' me here!", "Don't poke the bomba!", "I oughta!"],
     },
   },
 
@@ -89,8 +117,15 @@ window.I18N.shinyOverrides = {
       "Dolce vita... no!", "Bel canto morente!", "Madonna santa!", "Forza Italia!"
     ],
     taunts: {
-      slingshot: ["Prova me!", "Non mi prendi!", "Bellissimo me!", "Sparami!", "Tira tira!", "Andiamo!", "Coraggio!", "Mama mia, dai!"],
-      rage:      ["MAMMA MIA RABBIATO!", "FORZA ITALIA!", "MODO OPERA!", "BELLISSIMO RAGE!", "FUOCO!"],
+      slingshot:     ["Prova me!", "Non mi prendi!", "Bellissimo me!", "Sparami!", "Tira tira!", "Andiamo!", "Coraggio!", "Mama mia, dai!"],
+      rage:          ["MAMMA MIA RABBIATO!", "FORZA ITALIA!", "MODO OPERA!", "BELLISSIMO RAGE!", "FUOCO!"],
+      healthy:       ["Sono forte!", "Non puoi battermi!", "Più domande!", "Continua bambino!", "Tralalero canta!", "Mamma mia, prova!"],
+      hurt:          ["Ahi!", "Quasi quasi!", "Non fermarti!", "Bello!", "Bravo!", "Madonna mia!"],
+      desperate:     ["Mamma!", "Aiuto, aiuto!", "Non posso!", "Perdono!", "Sonno!", "Addio mondo!"],
+      raged:         ["RABBIA TOTALE!", "ORA SI!", "MAMMA MIA RAGE!", "OPERA INFERNO!", "FORZA MASSIMA!"],
+      player_low_hp: ["Quasi morto!", "Debole!", "Ciao bambino!", "Codardo!"],
+      high_combo:    ["Fermati!", "Combo pazzo!", "Madonna santa!", "Panico!"],
+      part_lost:     ["La mia parte!", "Tradimento!", "Ahi!", "Non prendere!", "Ahhhh!"],
     },
   },
 
@@ -113,8 +148,15 @@ window.I18N.shinyOverrides = {
       "헉!", "하트 깨졌어!", "어쩜 좋아!", "애기야 가자!"
     ],
     taunts: {
-      slingshot: ["쏴봐요~", "맞춰봐!", "예쁘죠?", "어디?", "긴장돼요!", "쾅쾅!", "맞춰주세요!", "준비됐어요!"],
-      rage:      ["화났어요!", "삐삐삐!", "분노 모드!", "더 이상 안 참아!", "K-POP 분노!"],
+      slingshot:     ["쏴봐요~", "맞춰봐!", "예쁘죠?", "어디?", "긴장돼요!", "쾅쾅!", "맞춰주세요!", "준비됐어요!"],
+      rage:          ["화났어요!", "삐삐삐!", "분노 모드!", "더 이상 안 참아!", "K-POP 분노!"],
+      healthy:       ["팜팜이 강해요!", "더 시도해봐요!", "쉽지 않아요!", "팜팜은 짱!", "헐 약해!", "왜 그래요?"],
+      hurt:          ["아잉 아파!", "운 좋네!", "괜찮아요!", "더 와!", "잘했어요!", "아이고!"],
+      desperate:     ["엄마!", "헉 안돼!", "미안해!", "죽을 것 같아!", "졸려요~", "안녕 세상아!"],
+      raged:         ["분노 아이!", "팜팜 화났어!", "K-RAGE!", "삐삐삐 분노!", "용서 안 해!"],
+      player_low_hp: ["거의 다 됐어!", "약하잖아!", "안녕!", "겁쟁이!"],
+      high_combo:    ["그만!", "콤보 무서워!", "어머어머!", "패닉이야!"],
+      part_lost:     ["내 파츠~!", "나쁜 사람!", "아파아파!", "가져가지마!", "어어어!"],
     },
   },
 
@@ -137,8 +179,15 @@ window.I18N.shinyOverrides = {
       "Je suis une glace!", "Trop gentil!", "Délicieux... aïe!", "Bon appétit, idiot!"
     ],
     taunts: {
-      slingshot: ["Tire alors!", "Allez!", "Pas mal!", "Vise bien!", "Je suis chocolat!", "Coquette!", "Ouvre les yeux!", "Vraiment?"],
-      rage:      ["JE SUIS FÂCHÉ!", "MODE GLACE!", "ENRAGÉ!", "FRANCE FOREVER!", "RAGE DOUCE!"],
+      slingshot:     ["Tire alors!", "Allez!", "Pas mal!", "Vise bien!", "Je suis chocolat!", "Coquette!", "Ouvre les yeux!", "Vraiment?"],
+      rage:          ["JE SUIS FÂCHÉ!", "MODE GLACE!", "ENRAGÉ!", "FRANCE FOREVER!", "RAGE DOUCE!"],
+      healthy:       ["Je suis forte!", "Tu peux pas!", "Encore une question!", "Trop facile!", "Sois sérieux!", "Quelle blague!"],
+      hurt:          ["Aïe!", "Presque!", "Continue!", "Pas mal!", "Bien joué!", "Sacré bleu!"],
+      desperate:     ["Maman!", "Au secours!", "Pardon!", "J'ai faim!", "Sommeil...", "Adieu monde!"],
+      raged:         ["RAGE FRANÇAISE!", "MAINTENANT!", "GLACE RAGE!", "PARFAIT FUREUR!", "JE BRÛLE!"],
+      player_low_hp: ["Presque mort!", "Faible!", "Adieu!", "Lâche!"],
+      high_combo:    ["Stop!", "Combo fou!", "Mon dieu!", "Panique!"],
+      part_lost:     ["Ma partie!", "Tricheur!", "Aïe!", "Ne prends pas!", "Aaah!"],
     },
   },
 
@@ -161,8 +210,15 @@ window.I18N.shinyOverrides = {
       "妈呀!", "完蛋了!", "面包脸!", "新的脸!"
     ],
     taunts: {
-      slingshot: ["来啊!", "试试看!", "我很厉害!", "瞄准我!", "勇气来了!", "我是英雄!", "射吧!", "干杯!"],
-      rage:      ["我生气了!", "英雄模式!", "终极愤怒!", "牛逼来了!", "无敌!"],
+      slingshot:     ["来啊!", "试试看!", "我很厉害!", "瞄准我!", "勇气来了!", "我是英雄!", "射吧!", "干杯!"],
+      rage:          ["我生气了!", "英雄模式!", "终极愤怒!", "牛逼来了!", "无敌!"],
+      healthy:       ["我超强!", "再来吧!", "太简单!", "不行不行!", "yyds!", "666继续!"],
+      hurt:          ["哎哟!", "差一点!", "不停!", "干杯!", "好球!", "妈呀!"],
+      desperate:     ["妈妈!", "救命!", "对不起!", "饿啊!", "困了!", "再见世界!"],
+      raged:         ["真生气!", "现在!", "英雄愤怒!", "终极模式!", "无敌怒!"],
+      player_low_hp: ["你完了!", "弱啊!", "再见!", "胆小鬼!"],
+      high_combo:    ["停!", "连击疯了!", "妈呀!", "慌张!"],
+      part_lost:     ["我的部分!", "作弊!", "痛!", "别拿!", "啊啊啊!"],
     },
   },
 
@@ -185,8 +241,15 @@ window.I18N.shinyOverrides = {
       "Δεν αξίζει!", "Δάφνη!", "Σύμπαν!", "Τι λες!"
     ],
     taunts: {
-      slingshot: ["Πάρε το!", "Έλα!", "Είμαι όμορφος!", "Στόχευσε!", "Δοκίμασε!", "Άουα!", "Δεν φοβάμαι!", "Ωραία βολή!"],
-      rage:      ["ΓΑΜΩΤΟ!", "ΛΥΣΣΑ!", "ΧΑΟΣ!", "ΘΕΟΣ ΧΑΟΥΣ!", "ΣΤΟ ΑΠΟΛΥΤΟ!"],
+      slingshot:     ["Πάρε το!", "Έλα!", "Είμαι όμορφος!", "Στόχευσε!", "Δοκίμασε!", "Άουα!", "Δεν φοβάμαι!", "Ωραία βολή!"],
+      rage:          ["ΓΑΜΩΤΟ!", "ΛΥΣΣΑ!", "ΧΑΟΣ!", "ΘΕΟΣ ΧΑΟΥΣ!", "ΣΤΟ ΑΠΟΛΥΤΟ!"],
+      healthy:       ["Είμαι δυνατή!", "Δεν με νικάς!", "Άλλη ερώτηση!", "Εύκολο!", "Φιλοσοφία!", "Χάος συνεχίζει!"],
+      hurt:          ["Άουτς!", "Παρά λίγο!", "Συνέχισε!", "Καλό!", "Μπράβο!", "Παναγιά μου!"],
+      desperate:     ["Μαμά!", "Βοήθεια!", "Όχι όχι!", "Πεινάω!", "Νυστάζω!", "Αντίο κόσμε!"],
+      raged:         ["ΟΡΓΗ!", "ΤΩΡΑ!", "ΧΑΟΣ ΟΡΓΗΣ!", "ΘΕΟΣ ΧΑΟΥΣ!", "ΓΑΜΩΤΟ ΟΡΓΗ!"],
+      player_low_hp: ["Σχεδόν τέλος!", "Αδύναμος!", "Αντίο!", "Δειλός!"],
+      high_combo:    ["Σταμάτα!", "Combo τρελό!", "Παναγιά!", "Πανικός!"],
+      part_lost:     ["Το μέρος μου!", "Απάτη!", "Αχ!", "Μην το παίρνεις!", "Άααα!"],
     },
   },
 };

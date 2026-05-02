@@ -402,7 +402,22 @@ window.SND = (() => {
     a.volume = 0.95;
     _currentVoice = a;
     const p = a.play();
-    if (p && p.catch) p.catch(() => {}); // 404 / iOS gesture block — silent
+    if (p && p.catch) p.catch(() => {
+      // 404 / iOS gesture block. For shiny bosses, the line might be a
+      // category we didn't translate (or a normal-Japanese fall-through).
+      // Try the normal-language opus as a safety net so the kid gets
+      // SOMETHING voiced instead of silence. Original-language audio is
+      // tonally weird for a shiny encounter but better than dead air.
+      if (isShiny) {
+        const fbUrl = `assets/voices/${encodeURIComponent(bossId)}/${hash}.opus`;
+        const fb = new Audio(fbUrl);
+        fb.preload = "auto";
+        fb.volume = 0.95;
+        _currentVoice = fb;
+        const fbp = fb.play();
+        if (fbp && fbp.catch) fbp.catch(() => {}); // both missed — silent
+      }
+    });
     return a;
   }
   function stopBossVoice() {
