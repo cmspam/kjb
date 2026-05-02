@@ -3747,6 +3747,46 @@ window.UI = (() => {
     const accuracyPct = totalAns > 0 ? Math.round(((stats.right||[]).length / totalAns) * 100) : 0;
     const elapsedSec = stats.startedAt ? Math.max(0, Math.round((Date.now() - stats.startedAt) / 1000)) : 0;
     const elapsedTxt = elapsedSec >= 60 ? `${Math.floor(elapsedSec/60)}:${String(elapsedSec%60).padStart(2,'0')}` : `${elapsedSec}s`;
+    // ----- STYLE GRADE -----
+    // Aggregate score blends accuracy, perfect-shots, parts broken, biggest
+    // hit. Maps to S / A / B / C / D so the kid sees a "rank" for the fight.
+    // Targets are forgiving — a clean B is achievable for first-timers.
+    //   accuracy:   0..100 → 0..40 points   (max 40)
+    //   perfect:    1pt each up to 20       (max 20)
+    //   good:       0.5pt each up to 10     (max 10)
+    //   parts:      4pt each up to 20       (max 20)
+    //   biggestHit: 1pt per dmg up to 10    (max 10)
+    // Total: 0–100. Grade: 90+ S, 75+ A, 60+ B, 40+ C, else D.
+    const perfectShots = stats.perfectShots || 0;
+    const goodShots = stats.goodShots || 0;
+    const partsBroken = stats.partsBroken || 0;
+    const biggestHit = stats.biggestHit || 0;
+    let score = 0;
+    score += Math.min(40, (accuracyPct * 0.4));
+    score += Math.min(20, perfectShots);
+    score += Math.min(10, goodShots * 0.5);
+    score += Math.min(20, partsBroken * 4);
+    score += Math.min(10, biggestHit);
+    score = Math.round(score);
+    const grade =
+      score >= 90 ? { letter: "S", color: "#ffe85a", glow: "#ffd24a", title: "PERFECT！" } :
+      score >= 75 ? { letter: "A", color: "#7ff0a0", glow: "#4adfff", title: "EXCELLENT！" } :
+      score >= 60 ? { letter: "B", color: "#aef0ff", glow: "#88ddff", title: "GREAT！" } :
+      score >= 40 ? { letter: "C", color: "#ffcc44", glow: "#ff8844", title: "GOOD JOB！" } :
+                    { letter: "D", color: "#ff8888", glow: "#ff3b6b", title: "がんばった！" };
+    // Show the grade only when the kid actually fought (had answers).
+    const styleGrade = totalAns > 0 ? `
+      <div class="style-grade-card">
+        <div class="style-grade-title">★ STYLE GRADE ★</div>
+        <div class="style-grade-letter" style="color:${grade.color}; text-shadow: 0 6px 0 #000, 0 0 36px ${grade.glow};">${grade.letter}</div>
+        <div class="style-grade-sub" style="color:${grade.glow};">${grade.title}</div>
+        <div class="style-grade-rows">
+          ${perfectShots > 0 ? `<div class="sg-row"><span>✨ パーフェクト ショット</span><b>${perfectShots}</b></div>` : ''}
+          ${goodShots > 0    ? `<div class="sg-row"><span>👍 グッド ショット</span><b>${goodShots}</b></div>` : ''}
+          ${partsBroken > 0  ? `<div class="sg-row"><span>💥 こわした パーツ</span><b>${partsBroken}</b></div>` : ''}
+          <div class="sg-row sg-total"><span>SCORE</span><b>${score} / 100</b></div>
+        </div>
+      </div>` : "";
     // Broadcast scorecard — TV-style stat block at the top of the recap.
     const scorecard = (totalAns > 0 || stats.biggestHit > 0) ? `
       <div class="match-scorecard">
@@ -3757,11 +3797,12 @@ window.UI = (() => {
           ${elapsedSec > 0 ? `<div class="scorecard-stat"><div class="scorecard-stat-label">TIME</div><div class="scorecard-stat-val">${elapsedTxt}</div></div>` : ''}
         </div>
       </div>` : "";
-    if (!right.length && !wrong.length && !scorecard) return "";
+    if (!right.length && !wrong.length && !scorecard && !styleGrade) return "";
     const cap = (arr, n=8) => arr.length > n ? arr.slice(0, n).concat([`+${arr.length-n}`]) : arr;
     const rightLine = right.length ? `<div style="margin:6px 0;"><span style="color:var(--good); font-weight:900;">🎯 おぼえた:</span> ${cap(right).map(escapeHTML).join(", ")}</div>` : "";
     const wrongLine = wrong.length ? `<div style="margin:6px 0;"><span style="color:var(--bad); font-weight:900;">🔁 ふくしゅう:</span> ${cap(wrong).map(escapeHTML).join(", ")}</div>` : "";
     return `
+      ${styleGrade}
       ${scorecard}
       ${(rightLine || wrongLine) ? `<div style="background:var(--card); border-radius:12px; padding:12px 14px; margin: 14px auto; max-width: 520px; font-size: 16px; text-align:left; line-height:1.6;">
         <div style="font-size:14px; color:var(--accent); font-weight:900; margin-bottom:4px;">▶ きょうの ことば</div>

@@ -1064,6 +1064,7 @@ window.Game = (() => {
       // with no in-the-moment click. Now every break is a click.
       const bonusEnergy = 1;
       if (p) p.energy = (p.energy || 0) + bonusEnergy;
+      if (S.battleStats) S.battleStats.partsBroken = (S.battleStats.partsBroken || 0) + 1;
       // Dramatic part-destroyed zoom-in cinematic — replaces the small
       // splash overlay. Re-renders the boss SVG with a tighter viewBox
       // centered on the broken part, with a "BROKEN!" headline + the
