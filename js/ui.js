@@ -1194,18 +1194,26 @@ window.UI = (() => {
       const defeated = !!(window.Progress && Progress.isDefeated && Progress.isDefeated(m.id));
       const isCurrent = m.id === currentBossId;
       const isFinal = !!m.isFinalBoss;
-      // Shiny defeat marker — gold ✨ in the corner of the tile if the kid
-      // has ever beaten this boss in shiny form. Just visual; doesn't
-      // affect the encounter roll for this fight.
-      const shinyMark = (window.Progress && Progress.hasShinyDefeated && Progress.hasShinyDefeated(m.id))
-        ? `<div class="boss-picker-shiny-mark">✨</div>` : '';
+      // Shiny refight: any shiny boss the kid has ever ENCOUNTERED (seen,
+      // defeated or not) gets a clickable ✨ button overlaid on the tile.
+      // Tapping the ✨ button starts a guaranteed-shiny fight; tapping the
+      // rest of the tile starts a normal fight (which still rolls the
+      // ~10–20% random shiny chance). Defeated shinies get a gold tint
+      // to distinguish from "seen but not yet beaten".
+      const encountered = !!(window.Progress && Progress.hasShinyEncountered && Progress.hasShinyEncountered(m.id));
+      const shinyDefeatedBefore = !!(window.Progress && Progress.hasShinyDefeated && Progress.hasShinyDefeated(m.id));
+      const shinyButton = encountered
+        ? `<button class="boss-picker-shiny-btn ${shinyDefeatedBefore?'beaten':'seen'}" data-shiny-idx="${i}" title="シャイニーで たたかう！" aria-label="シャイニーで たたかう！">✨</button>`
+        : '';
       return `
-        <button class="map-tile ${defeated?'map-defeated':''} ${isCurrent?'map-current':''} ${isFinal?'map-final':''}" data-idx="${i}" style="position:relative;">
-          ${shinyMark}
-          <div class="map-tile-svg">${Monsters.renderBossSVG(m)}</div>
-          <div class="map-tile-name">${escapeHTML(m.name_jp)}${isFinal?' 👑':''}</div>
-          <div class="map-tile-status">${isFinal ? '⚡ ファイナル ボス！' : (defeated ? '✅ たおした' : (isCurrent ? '⚔️ せんちゅう' : 'たたかう？'))}</div>
-        </button>`;
+        <div class="map-tile-wrap" style="position:relative;">
+          <button class="map-tile ${defeated?'map-defeated':''} ${isCurrent?'map-current':''} ${isFinal?'map-final':''}" data-idx="${i}">
+            <div class="map-tile-svg">${Monsters.renderBossSVG(m)}</div>
+            <div class="map-tile-name">${escapeHTML(m.name_jp)}${isFinal?' 👑':''}</div>
+            <div class="map-tile-status">${isFinal ? '⚡ ファイナル ボス！' : (defeated ? '✅ たおした' : (isCurrent ? '⚔️ せんちゅう' : 'たたかう？'))}</div>
+          </button>
+          ${shinyButton}
+        </div>`;
     }).join("");
     // Locked teaser tile when not yet unlocked.
     const lockedTeaser = (finalFactory && !allDefeated) ? `
@@ -1227,6 +1235,15 @@ window.UI = (() => {
         const idx = parseInt(btn.dataset.idx, 10);
         const factory = factories[idx];
         if (factory) onPick(factory);
+      });
+    });
+    // Shiny refight buttons — call onPick with { forceShiny: true } so the
+    // game-side handler skips the random roll and applies shiny directly.
+    s.querySelectorAll(".boss-picker-shiny-btn").forEach(btn => {
+      tap(btn, () => {
+        const idx = parseInt(btn.dataset.shinyIdx, 10);
+        const factory = factories[idx];
+        if (factory) onPick(factory, { forceShiny: true });
       });
     });
     tap($("map-back"), () => { if (onCancel) onCancel(); });

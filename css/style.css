@@ -2616,18 +2616,44 @@ rt {
   margin-bottom: 8px;
 }
 
-/* Boss-picker map marker — ✨ over the boss tile if the kid has shiny-
- * defeated that boss. Sits in the corner. */
-.boss-picker-shiny-mark {
+/* Boss-picker shiny refight button — clickable ✨ overlay on the tile of
+ * any boss the kid has encountered in shiny form. Tap → guaranteed
+ * shiny fight (skips the 10/20% random roll). Defeated shinies get the
+ * .beaten variant (gold + brighter) to distinguish from "seen but
+ * still standing" (.seen, silver-ish). Sized big enough to tap on
+ * mobile without colliding with a tile press. */
+.map-tile-wrap {
+  position: relative;
+  display: flex;
+}
+.map-tile-wrap > .map-tile { width: 100%; }
+.boss-picker-shiny-btn {
   position: absolute; top: 4px; right: 4px;
+  z-index: 4;
+  width: 44px; height: 44px;
+  padding: 0;
+  border-radius: 50%;
   font-size: 24px;
+  font-weight: 900;
+  background: radial-gradient(circle, #fff5a0, #ffd24a 60%, #c8941b);
+  border: 3px solid #fff;
+  box-shadow: 0 3px 0 rgba(0,0,0,.45), 0 0 14px rgba(255, 232, 90, 0.7);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
   filter: drop-shadow(0 0 6px #ffe85a);
   animation: shiny-mark-pulse 1.6s ease-in-out infinite alternate;
-  z-index: 3;
+  transition: transform 0.1s ease;
+}
+.boss-picker-shiny-btn:hover  { transform: scale(1.1); }
+.boss-picker-shiny-btn:active { transform: scale(0.92); }
+.boss-picker-shiny-btn.seen {
+  /* Encountered but not yet defeated — silver-ish */
+  background: radial-gradient(circle, #f0f0f0, #c8c8c8 60%, #888);
+  box-shadow: 0 3px 0 rgba(0,0,0,.45), 0 0 14px rgba(220, 220, 240, 0.7);
 }
 @keyframes shiny-mark-pulse {
-  0%   { transform: scale(0.85) rotate(-8deg); }
-  100% { transform: scale(1.15) rotate(8deg); }
+  0%   { transform: scale(0.92) rotate(-6deg); }
+  100% { transform: scale(1.1) rotate(6deg); }
 }
 
 /* ===== EPIC PROJECTILE FX =====

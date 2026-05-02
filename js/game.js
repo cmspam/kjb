@@ -268,8 +268,19 @@ window.Game = (() => {
       // button with a grid showing all 6 with progress badges. Tap a tile to
       // pick that boss; the bossIntro then shows for them.
       const openMap = () => {
-        UI.renderBossPickerMap(S.boss && S.boss.id, (factory) => {
-          S.boss = maybeShiny(factory());
+        UI.renderBossPickerMap(S.boss && S.boss.id, (factory, pickOpts) => {
+          let boss = factory();
+          if (pickOpts && pickOpts.forceShiny) {
+            // Refight from the picker — kid tapped the ✨ button on a boss
+            // they've already encountered as shiny. Skip the random roll
+            // and apply shiny unconditionally.
+            Monsters.applyShiny(boss);
+            if (Progress.recordShinyEncounter) Progress.recordShinyEncounter(boss.id);
+            if (SND && SND.markShiny) SND.markShiny(boss.id, true);
+          } else {
+            maybeShiny(boss);
+          }
+          S.boss = boss;
           if (S.scaling) S.boss.attacksPerRound = S.scaling.attacks;
           beginMatch();
         }, () => beginMatch());
