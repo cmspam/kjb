@@ -376,7 +376,7 @@ window.UI = (() => {
           </div>
           <button class="btn huge hot title-start-btn" id="btn-start">${JP.start} ⚔️</button>
           <div class="title-press-start">▶ TAP TO START ◀</div>
-          ${_shinyPvpUnlocked ? `<div style="color:#ffe85a; font-weight:900; letter-spacing:3px; font-size:13px; margin-top:4px; text-shadow:0 2px 0 #000, 0 0 8px #ffd24a;">✨ SHINY PvP MODE ✨</div>` : ''}
+          ${_shinyPvpUnlocked ? `<div style="color:#ffe85a; font-weight:900; letter-spacing:3px; font-size:13px; margin-top:4px; text-shadow:0 2px 0 #000, 0 0 8px #ffd24a;">✨ SHINY MODE ✨<div style="font-size:10px; letter-spacing:1px; margin-top:2px; color:#ffd24a; font-weight:700;">PvP えらべる ・ ヒーロー 50%</div></div>` : ''}
           <div class="row" style="margin-top:8px;">
             <button class="btn ghost" id="btn-rules">あそびかた ❓</button>
             <button class="btn ghost" id="btn-compendium">📖 ずかん${(window.Progress&&Progress.totalDefeated())?` (${Progress.totalDefeated()}/6)`:''}</button>
@@ -429,7 +429,7 @@ window.UI = (() => {
           if (taps.length >= 7) {
             taps.length = 0;
             _shinyPvpUnlocked = !_shinyPvpUnlocked;
-            toast(_shinyPvpUnlocked ? "✨ シャイニー PvP モード ON ✨" : "シャイニー PvP モード OFF", 2400);
+            toast(_shinyPvpUnlocked ? "✨ シャイニー モード ON ✨ (PvP えらべる ＋ ヒーロー 50%)" : "シャイニー モード OFF", 2800);
             paint(); // re-render so the persistent indicator updates
           }
         });
@@ -4557,5 +4557,6 @@ window.UI = (() => {
            showRoundIntro, showRageIntro, showPhase2Intro, showKO, showFightStinger, spawnConfetti,
            showComboSplash, showFirstBloodSplash, showPartDestroyedSplash, showPartDestroyedZoom, showSpeechBonusSplash,
            showCompendium, runSpeechChallenge,
-           menuModal, showPvpFaceoff, showCliffhanger };
+           menuModal, showPvpFaceoff, showCliffhanger,
+           isShinyPvpUnlocked: () => _shinyPvpUnlocked };
 })();

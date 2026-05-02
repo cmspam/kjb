@@ -242,8 +242,13 @@ window.Game = (() => {
         if (SND && SND.clearShiny) SND.clearShiny();  // start clean each match
         if (forceNoShiny) return boss;
         if (!forceShiny && !SHINIES_ENABLED) return boss;
+        // Secret-code boost: when the kid has unlocked shiny PvP via the
+        // 7-tap title handshake, the same code also raises the PvE shiny
+        // chance to 50% so the code has two visible payoffs.
+        const codeUnlocked = !!(window.UI && UI.isShinyPvpUnlocked && UI.isShinyPvpUnlocked());
         let chance = 0;
         if (forceShiny) chance = 1;
+        else if (codeUnlocked) chance = 0.50;
         else if (Progress.isDefeated && Progress.isDefeated(boss.id)) chance = 0.20;
         else chance = 0.10;
         if (Math.random() < chance) {
