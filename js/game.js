@@ -947,11 +947,12 @@ window.Game = (() => {
       // standalone slingshot path so existing flows keep working.
       if (attack) {
         const partLabel = target.part ? `${opponent.name} ${target.part.name_jp}` : opponent.name;
+        const partGeom = (target.part && target.part.geom) ? { x: target.part.geom.x, y: target.part.geom.y } : null;
         UI.showMonsterPvpAttack(
           p.monster, attack, opMon, partLabel, plan.totalDmg,
           false /* missed */, null /* missReason */,
           () => applyHits(finishTurn),
-          { attackerName: p.monster.name_jp, typeLabel: def.label }
+          { attackerName: p.monster.name_jp, typeLabel: def.label, partGeom }
         );
       } else {
         // Untyped fallback — single hit, slingshot animation if enabled.
@@ -1023,7 +1024,12 @@ window.Game = (() => {
       // Card-specific projectile: if the kid played a damage-bonus or
       // combo card before this attack, load that card's icon as the
       // slingshot ball so the shot reads as the card-themed move.
+      // Part geom drives the bullet-cam zoom origin so the camera rushes
+      // INTO the targeted body part, not the boss center.
       const projOpts = {};
+      if (part.geom && typeof part.geom.x === "number") {
+        projOpts.partGeom = { x: part.geom.x, y: part.geom.y };
+      }
       if (S.pendingCardId) {
         const cardDef = Cards.byId && Cards.byId(S.pendingCardId);
         if (cardDef && cardDef.icon) {

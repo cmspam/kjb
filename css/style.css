@@ -1906,6 +1906,10 @@ rt {
 .sling-target-svg svg { max-width: 100%; max-height: 100%; }
 .sling-target-svg.zooming {
   transform: scale(5.2);
+  /* Inline --zoom-origin (set when caller passes partGeom) anchors the
+   * camera push-in on the targeted body part. Falls back to center when
+   * no part is targeted. */
+  transform-origin: var(--zoom-origin, center center);
   filter: drop-shadow(0 0 48px rgba(255,80,80,0.95));
   animation: none;
 }

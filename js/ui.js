@@ -1305,6 +1305,10 @@ window.UI = (() => {
   //   skipTaunt   — suppress the slingshot heckle (PvP already played a
   //                 charge phrase during the cinematic; double-voicing
   //                 sounds repetitive).
+  //   partGeom    — { x, y } in boss SVG viewBox coords (0..800, 0..480).
+  //                 If provided, the bullet-cam zoom anchors on this part
+  //                 instead of the boss center — the camera rushes INTO
+  //                 the targeted body part as the projectile arrives.
   function showSlingshot(boss, partName, onConnect, onFire, opts) {
     // Backward-compat: if only one callback, treat it as onFire.
     if (typeof onFire === "undefined" && typeof onConnect === "function") {
@@ -1337,10 +1341,23 @@ window.UI = (() => {
       ? `<text id="pouch-emoji" x="200" y="320" font-size="38" text-anchor="middle" dominant-baseline="middle">${pouchEmoji}</text>`
       : `<circle cx="200" cy="306" r="14" fill="#888" stroke="#000" stroke-width="2"/>
          <circle cx="196" cy="302" r="3" fill="#fff" opacity=".7"/>`;
+    // Part-zoom: when caller passes partGeom (the targeted body part's
+    // (x,y) in 800×480 viewBox coords), anchor the bullet-cam zoom on
+    // that point instead of center. We expose the origin as a CSS
+    // variable on the SVG element; the .zooming rule reads var(--zoom-
+    // origin) so the static (pre-fire) state still uses center, and only
+    // the impact-zoom anchors on the part. Reads as: kid releases →
+    // camera rushes INTO the chosen body part.
+    let targetSvgStyle = "";
+    if (opts.partGeom && typeof opts.partGeom.x === "number" && typeof opts.partGeom.y === "number") {
+      const ox = (opts.partGeom.x / 800) * 100;
+      const oy = (opts.partGeom.y / 480) * 100;
+      targetSvgStyle = ` style="--zoom-origin: ${ox}% ${oy}%;"`;
+    }
     modal.innerHTML = `
       ${taunt ? `<div class="sling-bubble">${escapeHTML(taunt)}</div>` : ``}
       <div class="sling-target-area">
-        <div class="sling-target-svg" id="sling-target-svg">${bossSvg}</div>
+        <div class="sling-target-svg" id="sling-target-svg"${targetSvgStyle}>${bossSvg}</div>
         <div class="sling-target-name">${escapeHTML(partName||"")}</div>
       </div>
       <svg viewBox="0 0 400 500" id="sling-svg" preserveAspectRatio="xMidYMax meet">
@@ -1349,6 +1366,28 @@ window.UI = (() => {
         <line x1="200" y1="290" x2="280" y2="190" stroke="#7a4520" stroke-width="20" stroke-linecap="round"/>
         <line x1="120" y1="190" x2="200" y2="310" stroke="#222" stroke-width="6" id="band-l" stroke-linecap="round"/>
         <line x1="280" y1="190" x2="200" y2="310" stroke="#222" stroke-width="6" id="band-r" stroke-linecap="round"/>
+        <!-- Pull-strength meter: vertical zone bars on the right side of the
+             slingshot frame so the kid SEES where the perfect sweet spot is.
+             Bands map directly to pullQualityFor() ranges:
+                pull 0–24   → red  (won't fire)
+                pull 25–59  → gray (weak)
+                pull 60–89  → yellow (good +1)
+                pull 90–119 → gold (PERFECT +2)
+                pull 120–130→ yellow (good +1)
+             A triangular marker tracks the current pull position. -->
+        <g id="meter" opacity="0.85">
+          <rect x="335" y="310" width="22" height="25"  fill="#aa1f1f" stroke="#000" stroke-width="1.5"/>
+          <rect x="335" y="335" width="22" height="35"  fill="#5a5a5a" stroke="#000" stroke-width="1.5"/>
+          <rect x="335" y="370" width="22" height="30"  fill="#e8c844" stroke="#000" stroke-width="1.5"/>
+          <rect x="335" y="400" width="22" height="30"  fill="#ffe85a" stroke="#000" stroke-width="1.5">
+            <animate attributeName="opacity" values="0.8;1;0.8" dur="1.1s" repeatCount="indefinite"/>
+          </rect>
+          <rect x="335" y="430" width="22" height="10"  fill="#e8c844" stroke="#000" stroke-width="1.5"/>
+          <text x="346" y="418" font-size="9" font-weight="900" fill="#3a1a00" text-anchor="middle" pointer-events="none">★</text>
+        </g>
+        <g id="meter-marker">
+          <polygon points="328,310 318,303 318,317" fill="#fff" stroke="#000" stroke-width="2"/>
+        </g>
         <g id="pouch-g">
           <ellipse cx="200" cy="310" rx="26" ry="18" fill="#5a3a1a" stroke="#000" stroke-width="3"/>
           ${pouchInnerHTML}
@@ -1368,26 +1407,31 @@ window.UI = (() => {
     let fired = false;
     // ----- Perfect-release meter (skill-timing layer) -----
     // Pull range maps to 0..130 (pulledY 310..440). Releasing in the GOOD or
-    // PERFECT band grants bonus damage to the connecting attack:
-    //   pull <  25  → won't fire
-    //   25..59      → "weak"   → no bonus
-    //   60..99      → "good"   → +1 damage, yellow pouch glow
-    //   100..115    → "PERFECT"→ +2 damage + crit visuals, gold sparkle glow
-    //   116..130    → "good"   → +1 damage (overpull is still a clean shot)
-    // The bonus is communicated to the caller via onConnect's argument; the
-    // damage math itself lives game-side so this stays purely visual here.
+    // PERFECT band grants bonus damage. The widened perfect window (30 units
+    // vs. earlier 16) is much easier for kids to hit. Visible zone meter on
+    // the right side of the slingshot SVG shows the bands; an arrow marker
+    // tracks the current pull position so the kid can SEE the sweet spot.
+    //   pull <  25  → won't fire (red bar)
+    //   25..59      → "weak"   → no bonus (gray bar)
+    //   60..89      → "good"   → +1 damage, yellow pouch glow (yellow bar)
+    //   90..119     → "PERFECT"→ +2 damage + crit visuals, gold glow (gold bar)
+    //   120..130    → "good"   → +1 damage (yellow bar — overpull still scores)
     function pullQualityFor(pull) {
       if (pull < 25)  return { quality: "miss",    bonus: 0 };
       if (pull < 60)  return { quality: "weak",    bonus: 0 };
-      if (pull < 100) return { quality: "good",    bonus: 1 };
-      if (pull < 116) return { quality: "perfect", bonus: 2 };
+      if (pull < 90)  return { quality: "good",    bonus: 1 };
+      if (pull < 120) return { quality: "perfect", bonus: 2 };
       return { quality: "good", bonus: 1 };
     }
+    const meterMarker = modal.querySelector("#meter-marker");
     function setY(y) {
       pulledY = Math.max(310, Math.min(440, y));
       pouchG.setAttribute("transform", `translate(0, ${pulledY - 310})`);
       bandL.setAttribute("y2", pulledY);
       bandR.setAttribute("y2", pulledY);
+      if (meterMarker) {
+        meterMarker.setAttribute("transform", `translate(0, ${pulledY - 310})`);
+      }
       // Live glow feedback so the kid sees they're approaching the sweet spot.
       // Reset all zone classes then apply the current one — the CSS shifts the
       // pouch's drop-shadow / saturation per zone (yellow → gold sparkle).
@@ -2078,6 +2122,9 @@ window.UI = (() => {
               projectile: emoji,
               pouchEmoji: emoji,
               skipTaunt: true,
+              // Part-zoom: bullet-cam anchors on the targeted body part so
+              // the camera rushes INTO it, not the opponent's center.
+              partGeom: opts.partGeom || null,
               // For misses, suppress the slingshot's default 💥 so the
               // cinematic's per-miss visual (shield/runner/sparkle) reads
               // cleanly without a competing standard explosion.
