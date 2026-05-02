@@ -310,8 +310,14 @@ window.Game = (() => {
     const p = S.players[idx];
     const usedIds = S.players.slice(0, idx).map(x => x.monster && x.monster.id).filter(Boolean);
     UI.renderPass(p, () => {
-      UI.renderMonsterPick(p.name, usedIds, (chosenFactory) => {
-        p.monster = chosenFactory();
+      UI.renderMonsterPick(p.name, usedIds, (chosenFactory, opts) => {
+        const monster = chosenFactory();
+        if (opts && opts.shiny && Monsters.applyShiny) {
+          Monsters.applyShiny(monster);
+          if (Progress.recordShinyEncounter) Progress.recordShinyEncounter(monster.id);
+          if (SND && SND.markShiny) SND.markShiny(monster.id, true);
+        }
+        p.monster = monster;
         pickMonstersSequentially(idx+1, done);
       });
     });

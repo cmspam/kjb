@@ -131,6 +131,15 @@ window.UI = (() => {
   }
   function clear(id) { $("screen-"+id).innerHTML = ""; }
 
+  // ---- "Secret code" PvP shiny mode ----
+  // Tap the title headline 7 times within 4 seconds to toggle. When ON, the
+  // PvP monster picker shows a ✨ button on each tile — tap it to pick that
+  // monster as shiny (alt-language voice + harder stats + visual palette
+  // swap, same as a hero-mode shiny encounter). State is in-memory only —
+  // doesn't persist across reloads, so kids who stumble into it once don't
+  // accidentally play with shinies forever.
+  let _shinyPvpUnlocked = false;
+
   // Shiny sparkle spawner — fires every 650ms, drops a single ✨ at a random
   // position into every visible .shiny-sparkle-layer. Each sparkle has its
   // own --drift / --rot CSS vars so they fly in random directions, and self-
@@ -367,6 +376,7 @@ window.UI = (() => {
           </div>
           <button class="btn huge hot title-start-btn" id="btn-start">${JP.start} ⚔️</button>
           <div class="title-press-start">▶ TAP TO START ◀</div>
+          ${_shinyPvpUnlocked ? `<div style="color:#ffe85a; font-weight:900; letter-spacing:3px; font-size:13px; margin-top:4px; text-shadow:0 2px 0 #000, 0 0 8px #ffd24a;">✨ SHINY PvP MODE ✨</div>` : ''}
           <div class="row" style="margin-top:8px;">
             <button class="btn ghost" id="btn-rules">あそびかた ❓</button>
             <button class="btn ghost" id="btn-compendium">📖 ずかん${(window.Progress&&Progress.totalDefeated())?` (${Progress.totalDefeated()}/6)`:''}</button>
@@ -405,6 +415,25 @@ window.UI = (() => {
         try { SND.unlock(); } catch(e) {}
         showSettings(() => renderTitle({onStart}));
       });
+      // ---- Konami-style secret: tap the title 7× in 4s to toggle shiny PvP ----
+      // No visible feedback for the first 6 taps. On the 7th tap the toggle
+      // fires and a toast confirms ON/OFF. State persists for the session.
+      const headline = s.querySelector(".title-headline");
+      if (headline) {
+        const taps = headline._shinyTaps = headline._shinyTaps || [];
+        tap(headline, () => {
+          const now = Date.now();
+          // Drop taps older than the 4-second window.
+          while (taps.length && now - taps[0] > 4000) taps.shift();
+          taps.push(now);
+          if (taps.length >= 7) {
+            taps.length = 0;
+            _shinyPvpUnlocked = !_shinyPvpUnlocked;
+            toast(_shinyPvpUnlocked ? "✨ シャイニー PvP モード ON ✨" : "シャイニー PvP モード OFF", 2400);
+            paint(); // re-render so the persistent indicator updates
+          }
+        });
+      }
     }
     paint();
   }
@@ -1021,24 +1050,40 @@ window.UI = (() => {
     show("title");
     const s = $("screen-title"); s.innerHTML = "";
     const factories = Monsters.listFactories();
+    // When the secret-code shiny mode is unlocked, surface a visible hint
+    // and a per-tile ✨ button so players can opt in / opt out per monster.
+    const shinyHint = _shinyPvpUnlocked
+      ? `<div class="subtle" style="margin-bottom:6px; color:#ffe85a; font-weight:900;">✨ シャイニーで えらべる！(✨ボタン)</div>`
+      : "";
     s.appendChild(el(`
       <div class="center" style="max-width: 720px; margin: 12px auto; padding: 0 12px;">
         <h2>${escapeHTML(playerName)}、モンスターを えらんでね！</h2>
-        <div class="subtle" style="margin-bottom:8px;">タップで けってい</div>
+        <div class="subtle" style="margin-bottom:4px;">タップで けってい</div>
+        ${shinyHint}
         <div id="mp-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;"></div>
       </div>`));
     const grid = $("mp-grid");
     factories.forEach((factory) => {
       const sample = factory();
       const taken = usedIds.includes(sample.id);
-      const card = el(`
-        <button class="part-btn" style="padding:8px;${taken?'opacity:.35;':''}">
-          <div style="height:140px;">${Monsters.renderBossSVG(sample)}</div>
-          <div class="pn" style="font-size:14px;color:var(--accent);">${escapeHTML(sample.name_jp)}</div>
-          ${taken ? `<div class="pe" style="color:#aaa;">えらばれた</div>` : ``}
-        </button>`);
-      if (!taken) tap(card, () => { SND.sfxPop(); onPick(factory); });
-      grid.appendChild(card);
+      // Wrap so the ✨ shiny-pick button can absolute-position over the corner
+      // of the card without nesting <button> inside <button>.
+      const wrap = el(`
+        <div class="mp-card-wrap" style="position:relative; display:flex;">
+          <button class="part-btn" style="padding:8px;${taken?'opacity:.35;':''} width:100%;">
+            <div style="height:140px;">${Monsters.renderBossSVG(sample)}</div>
+            <div class="pn" style="font-size:14px;color:var(--accent);">${escapeHTML(sample.name_jp)}</div>
+            ${taken ? `<div class="pe" style="color:#aaa;">えらばれた</div>` : ``}
+          </button>
+          ${(_shinyPvpUnlocked && !taken) ? `<button class="boss-picker-shiny-btn beaten" data-shiny title="シャイニーで えらぶ！" aria-label="シャイニーで えらぶ！">✨</button>` : ''}
+        </div>`);
+      if (!taken) {
+        const mainBtn = wrap.querySelector(".part-btn");
+        const shinyBtn = wrap.querySelector("[data-shiny]");
+        tap(mainBtn, () => { SND.sfxPop(); onPick(factory); });
+        if (shinyBtn) tap(shinyBtn, () => { SND.sfxPop(); onPick(factory, { shiny: true }); });
+      }
+      grid.appendChild(wrap);
     });
   }
 
