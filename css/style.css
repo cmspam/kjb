@@ -2193,6 +2193,195 @@ rt {
   100% { transform: translate(-50%, -50%) scale(1.4); filter: blur(10px) brightness(2.0); }
 }
 
+/* ===== PER-MONSTER ATTACK BACKGROUND =====
+ * A "shiny power-up" bg that paints behind the vignette during the charge
+ * stage, unique per monster. The bg-layer fades up during charge so it
+ * reads as the monster CONJURING the energy field, not just being inside
+ * one. Pseudo-elements add rotating/pulsing motion specific to each monster.
+ *
+ * Layered z-order: bg-layer (default, paints first) → vignette (z-index 1)
+ * → stage with boss SVG / orb / particles (z-index 1-2) → flash (5).
+ * Vignette still darkens the periphery so the boss focal point reads.
+ */
+.boss-anim-bg-layer {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.9s ease-in;
+}
+.boss-anim-bg-layer.charging { opacity: 1; }
+.boss-anim-bg-layer::before,
+.boss-anim-bg-layer::after {
+  content: "";
+  position: absolute;
+  inset: -50%; /* 200% × 200% so rotations don't reveal edges */
+  pointer-events: none;
+}
+@keyframes bossanim-bg-rotate-cw  { to { transform: rotate(360deg); } }
+@keyframes bossanim-bg-rotate-ccw { to { transform: rotate(-360deg); } }
+
+/* Tako — magenta sunburst rays (takoyaki shop banner energy) */
+.boss-anim-bg-layer.bg-tako {
+  background: radial-gradient(circle at center,
+    #ff5fa3 0%, #c01865 35%, #4d0a25 75%, #1a0010 100%);
+}
+.boss-anim-bg-layer.bg-tako::before {
+  background: repeating-conic-gradient(from 0deg at center,
+    rgba(255, 220, 230, 0.42) 0deg,
+    rgba(255, 220, 230, 0.42) 6deg,
+    transparent 6deg,
+    transparent 14deg);
+  animation: bossanim-bg-rotate-cw 6s linear infinite;
+  mix-blend-mode: screen;
+}
+
+/* Unko — brown explosion rings rippling outward */
+.boss-anim-bg-layer.bg-unko {
+  background: radial-gradient(circle at center,
+    #c47b48 0%, #7a3d1a 40%, #3a1a05 75%, #150800 100%);
+}
+.boss-anim-bg-layer.bg-unko::before {
+  background: repeating-radial-gradient(circle at center,
+    rgba(255, 200, 100, 0.55) 0px,
+    rgba(255, 200, 100, 0.55) 3px,
+    transparent 3px,
+    transparent 60px);
+  animation: bossanim-bg-shockwave 1.4s ease-out infinite;
+  mix-blend-mode: screen;
+}
+@keyframes bossanim-bg-shockwave {
+  0%   { transform: scale(0.4); opacity: 0; }
+  35%  { opacity: 0.9; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* Tral — opera red drapes + golden spotlight */
+.boss-anim-bg-layer.bg-tral {
+  background:
+    radial-gradient(ellipse at 50% 25%, rgba(255, 220, 100, 0.35) 0%, transparent 45%),
+    linear-gradient(180deg, #6b0a0a 0%, #2a0303 100%);
+}
+.boss-anim-bg-layer.bg-tral::before {
+  inset: 0;
+  background: repeating-linear-gradient(90deg,
+    rgba(0, 0, 0, 0.28) 0,
+    rgba(0, 0, 0, 0.28) 28px,
+    transparent 28px,
+    transparent 56px);
+}
+.boss-anim-bg-layer.bg-tral::after {
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%,
+    rgba(255, 220, 120, 0.7) 0%,
+    rgba(255, 200, 80, 0.3) 30%,
+    transparent 60%);
+  animation: bossanim-bg-spotlight 1.4s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+}
+@keyframes bossanim-bg-spotlight {
+  0%   { opacity: 0.5; transform: scale(0.92); }
+  100% { opacity: 1;   transform: scale(1.12); }
+}
+
+/* Pamp — pastel sparkle haze */
+.boss-anim-bg-layer.bg-pamp {
+  background: radial-gradient(circle at center,
+    #ffd6f0 0%, #b88cc4 45%, #5a2a78 80%, #1a0820 100%);
+}
+.boss-anim-bg-layer.bg-pamp::before {
+  background:
+    radial-gradient(circle at 15% 25%, rgba(255,255,255,0.9), transparent 1%),
+    radial-gradient(circle at 75% 65%, rgba(255,255,255,0.85), transparent 1%),
+    radial-gradient(circle at 40% 80%, rgba(255,255,255,0.8), transparent 1%),
+    radial-gradient(circle at 85% 15%, rgba(255,255,255,0.85), transparent 1%),
+    radial-gradient(circle at 25% 55%, rgba(255,255,255,0.7), transparent 1%);
+  background-size: 60px 60px, 80px 80px, 100px 100px, 70px 70px, 90px 90px;
+  animation: bossanim-bg-sparkle 2.4s ease-in-out infinite;
+}
+@keyframes bossanim-bg-sparkle {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+/* Parfait — diagonal whipped-cream swirls */
+.boss-anim-bg-layer.bg-parfait {
+  background: radial-gradient(circle at center,
+    #fff0d8 0%, #ffadc4 35%, #a02050 75%, #2a0815 100%);
+}
+.boss-anim-bg-layer.bg-parfait::before {
+  inset: 0;
+  background: repeating-linear-gradient(45deg,
+    rgba(255, 255, 255, 0.42) 0,
+    rgba(255, 255, 255, 0.42) 10px,
+    transparent 10px,
+    transparent 30px);
+  animation: bossanim-bg-diag 5s linear infinite;
+}
+@keyframes bossanim-bg-diag {
+  0%   { background-position: 0 0; }
+  100% { background-position: 80px 80px; }
+}
+
+/* Anpan — gold-on-red hero sunburst (Japanese flag energy) */
+.boss-anim-bg-layer.bg-anpan {
+  background: radial-gradient(circle at center,
+    #ffe07a 0%, #d24438 40%, #6b0e08 80%, #1a0204 100%);
+}
+.boss-anim-bg-layer.bg-anpan::before {
+  background: repeating-conic-gradient(from 0deg at center,
+    rgba(255, 220, 100, 0.55) 0deg,
+    rgba(255, 220, 100, 0.55) 10deg,
+    transparent 10deg,
+    transparent 22deg);
+  animation: bossanim-bg-rotate-cw 4s linear infinite;
+  mix-blend-mode: screen;
+}
+
+/* Brainrot — rotating rainbow conic with glitch jitter */
+.boss-anim-bg-layer.bg-brainrot {
+  background: conic-gradient(from 0deg at center,
+    #ff3b6b 0deg, #ffcc44 60deg, #aa66ff 120deg,
+    #44ddee 180deg, #88ddff 240deg, #ff8ec7 300deg, #ff3b6b 360deg);
+  animation: bossanim-bg-rotate-cw 5s linear infinite;
+}
+.boss-anim-bg-layer.bg-brainrot::before {
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+.boss-anim-bg-layer.bg-brainrot::after {
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 40%, transparent 4%, rgba(0,0,0,0.55) 5%, transparent 7%),
+    radial-gradient(circle at 70% 60%, transparent 4%, rgba(0,0,0,0.55) 5%, transparent 7%),
+    radial-gradient(circle at 50% 80%, transparent 3%, rgba(0,0,0,0.4) 4%, transparent 6%);
+  animation: bossanim-bg-glitch 0.18s steps(4) infinite;
+  mix-blend-mode: multiply;
+}
+@keyframes bossanim-bg-glitch {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(-4px, 2px); }
+  50%  { transform: translate(3px, -3px); }
+  75%  { transform: translate(-2px, 4px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Generic fallback — used when boss.id doesn't match any of the above. */
+.boss-anim-bg-layer.bg-default {
+  background: radial-gradient(circle at center,
+    #6b1830 0%, #3a0820 50%, #150010 100%);
+}
+.boss-anim-bg-layer.bg-default::before {
+  background: repeating-conic-gradient(from 0deg at center,
+    rgba(255, 100, 130, 0.3) 0deg,
+    rgba(255, 100, 130, 0.3) 8deg,
+    transparent 8deg,
+    transparent 18deg);
+  animation: bossanim-bg-rotate-cw 8s linear infinite;
+  mix-blend-mode: screen;
+}
+
 /* Random event modal (fairy, bomb-kun, thief cat) */
 .event-modal {
   position: fixed; inset: 0;

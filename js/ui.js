@@ -1560,12 +1560,23 @@ window.UI = (() => {
     //   6. Camera-shake escalates by adding `.shaking` to the overlay 200ms
     //      into the charge
     setTimeout(() => {
+      // Per-monster attack background — a "shiny power-up" pattern keyed on
+      // the attacker's id (tako/unko/tral/pamp/parfait/anpan/brainrot). Falls
+      // back to a generic magenta sunburst for unknown ids. Class triggers a
+      // pseudo-element animation (rotation / shockwave / sparkle / etc.).
+      const KNOWN_BG_IDS = ["tako","unko","tral","pamp","parfait","anpan","brainrot"];
+      const bgKey = (boss && KNOWN_BG_IDS.indexOf(boss.id) >= 0) ? boss.id : "default";
       overlay.innerHTML = `
+        <div class="boss-anim-bg-layer bg-${bgKey}"></div>
         <div class="boss-anim-vignette"></div>
         <div class="boss-anim-stage">
           <div class="boss-anim-svg-wrap"></div>
         </div>
         <div class="boss-anim-bubble">${escapeHTML(phrase)}</div>`;
+      // Trigger the bg-layer fade-in on the next frame so the CSS transition
+      // (opacity 0 → 1) actually animates instead of snapping.
+      const bgLayer = overlay.querySelector(".boss-anim-bg-layer");
+      if (bgLayer) requestAnimationFrame(() => bgLayer.classList.add("charging"));
       // Boss voices the charge phrase as the bubble pops in
       if (boss && boss.id) SND.playBossLine(boss.id, phrase);
       const stage = overlay.querySelector(".boss-anim-stage");
