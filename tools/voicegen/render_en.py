@@ -16,12 +16,27 @@ Usage (from project root):
 
 import asyncio
 import json
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import edge_tts
+
+# Emojis must NOT reach the TTS engine — Edge TTS will read them aloud as
+# their Unicode names ("pile of poo", "reverse counterclockwise arrow").
+# We synthesize the emoji-free version but keep the original (with emoji)
+# for hashing so runtime lookups still match.
+EMOJI_RE = re.compile(
+    "["
+    "\U0001F000-\U0001FFFF"   # most modern pictographs
+    "\U00002600-\U000027BF"   # misc symbols + dingbats
+    "\U00002B00-\U00002BFF"   # arrows / supplemental shapes
+    "‍️⃣〰"  # joiner / variation selector / keycap / wavy dash
+    "]+", flags=re.UNICODE)
+def strip_emoji(s):
+    return EMOJI_RE.sub("", s).strip()
 
 VOICE = "en-US-AriaNeural"
 OUT_DIR = Path("assets/audio/en")
@@ -54,16 +69,22 @@ async def render_one(entry, idx):
         counters["skip"] += 1
         return
     tmp_mp3 = TMP_DIR / f"{h}.mp3"
+    # Strip emojis for synthesis only. Hash above already used the raw text.
+    spoken = strip_emoji(text)
+    if not spoken:
+        # Pure-emoji string — nothing to render.
+        counters["fail"] += 1
+        return
     async with sem:
         # Edge TTS render with one retry on transient failure
         for attempt in range(3):
             try:
-                comm = edge_tts.Communicate(text, VOICE)
+                comm = edge_tts.Communicate(spoken, VOICE)
                 await comm.save(str(tmp_mp3))
                 break
             except Exception as e:
                 if attempt == 2:
-                    print(f"FAIL render [{h}] {text!r}: {e}")
+                    print(f"FAIL render [{h}] {spoken!r}: {e}")
                     counters["fail"] += 1
                     return
                 await asyncio.sleep(1.0 * (attempt + 1))

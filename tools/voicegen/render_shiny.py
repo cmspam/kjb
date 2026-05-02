@@ -11,12 +11,25 @@ shouts vs phrases, similar to the VOICEVOX renderer.
 
 import asyncio
 import json
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import edge_tts
+
+# Same emoji-strip as render_en.py — Edge TTS reads emojis aloud as their
+# Unicode names. Strip for synthesis only; hash uses the original text.
+EMOJI_RE = re.compile(
+    "["
+    "\U0001F000-\U0001FFFF"
+    "\U00002600-\U000027BF"
+    "\U00002B00-\U00002BFF"
+    "‍️⃣〰"
+    "]+", flags=re.UNICODE)
+def strip_emoji(s):
+    return EMOJI_RE.sub("", s).strip()
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 LINES_DIR = ROOT / "tools" / "voicegen" / "work" / "shiny_lines"
@@ -49,11 +62,17 @@ async def render_line(voice, entry, out_dir, sem, counters):
         return
     tmp_mp3 = TMP_DIR / f"{out_dir.name}_{h}.mp3"
     tuning = KIND_SSML.get(kind, KIND_SSML["attack-phrase"])
+    # Strip emojis for synthesis only — TTS otherwise reads their Unicode
+    # names ("pile of poo", "reverse arrow"). Hash keeps the original.
+    spoken = strip_emoji(text)
+    if not spoken:
+        counters["fail"] += 1
+        return
     async with sem:
         for attempt in range(3):
             try:
                 comm = edge_tts.Communicate(
-                    text, voice,
+                    spoken, voice,
                     rate=tuning["rate"],
                     pitch=tuning["pitch"],
                     volume=tuning["volume"],
@@ -62,7 +81,7 @@ async def render_line(voice, entry, out_dir, sem, counters):
                 break
             except Exception as e:
                 if attempt == 2:
-                    print(f"  FAIL render [{h}] {text!r}: {e}")
+                    print(f"  FAIL render [{h}] {spoken!r}: {e}")
                     counters["fail"] += 1
                     return
                 await asyncio.sleep(1.0 * (attempt + 1))

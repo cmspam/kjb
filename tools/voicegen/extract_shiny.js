@@ -62,7 +62,12 @@ for (const [bossId, ov] of Object.entries(overrides)) {
     }
   }
   fs.writeFileSync(path.join(OUT_DIR, `${bossId}.json`),
-    JSON.stringify({ voice: ov.voice, lines }, null, 2));
-  summary.push(`${bossId} (${ov.voice}): ${lines.length} lines`);
+    JSON.stringify({
+      voice: ov.voice,
+      style: ov.style || null,
+      styleDefault: ov.styleDefault || null,
+      lines
+    }, null, 2));
+  summary.push(`${bossId} (${ov.voice}${ov.style?` style:${ov.style}`:''}): ${lines.length} lines`);
 }
 console.log(summary.join("\n"));

@@ -6,20 +6,21 @@
 // keeps the shiny feeling like a "language overlay" rather than requiring
 // 7× more writing for context-specific lines kids rarely hear.
 //
-// Voice/language per boss (rendered with Edge TTS):
-//   tako     → es-ES-AlvaroNeural (Spanish, energetic vendor)
-//   unko     → en-US-GuyNeural    (American English, deep — NYC tough guy via script)
-//   tral     → it-IT-DiegoNeural  (Italian, theatrical opera)
-//   pamp     → ko-KR-SunHiNeural  (Korean, soft K-pop aegyo)
-//   parfait  → fr-FR-HenriNeural  (French, sophisticated)
-//   anpan    → zh-CN-YunxiNeural  (Mandarin Chinese, hero bravado)
-//   brainrot → el-GR-NestorasNeural (Greek, dramatic chaos)
+// Voice/language per boss (rendered with Edge TTS). Voices match the
+// gender of the original Japanese ずんだもん / 春日部つむぎ / etc. casting:
+//   tako     → es-ES-ElviraNeural (Spanish, female — energetic vendor)
+//   unko     → en-US-ChristopherNeural (American English, deep authoritative — NYC mafia-boss energy)
+//   tral     → it-IT-DiegoNeural  (Italian, male — theatrical opera)
+//   pamp     → ko-KR-SunHiNeural  (Korean, female — soft K-pop aegyo)
+//   parfait  → fr-FR-DeniseNeural (French, female — sophisticated)
+//   anpan    → zh-CN-YunxiNeural  (Mandarin Chinese, male — hero bravado)
+//   brainrot → el-GR-AthinaNeural (Greek, female — dramatic chaos)
 window.I18N = window.I18N || {};
 window.I18N.shinyOverrides = {
 
   // tako (Spanish) — takoyaki street vendor, español TikTok energy
   tako: {
-    voice: "es-ES-AlvaroNeural",
+    voice: "es-ES-ElviraNeural",
     catchphrase: "¡Pulpo Pulpo Sahúr!",
     attacks: [
       { name: "¡Tinta Negra! 🐙",      type: "wild",   phrases: ["¡Tinta lista!", "¡Negro como la noche!", "¡No verás nada!"] },
@@ -41,9 +42,13 @@ window.I18N.shinyOverrides = {
     },
   },
 
-  // unko (English NYC) — Edo べらんめえ → Brooklyn tough guy
+  // unko (English NYC) — Edo べらんめえ → Brooklyn tough guy. Christopher
+  // is described as "Reliable, Authority" — deeper, news-anchor weight.
+  // Combined with the NYC slang script (fuhgeddaboudit / bada-bing /
+  // capisce / ya killin' me here) it lands much closer to mafia-boss
+  // tough-guy than the previous Guy voice.
   unko: {
-    voice: "en-US-GuyNeural",
+    voice: "en-US-ChristopherNeural",
     catchphrase: "Bombardiro Unkodilo, fuhgeddaboudit!",
     attacks: [
       { name: "Stink Shooter 💩",    type: "wild",   phrases: ["Yo, here it comes!", "Smell THIS!", "Brown shower, ay!"] },
@@ -115,7 +120,7 @@ window.I18N.shinyOverrides = {
 
   // parfait (French) — chocolate parfait sushi-fish
   parfait: {
-    voice: "fr-FR-HenriNeural",
+    voice: "fr-FR-DeniseNeural",
     catchphrase: "Parfait Parfait Iwashi, c'est moi!",
     attacks: [
       { name: "Tempête de Crème 🍦",  type: "wild",   phrases: ["Crème partout!", "Doux et fort!", "Mousseuuux!"] },
@@ -163,7 +168,7 @@ window.I18N.shinyOverrides = {
 
   // brainrot (Greek) — chaos king, philosophy + Greek twitter memes
   brainrot: {
-    voice: "el-GR-NestorasNeural",
+    voice: "el-GR-AthinaNeural",
     catchphrase: "Brainrot King! Ωραία ωραία! Φιλοσοφία!",
     attacks: [
       { name: "Mega Φιλοσοφία 👊", type: "heavy",  phrases: ["Δύναμη όλων!", "Ωραία!", "Πάρε αυτό!"] },
