@@ -916,17 +916,19 @@ window.Game = (() => {
         setTimeout(() => endTurn(), 3000);
       }
 
-      // If we have an attack object, run the dramatic monster-vs-monster
-      // cinematic before applying hits. If not (legacy untyped callers, e.g.
-      // a card with hard-coded damage), fall back to the slingshot path so
-      // existing flows keep working.
+      // If we have an attack object, run the combined PvP cinematic +
+      // slingshot flow: attacker monster powers up, attack emoji is
+      // conjured, transitions into the slingshot pouch, kid fires it at
+      // the opponent. If we don't have an attack object (legacy untyped
+      // callers, e.g. a card with hard-coded damage), fall back to the
+      // standalone slingshot path so existing flows keep working.
       if (attack) {
         const partLabel = target.part ? `${opponent.name} ${target.part.name_jp}` : opponent.name;
-        UI.showBossAttackAnim(
-          p.monster, attack, partLabel, plan.totalDmg, false,
+        UI.showMonsterPvpAttack(
+          p.monster, attack, opMon, partLabel, plan.totalDmg,
+          false /* missed */, null /* missReason */,
           () => applyHits(finishTurn),
-          null,
-          { byPlayer: true, attackerName: p.monster.name_jp, typeLabel: def.label }
+          { attackerName: p.monster.name_jp, typeLabel: def.label }
         );
       } else {
         // Untyped fallback — single hit, slingshot animation if enabled.

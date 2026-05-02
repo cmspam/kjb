@@ -1294,18 +1294,36 @@ window.UI = (() => {
   //               reactions / KO check / endTurn here. Modal fades out
   //               between bang and close so the boss reveal is visible.
   // Either is optional (legacy callers passing only onFire still work).
-  function showSlingshot(boss, partName, onConnect, onFire) {
+  //
+  // opts (optional):
+  //   projectile  — emoji used for the airborne projectile (default "🪨").
+  //                 PvP attacks pass the attack-emoji here so the kid is
+  //                 firing the attack itself, not a generic rock.
+  //   pouchEmoji  — emoji to render INSIDE the pouch as the loaded ball.
+  //                 Defaults to projectile. The morph from cinematic to
+  //                 slingshot animates the burst-emoji into this position.
+  //   skipTaunt   — suppress the slingshot heckle (PvP already played a
+  //                 charge phrase during the cinematic; double-voicing
+  //                 sounds repetitive).
+  function showSlingshot(boss, partName, onConnect, onFire, opts) {
     // Backward-compat: if only one callback, treat it as onFire.
     if (typeof onFire === "undefined" && typeof onConnect === "function") {
       onFire = onConnect;
       onConnect = null;
     }
+    opts = opts || {};
+    const projectileEmoji = opts.projectile || "🪨";
+    const pouchEmoji = opts.pouchEmoji || (opts.projectile || null);
     SND.unlock();
     // Per-boss slingshot heckle in that boss's dialect; pre-rendered by the
-    // voicegen build so playBossLine actually plays audio.
-    const slingPool = (boss && boss.taunts && boss.taunts.slingshot) || ["うってみろよ！"];
-    const taunt = pickRand(slingPool);
-    if (boss && boss.id) SND.playBossLine(boss.id, taunt);
+    // voicegen build so playBossLine actually plays audio. Skipped when the
+    // caller already played a voiced charge phrase (PvP cinematic).
+    let taunt = "";
+    if (!opts.skipTaunt) {
+      const slingPool = (boss && boss.taunts && boss.taunts.slingshot) || ["うってみろよ！"];
+      taunt = pickRand(slingPool);
+      if (boss && boss.id) SND.playBossLine(boss.id, taunt);
+    }
     const modal = document.createElement("div");
     modal.className = "sling-modal";
     // Render the actual boss (small / "in the distance") instead of a
@@ -1313,8 +1331,14 @@ window.UI = (() => {
     // boss SVG scales up rapidly (3D-like approach) while the rock flies
     // toward it, then 💥 lands. Boss SVG re-renders to show damage.
     const bossSvg = (boss && Monsters.renderBossSVG) ? Monsters.renderBossSVG(boss) : "";
+    // Pouch contents: gray rock circles by default, or an SVG-text emoji if
+    // the caller wants the loaded ball to BE the attack emoji (PvP mode).
+    const pouchInnerHTML = pouchEmoji
+      ? `<text id="pouch-emoji" x="200" y="320" font-size="38" text-anchor="middle" dominant-baseline="middle">${pouchEmoji}</text>`
+      : `<circle cx="200" cy="306" r="14" fill="#888" stroke="#000" stroke-width="2"/>
+         <circle cx="196" cy="302" r="3" fill="#fff" opacity=".7"/>`;
     modal.innerHTML = `
-      <div class="sling-bubble">${escapeHTML(taunt)}</div>
+      ${taunt ? `<div class="sling-bubble">${escapeHTML(taunt)}</div>` : ``}
       <div class="sling-target-area">
         <div class="sling-target-svg" id="sling-target-svg">${bossSvg}</div>
         <div class="sling-target-name">${escapeHTML(partName||"")}</div>
@@ -1327,8 +1351,7 @@ window.UI = (() => {
         <line x1="280" y1="190" x2="200" y2="310" stroke="#222" stroke-width="6" id="band-r" stroke-linecap="round"/>
         <g id="pouch-g">
           <ellipse cx="200" cy="310" rx="26" ry="18" fill="#5a3a1a" stroke="#000" stroke-width="3"/>
-          <circle cx="200" cy="306" r="14" fill="#888" stroke="#000" stroke-width="2"/>
-          <circle cx="196" cy="302" r="3" fill="#fff" opacity=".7"/>
+          ${pouchInnerHTML}
         </g>
       </svg>
       <div class="sling-text">ひっぱって はなして！👇</div>`;
@@ -1409,23 +1432,28 @@ window.UI = (() => {
       // for most of the 380ms, then SMASHES into the camera at impact.
       const targetSvg = modal.querySelector("#sling-target-svg");
       if (targetSvg) targetSvg.classList.add("zooming");
-      // Foreground rock — locked at the bottom-center, drifts up + tumbles
-      // slightly via the .sling-proj keyframe. We're riding behind it.
+      // Foreground projectile — by default the rock; PvP attacks override
+      // this to the attack-emoji so the kid is launching the actual attack.
+      // Locked at bottom-center, drifts up + tumbles via .sling-proj keyframe.
       const proj = document.createElement("div");
       proj.className = "sling-proj";
-      proj.textContent = "🪨";
+      proj.textContent = projectileEmoji;
       modal.appendChild(proj);
       setTimeout(() => {
         // Impact frame: white radial flash punches through, then the bang
         // emoji pops. The connect hook fires here so the kid hears the
-        // bang the same instant the boss redraws with damage.
+        // bang the same instant the boss redraws with damage. PvP misses
+        // suppress the default 💥 so the cinematic's per-miss visual
+        // (shield bounce / escape runner / dodge sparkle) reads cleanly.
         const flash = document.createElement("div");
         flash.className = "sling-impact-flash";
         modal.appendChild(flash);
-        const bang = document.createElement("div");
-        bang.className = "sling-bang";
-        bang.textContent = "💥";
-        modal.appendChild(bang);
+        if (!opts.suppressDefaultBang) {
+          const bang = document.createElement("div");
+          bang.className = "sling-bang";
+          bang.textContent = "💥";
+          modal.appendChild(bang);
+        }
         if (typeof onConnect === "function") onConnect();
         modal.style.transition = "opacity 0.45s ease";
         modal.style.opacity = "0";
@@ -1726,18 +1754,17 @@ window.UI = (() => {
       );
     }, T.burst);
 
-    // ----- Stage 3: bang (hit) or per-miss-type outcome -----
+    // ----- Stage 3 (extracted as a helper) -----
     // Hit:    💥 explodes at center
     // Shield: 🛡️ pops up + the emoji ricochets off (bouncing class)
     // Escape: 🏃 runs across, emoji passes through (passing class)
     // Dodge:  emoji whooshes past + ✨ sparkle puff
-    // Fizzle: handled at Stage 1.5; nothing extra here
-    setTimeout(() => {
+    // Fizzle: handled at Stage 1.5; this is a no-op
+    function runBangStage() {
       if (isFizzle) return;
       const burst = overlay.querySelector(".boss-anim-emoji");
       if (missed) {
         if (missReason === "shield") {
-          // Defender's shield pops up; emoji bounces off it.
           const shield = document.createElement("div");
           shield.className = "boss-anim-shield";
           shield.textContent = "🛡️";
@@ -1745,7 +1772,6 @@ window.UI = (() => {
           if (burst) burst.classList.add("bouncing");
           if (SND.sfxBreak) SND.sfxBreak();
         } else if (missReason === "escape") {
-          // Defender slides off-screen; emoji whooshes through where they were.
           const runner = document.createElement("div");
           runner.className = "boss-anim-escape-runner";
           runner.textContent = "🏃";
@@ -1753,7 +1779,6 @@ window.UI = (() => {
           if (burst) burst.classList.add("passing");
           if (SND.sfxPop) SND.sfxPop();
         } else {
-          // Generic dodge — emoji passes harmlessly + sparkle puff.
           const puff = document.createElement("div");
           puff.className = "boss-anim-dodge-puff";
           puff.textContent = "✨";
@@ -1762,7 +1787,6 @@ window.UI = (() => {
           if (SND.sfxPop) SND.sfxPop();
         }
       } else {
-        // Direct hit — the existing impact frame.
         const bang = document.createElement("div");
         bang.className = "boss-anim-bang";
         bang.textContent = "💥";
@@ -1777,10 +1801,10 @@ window.UI = (() => {
         );
         SND.sfxHit();
       }
-    }, T.bang);
+    }
 
-    // ----- Stage 4: attack name + damage / miss reveal -----
-    setTimeout(() => {
+    // ----- Stage 4 (extracted as a helper) -----
+    function runRevealStage() {
       const name = document.createElement("div");
       name.className = "boss-anim-name";
       name.innerHTML = `
@@ -1799,16 +1823,42 @@ window.UI = (() => {
       // higher intonation/volume so they sound shouted, not spoken. Skipped
       // on fizzle since the attack never actually formed.
       if (!isFizzle && boss && boss.id && attack && attack.name) SND.playBossLine(boss.id, attack.name);
-    }, T.reveal);
+    }
 
-    // ----- End: clean up + callback -----
-    // ~1900-2400ms after reveal so kids can read the attack-name + damage text.
-    const endTimer = setTimeout(() => { if (!finished) finish(); }, T.end);
+    // Slingshot-handoff branch. When the caller passes opts.onBurstReady AND
+    // this isn't a fizzle, we hand off after the burst stage and let the
+    // caller drive bang+reveal+cleanup themselves (so they can interpose a
+    // slingshot interaction between burst and bang). For fizzle or non-handoff
+    // callers, the standard timer pipeline runs.
     let finished = false;
+    const useHandoff = !!opts.onBurstReady && !isFizzle;
+    let endTimer = null;
+    if (useHandoff) {
+      // Hand off ~500ms after the burst settles — gives the kid a beat to
+      // see the conjured attack emoji at center before the slingshot opens.
+      setTimeout(() => {
+        if (finished) return;
+        opts.onBurstReady({
+          overlay,
+          burst: overlay.querySelector(".boss-anim-emoji"),
+          emoji,
+          // Caller invokes these when ready to play out the impact + reveal.
+          // Typical flow: open slingshot, animate emoji into pouch, kid fires;
+          // on slingshot bang call runBang+runReveal then finish().
+          runBangStage,
+          runRevealStage,
+          finish: () => { try { finish(); } catch(_){} }
+        });
+      }, T.burst + 500);
+    } else {
+      setTimeout(runBangStage, T.bang);
+      setTimeout(runRevealStage, T.reveal);
+      endTimer = setTimeout(() => { if (!finished) finish(); }, T.end);
+    }
     function finish() {
       if (finished) return;
       finished = true;
-      try { clearTimeout(endTimer); } catch(_){}
+      try { if (endTimer) clearTimeout(endTimer); } catch(_){}
       try { overlay.remove(); } catch(_){}
       onDone();
     }
@@ -1820,6 +1870,10 @@ window.UI = (() => {
     // innerHTML rewrite has definitely settled.
     setTimeout(() => {
       if (finished) return;
+      // Skip button — for the slingshot-handoff path we DON'T add a skip:
+      // the kid actively interacts with the slingshot, so the cinematic's
+      // skip button is replaced by the slingshot's own pull-and-release.
+      if (useHandoff) return;
       const skipBtn = document.createElement("button");
       skipBtn.className = "boss-anim-skip";
       skipBtn.innerHTML = "スキップ ▶▶";
@@ -1827,6 +1881,108 @@ window.UI = (() => {
       // Use the project's tap helper so iOS pointer/click are handled.
       tap(skipBtn, finish);
     }, T.charge + 80);
+  }
+
+  // -------- PvP MONSTER ATTACK (cinematic + slingshot integration) --------
+  // Combined flow that's specific to monster-vs-monster:
+  //   1. Run the boss-attack cinematic through the burst stage (warning →
+  //      aura/particle charge → hold+flash → emoji burst at center)
+  //   2. Hand off to a slingshot loaded with the attack emoji
+  //   3. Kid drags + releases — fires the attack-emoji at the opponent
+  //   4. On slingshot impact, run the cinematic's bang stage (per-miss
+  //      type or hit) followed by the reveal stage
+  //
+  // Fizzle short-circuits before the slingshot opens — the boss couldn't
+  // muster the attack at all. The standard cinematic fizzle puff + reveal
+  // plays via the non-handoff path of showBossAttackAnim.
+  function showMonsterPvpAttack(attacker, attack, opponent, partName, dmg, missed, missReason, onDone, opts) {
+    opts = opts || {};
+    const isFizzle = missed && missReason === "fizzle";
+    showBossAttackAnim(
+      attacker, attack, partName, dmg, missed,
+      onDone,
+      missReason,
+      {
+        byPlayer: true,
+        attackerName: opts.attackerName,
+        typeLabel: opts.typeLabel,
+        // Fizzle skips the slingshot — the cinematic plays its own sputter
+        // + reveal directly via the non-handoff path. Only non-fizzle PvP
+        // attacks hand off to the slingshot integration.
+        onBurstReady: isFizzle ? undefined : ({ overlay, burst, emoji, runBangStage, runRevealStage, finish }) => {
+          // Promote the burst emoji to a fixed-position element on body so
+          // it survives the cinematic overlay's opacity fade and we can
+          // animate it to ANY screen coordinate (slingshot pouch).
+          if (burst) {
+            const rect = burst.getBoundingClientRect();
+            burst.style.position = "fixed";
+            burst.style.left = (rect.left + rect.width/2) + "px";
+            burst.style.top = (rect.top + rect.height/2) + "px";
+            burst.style.zIndex = "1502";
+            document.body.appendChild(burst);
+          }
+
+          // Fade the cinematic overlay underneath while the kid plays the
+          // slingshot. Restored to opacity 1 at slingshot impact so the
+          // bang/reveal stages are visible.
+          overlay.style.transition = "opacity 0.4s ease";
+          overlay.style.opacity = "0";
+
+          showSlingshot(
+            opponent,
+            partName,
+            // onConnect — fires at slingshot impact (~600ms after release).
+            // Restore the cinematic and play out bang+reveal.
+            () => {
+              overlay.style.opacity = "1";
+              runBangStage();
+              setTimeout(() => runRevealStage(), 550);
+              // Hold the reveal for ~2.4s before tearing down the cinematic.
+              setTimeout(() => finish(), 2900);
+            },
+            // onFire — fires at slingshot modal close. Cinematic teardown
+            // is handled by the finish() call queued in onConnect; nothing
+            // else to do here.
+            null,
+            {
+              projectile: emoji,
+              pouchEmoji: emoji,
+              skipTaunt: true,
+              // For misses, suppress the slingshot's default 💥 so the
+              // cinematic's per-miss visual (shield/runner/sparkle) reads
+              // cleanly without a competing standard explosion.
+              suppressDefaultBang: missed && missReason !== "shield",
+            }
+          );
+
+          // Animate the burst emoji from screen center into the slingshot
+          // pouch. Two requestAnimationFrames so the slingshot has actually
+          // rendered and we can read pouch geometry. Falls back gracefully
+          // if the pouch can't be located.
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const pouchEl = document.querySelector(".sling-modal #pouch-g");
+              if (!pouchEl || !burst) return;
+              const r = pouchEl.getBoundingClientRect();
+              const tx = r.left + r.width/2;
+              const ty = r.top + r.height/2;
+              const cx = parseFloat(burst.style.left) || (window.innerWidth/2);
+              const cy = parseFloat(burst.style.top)  || (window.innerHeight/2);
+              burst.animate(
+                [
+                  { transform: "translate(-50%,-50%) scale(1.8) rotate(0)",
+                    left: cx + "px", top: cy + "px", opacity: 1 },
+                  { transform: "translate(-50%,-50%) scale(0.4) rotate(360deg)",
+                    left: tx + "px", top: ty + "px", opacity: 0 }
+                ],
+                { duration: 520, fill: "forwards", easing: "cubic-bezier(.55,.05,.85,.4)" }
+              );
+              setTimeout(() => { try { burst.remove(); } catch(_){} }, 540);
+            });
+          });
+        }
+      }
+    );
   }
 
   // -------- RARE EVENT HYPE INTRO --------
@@ -3948,7 +4104,7 @@ window.UI = (() => {
            confirmModal,
            renderFairyEvent, renderBombEvent, renderThiefEvent,
            renderRushEvent, renderGamblerEvent, renderJankenEvent, renderNinjaEvent,
-           renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim,
+           renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim, showMonsterPvpAttack,
            renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
            showMatchTitleCard, renderBossPickerMap, showCardPlay, showKillingBlow,
            showRoundIntro, showRageIntro, showPhase2Intro, showKO, showFightStinger, spawnConfetti,
