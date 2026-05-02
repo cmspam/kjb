@@ -902,6 +902,24 @@ window.Monsters = (() => {
     // multiplier so the formula stays in one place.
     boss._shinyDmgMult = 1.3;
     boss._shinyUltThreshold = 2;
+    // Apply alternate-language voiced lines from the shiny locale overrides.
+    // Voice path lookup uses `${boss.id}_shiny/<hash>.opus` at runtime
+    // (audio.js / playBossLine consults boss.shiny to switch directories).
+    const ov = (window.I18N && window.I18N.shinyOverrides && window.I18N.shinyOverrides[boss.id]) || null;
+    if (ov) {
+      if (ov.catchphrase) boss.catchphrase = ov.catchphrase;
+      if (Array.isArray(ov.attacks) && ov.attacks.length === boss.attacks.length) {
+        // Preserve original attack order so game.js attack-type lookups still
+        // line up; just swap names + phrases.
+        boss.attacks = boss.attacks.map((a, i) => Object.assign({}, a, {
+          name: ov.attacks[i].name || a.name,
+          phrases: ov.attacks[i].phrases || a.phrases,
+          type: a.type, // keep original type (drives charge/impact FX color)
+        }));
+      }
+      if (Array.isArray(ov.hits)) boss.hits = ov.hits;
+      if (ov.taunts) boss.taunts = Object.assign({}, boss.taunts || {}, ov.taunts);
+    }
     return boss;
   }
 

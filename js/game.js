@@ -233,12 +233,13 @@ window.Game = (() => {
       // more replay value). ?shiny=1 forces shiny on; ?shiny=0 forces off
       // so we can test both paths during dev. Feature-flagged behind
       // SHINIES_ENABLED until the audio/translations land.
-      const SHINIES_ENABLED = false;
+      const SHINIES_ENABLED = true;
       const shinyParam = devParams().get("shiny");
       const forceShiny = shinyParam === "1";
       const forceNoShiny = shinyParam === "0";
       function maybeShiny(boss) {
         if (!boss) return boss;
+        if (SND && SND.clearShiny) SND.clearShiny();  // start clean each match
         if (forceNoShiny) return boss;
         if (!forceShiny && !SHINIES_ENABLED) return boss;
         let chance = 0;
@@ -248,6 +249,7 @@ window.Game = (() => {
         if (Math.random() < chance) {
           Monsters.applyShiny(boss);
           if (Progress.recordShinyEncounter) Progress.recordShinyEncounter(boss.id);
+          if (SND && SND.markShiny) SND.markShiny(boss.id, true);
         }
         return boss;
       }

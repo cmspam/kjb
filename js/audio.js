@@ -371,7 +371,18 @@ window.SND = (() => {
   // Track the most recent voice line so a fast-following call can interrupt the
   // previous one (we don't want overlapping bosses talking over themselves).
   let _currentVoice = null;
-  function playBossLine(bossId, text) {
+  // Bosses currently in shiny mode for this session. Game.js calls
+  // SND.markShiny(bossId) when entering a shiny fight; playBossLine
+  // checks the set so all 16 call sites stay unchanged.
+  const _shinyIds = new Set();
+  function markShiny(bossId, isShiny) {
+    if (!bossId) return;
+    if (isShiny) _shinyIds.add(bossId);
+    else _shinyIds.delete(bossId);
+  }
+  function clearShiny() { _shinyIds.clear(); }
+
+  function playBossLine(bossId, text, opts) {
     if (muted) return null;
     if (!bossId || !text) return null;
     const cleaned = stripFurigana(String(text)).replace(/\s+/g, ' ').trim();
@@ -379,7 +390,13 @@ window.SND = (() => {
     // Stop any line currently playing on the same channel
     try { if (_currentVoice && !_currentVoice.paused) _currentVoice.pause(); } catch(_){}
     const hash = djb2Hash(cleaned);
-    const url = `assets/voices/${encodeURIComponent(bossId)}/${hash}.opus`;
+    // Shiny bosses pull from a parallel voice directory (<bossId>_shiny/)
+    // rendered with Edge TTS in the alternate language. If the shiny opus
+    // is missing for this hash, the audio element 404s and the catch
+    // handler stays silent — same graceful fallback as normal-boss misses.
+    const isShiny = (opts && opts.shiny) || _shinyIds.has(bossId);
+    const dir = isShiny ? `${bossId}_shiny` : bossId;
+    const url = `assets/voices/${encodeURIComponent(dir)}/${hash}.opus`;
     const a = new Audio(url);
     a.preload = "auto";
     a.volume = 0.95;
@@ -974,6 +991,6 @@ window.SND = (() => {
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
            getThemes, setThemes, getSpellMode, setSpellMode, getA11y, setA11y,
            playTheme, playThemeSnippet, stopTheme, duckTheme, isThemePlaying, playSiren,
-           playBossLine, stopBossVoice,
+           playBossLine, stopBossVoice, markShiny, clearShiny,
            isSpeechSupported, recognizeOnce };
 })();
