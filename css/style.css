@@ -2632,6 +2632,9 @@ rt {
     rgba(120, 70, 0, 0.0) 100%);
   animation: shiny-tx-flash 1.4s cubic-bezier(.18,.89,.32,1.28) forwards;
 }
+.shiny-transform-overlay.mini {
+  animation-duration: 0.9s;
+}
 @keyframes shiny-tx-flash {
   0%   { background: radial-gradient(circle at center, rgba(255,240,160,0) 0%, rgba(255,220,90,0) 30%, rgba(255,200,50,0) 60%, rgba(120,70,0,0) 100%); }
   18%  { background: radial-gradient(circle at center, rgba(255,255,255,1) 0%, rgba(255,240,140,0.95) 25%, rgba(255,200,60,0.85) 55%, rgba(120,70,0,0.7) 100%); }
@@ -2647,6 +2650,11 @@ rt {
   pointer-events: none;
   filter: drop-shadow(0 0 40px #ffe85a) drop-shadow(0 0 18px #fff);
   animation: shiny-tx-bolt 1.4s cubic-bezier(.18,.89,.32,1.28) forwards;
+}
+.shiny-transform-bolt.mini {
+  font-size: 110px;
+  animation-duration: 0.9s;
+  filter: drop-shadow(0 0 24px #ffe85a) drop-shadow(0 0 10px #fff);
 }
 @keyframes shiny-tx-bolt {
   0%   { transform: translate(-50%, -50%) scale(0) rotate(-30deg); opacity: 0; }

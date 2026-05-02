@@ -1063,6 +1063,7 @@ window.UI = (() => {
         <div id="mp-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;"></div>
       </div>`));
     const grid = $("mp-grid");
+    let pickLocked = false;  // shared across cards — prevents double-pick during cinematic
     factories.forEach((factory) => {
       const sample = factory();
       const taken = usedIds.includes(sample.id);
@@ -1071,7 +1072,7 @@ window.UI = (() => {
       const wrap = el(`
         <div class="mp-card-wrap" style="position:relative; display:flex;">
           <button class="part-btn" style="padding:8px;${taken?'opacity:.35;':''} width:100%;">
-            <div style="height:140px;">${Monsters.renderBossSVG(sample)}</div>
+            <div class="mp-card-svg" style="height:140px;">${Monsters.renderBossSVG(sample)}</div>
             <div class="pn" style="font-size:14px;color:var(--accent);">${escapeHTML(sample.name_jp)}</div>
             ${taken ? `<div class="pe" style="color:#aaa;">えらばれた</div>` : ``}
           </button>
@@ -1080,8 +1081,26 @@ window.UI = (() => {
       if (!taken) {
         const mainBtn = wrap.querySelector(".part-btn");
         const shinyBtn = wrap.querySelector("[data-shiny]");
-        tap(mainBtn, () => { SND.sfxPop(); onPick(factory); });
-        if (shinyBtn) tap(shinyBtn, () => { SND.sfxPop(); onPick(factory, { shiny: true }); });
+        tap(mainBtn, () => {
+          if (pickLocked) return;
+          SND.sfxPop();
+          onPick(factory);
+        });
+        if (shinyBtn) {
+          tap(shinyBtn, () => {
+            if (pickLocked) return;
+            pickLocked = true;
+            SND.sfxPop();
+            // Mini transformation cinematic on the chosen card before we
+            // hand off. The kid sees their pick flash gold and palette-swap
+            // to the shiny variant, so the secret-code ✨ feels like it
+            // *did something* instead of silently flagging a hidden bit.
+            const stageEl = wrap.querySelector(".mp-card-svg");
+            showShinyTransform(stageEl, sample, () => {
+              onPick(factory, { shiny: true });
+            }, { mini: true });
+          });
+        }
       }
       grid.appendChild(wrap);
     });
@@ -1383,18 +1402,27 @@ window.UI = (() => {
   // so the kid sees the palette swap snap into place under the flash.
   // Calls onDone after the cinematic finishes (~1.45s) so the caller can
   // reveal banners / play the catchphrase / etc.
-  function showShinyTransform(stageEl, boss, onDone) {
+  //
+  // opts.mini = true  → shorter (900ms), no rays, smaller bolt. Used by the
+  //   PvP secret-code ✨ pick where the kid is *deliberately* picking shiny;
+  //   we want a satisfying flourish, not a full reveal-cinematic.
+  function showShinyTransform(stageEl, boss, onDone, opts) {
+    opts = opts || {};
+    const mini = !!opts.mini;
     if (!stageEl || !boss) { if (onDone) onDone(); return; }
     if (SND && SND.sfxShinyTx) SND.sfxShinyTx();
-    if (SND && SND.duckTheme) SND.duckTheme(1400, 0.28);
-    const rays = document.createElement("div");
-    rays.className = "shiny-transform-rays";
-    document.body.appendChild(rays);
+    if (SND && SND.duckTheme) SND.duckTheme(mini ? 900 : 1400, 0.28);
+    let rays = null;
+    if (!mini) {
+      rays = document.createElement("div");
+      rays.className = "shiny-transform-rays";
+      document.body.appendChild(rays);
+    }
     const overlay = document.createElement("div");
-    overlay.className = "shiny-transform-overlay";
+    overlay.className = "shiny-transform-overlay" + (mini ? " mini" : "");
     document.body.appendChild(overlay);
     const bolt = document.createElement("div");
-    bolt.className = "shiny-transform-bolt";
+    bolt.className = "shiny-transform-bolt" + (mini ? " mini" : "");
     bolt.textContent = "✨";
     document.body.appendChild(bolt);
     stageEl.classList.add("shiny-tx-shake");
@@ -1402,19 +1430,21 @@ window.UI = (() => {
     // variant by toggling the flag for a single render call. Sparkle layer
     // is added inside the stage so the existing setInterval spawner picks
     // it up and starts emitting ✨ continuously after the reveal.
+    const swapAt = mini ? 380 : 630;
+    const total = mini ? 900 : 1450;
     setTimeout(() => {
       const wasShiny = boss.shiny;
       boss.shiny = true;
       stageEl.innerHTML = Monsters.renderBossSVG(boss) + `<div class="shiny-sparkle-layer"></div>`;
       boss.shiny = wasShiny;
-    }, 630);
+    }, swapAt);
     setTimeout(() => {
-      try { rays.remove(); } catch(_) {}
+      try { if (rays) rays.remove(); } catch(_) {}
       try { overlay.remove(); } catch(_) {}
       try { bolt.remove(); } catch(_) {}
       stageEl.classList.remove("shiny-tx-shake");
       if (onDone) onDone();
-    }, 1450);
+    }, total);
   }
 
   // -------- MONSTER ATTACK PICKER (PvP) --------
