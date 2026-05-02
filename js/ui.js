@@ -1366,11 +1366,35 @@ window.UI = (() => {
     // A second pointerdown→drag→release inside that window must not fire
     // a second projectile / call onFire() twice. This flag locks it down.
     let fired = false;
+    // ----- Perfect-release meter (skill-timing layer) -----
+    // Pull range maps to 0..130 (pulledY 310..440). Releasing in the GOOD or
+    // PERFECT band grants bonus damage to the connecting attack:
+    //   pull <  25  → won't fire
+    //   25..59      → "weak"   → no bonus
+    //   60..99      → "good"   → +1 damage, yellow pouch glow
+    //   100..115    → "PERFECT"→ +2 damage + crit visuals, gold sparkle glow
+    //   116..130    → "good"   → +1 damage (overpull is still a clean shot)
+    // The bonus is communicated to the caller via onConnect's argument; the
+    // damage math itself lives game-side so this stays purely visual here.
+    function pullQualityFor(pull) {
+      if (pull < 25)  return { quality: "miss",    bonus: 0 };
+      if (pull < 60)  return { quality: "weak",    bonus: 0 };
+      if (pull < 100) return { quality: "good",    bonus: 1 };
+      if (pull < 116) return { quality: "perfect", bonus: 2 };
+      return { quality: "good", bonus: 1 };
+    }
     function setY(y) {
       pulledY = Math.max(310, Math.min(440, y));
       pouchG.setAttribute("transform", `translate(0, ${pulledY - 310})`);
       bandL.setAttribute("y2", pulledY);
       bandR.setAttribute("y2", pulledY);
+      // Live glow feedback so the kid sees they're approaching the sweet spot.
+      // Reset all zone classes then apply the current one — the CSS shifts the
+      // pouch's drop-shadow / saturation per zone (yellow → gold sparkle).
+      const q = pullQualityFor(pulledY - 310).quality;
+      pouchG.classList.remove("zone-good", "zone-perfect");
+      if (q === "good") pouchG.classList.add("zone-good");
+      else if (q === "perfect") pouchG.classList.add("zone-perfect");
     }
     function svgY(clientY) {
       const r = svg.getBoundingClientRect();
@@ -1411,6 +1435,13 @@ window.UI = (() => {
     function fire() {
       if (fired) return;
       fired = true;
+      // Lock in the release quality at the moment of fire. We pass it to
+      // onConnect at impact time so callers can apply bonus damage. The
+      // visual treatment (gold trail, "PERFECT!" callout, brighter bang)
+      // also keys off this. Capture early because the pouch keyframes
+      // immediately overwrite pulledY visually.
+      const releaseQ = pullQualityFor(pulledY - 310);
+      const isPerfect = releaseQ.quality === "perfect";
       // Slingshot snaps forward (the actual shot mechanic — rock leaves the
       // pouch). The slingshot SVG itself fades to 0 right after via the
       // .firing class on the modal so the camera leaves the slingshot
@@ -1420,6 +1451,21 @@ window.UI = (() => {
       bandL.setAttribute("y2", "260");
       bandR.setAttribute("y2", "260");
       SND.sfxPop();
+      // PERFECT! callout pops up briefly so the kid sees the skill-shot was
+      // recognized. Stays on screen ~700ms — by then the bullet-cam tunnel
+      // has taken over the visual focus.
+      if (isPerfect) {
+        const callout = document.createElement("div");
+        callout.className = "sling-perfect-callout";
+        callout.textContent = "PERFECT！";
+        modal.appendChild(callout);
+        if (SND.sfxCrit) SND.sfxCrit();
+      } else if (releaseQ.quality === "good") {
+        const callout = document.createElement("div");
+        callout.className = "sling-good-callout";
+        callout.textContent = "GOOD！";
+        modal.appendChild(callout);
+      }
       // Bullet-cam phase. Drop the .firing class to:
       //   - shake the modal (handheld camera feel)
       //   - fade out the slingshot SVG and target name
@@ -1427,6 +1473,7 @@ window.UI = (() => {
       modal.classList.add("firing");
       const tunnel = document.createElement("div");
       tunnel.className = "sling-speedlines";
+      if (isPerfect) tunnel.classList.add("perfect");
       modal.appendChild(tunnel);
       // Boss rushes toward the camera on a hard ease-in curve — stays small
       // for most of the 380ms, then SMASHES into the camera at impact.
@@ -1435,8 +1482,10 @@ window.UI = (() => {
       // Foreground projectile — by default the rock; PvP attacks override
       // this to the attack-emoji so the kid is launching the actual attack.
       // Locked at bottom-center, drifts up + tumbles via .sling-proj keyframe.
+      // Perfect release adds a gold trail glow.
       const proj = document.createElement("div");
       proj.className = "sling-proj";
+      if (isPerfect) proj.classList.add("perfect");
       proj.textContent = projectileEmoji;
       modal.appendChild(proj);
       setTimeout(() => {
@@ -1447,14 +1496,18 @@ window.UI = (() => {
         // (shield bounce / escape runner / dodge sparkle) reads cleanly.
         const flash = document.createElement("div");
         flash.className = "sling-impact-flash";
+        if (isPerfect) flash.classList.add("perfect");
         modal.appendChild(flash);
         if (!opts.suppressDefaultBang) {
           const bang = document.createElement("div");
           bang.className = "sling-bang";
-          bang.textContent = "💥";
+          if (isPerfect) bang.classList.add("perfect");
+          bang.textContent = isPerfect ? "✨💥✨" : "💥";
           modal.appendChild(bang);
         }
-        if (typeof onConnect === "function") onConnect();
+        // Pass release quality + bonus through to the caller. Old callers
+        // that don't accept args still work (extra arg is ignored).
+        if (typeof onConnect === "function") onConnect(releaseQ);
         modal.style.transition = "opacity 0.45s ease";
         modal.style.opacity = "0";
       }, 600);

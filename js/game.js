@@ -990,10 +990,24 @@ window.Game = (() => {
     // kid sees the part redraw + dmg-num + part-destroyed cinematic AS
     // the 💥 lands), reactions + state transitions fire at modal close.
     if (SND.getSlingshot && SND.getSlingshot()) {
+      // Perfect-release bonus: the slingshot reports release quality at
+      // bang time. Bonus is added to the visual + applied damage so the
+      // kid sees their skill-shot reflected immediately. Mutable refs so
+      // both onConnect and onFire callbacks see the same final value.
+      let finalDmg = dmg;
+      let releaseBonus = 0;
       UI.showSlingshot(
         S.boss, part.name_jp,
-        () => applyPartHitVisual(p, part, dmg),       // onConnect (bang)
-        () => applyPartHit(p, part, dmg, true)         // onFire (modal close)
+        (releaseQ) => {
+          releaseBonus = (releaseQ && releaseQ.bonus) || 0;
+          finalDmg = dmg + releaseBonus;
+          if (releaseBonus > 0 && S.battleStats) {
+            S.battleStats.perfectShots = (S.battleStats.perfectShots || 0) + (releaseQ.quality === "perfect" ? 1 : 0);
+            S.battleStats.goodShots = (S.battleStats.goodShots || 0) + (releaseQ.quality === "good" ? 1 : 0);
+          }
+          applyPartHitVisual(p, part, finalDmg);
+        },
+        () => applyPartHit(p, part, finalDmg, true)
       );
       return;
     }
