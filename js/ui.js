@@ -1297,6 +1297,13 @@ window.UI = (() => {
   // -------- BOSS INTRO (shown once at game start) --------
   // Backstories use 「漢字[よみ]」 syntax that gets converted to ruby tags so kanji
   // shows the hiragana reading above it. Inserted via innerHTML so the ruby renders.
+  //
+  // SHINY ENCOUNTERS: when boss.shiny is true, the bio first paints in the
+  // *normal* state (ordinary SVG, no banner) for ~1.1s so the kid registers
+  // the boss as ordinary. Then a full-screen gold burst hits, the SVG
+  // shake-flashes white and swaps to its shiny palette mid-flash, the banner
+  // springs in above, and the catchphrase plays — making "you got a shiny!"
+  // a reveal moment instead of just a state on the screen.
   function renderBossIntro(boss, onContinue, onCycle) {
     show("title");
     const s = $("screen-title"); s.innerHTML = "";
@@ -1304,21 +1311,27 @@ window.UI = (() => {
     const weaknessHint = boss.weakness_label
       ? `<div style="background:#3a1a4a; border:2px solid var(--accent); color:var(--accent); border-radius:10px; padding:8px 12px; margin: 10px auto; max-width:520px; font-weight:900;">⚡ よわてん: ${boss.weakness_label} で ×1.5 ダメージ！</div>`
       : "";
-    // Shiny variant: pulsing rainbow banner + warning subtitle so the kid
-    // knows this fight is going to be tougher BEFORE they tap start.
-    const shinyBanner = boss.shiny
-      ? `<div style="text-align:center; margin: 6px auto;">
-           <div class="shiny-warn-banner">✨ シャイニー ✨</div>
-         </div>
-         <div class="shiny-warn-sub" style="text-align:center;">⚠ つよく なってる！きをつけて！</div>`
-      : "";
+    // Render the SVG initially as non-shiny so the transformation has a
+    // visible "before". Toggle the boss.shiny flag temporarily; renderBossSVG
+    // reads it directly to decide whether to wrap in .shiny-boss-svg.<id>.
+    const isShiny = !!boss.shiny;
+    let initialSVG;
+    if (isShiny) {
+      boss.shiny = false;
+      initialSVG = Monsters.renderBossSVG(boss);
+      boss.shiny = true;
+    } else {
+      initialSVG = Monsters.renderBossSVG(boss);
+    }
+    // Banner slot is empty for shiny on first paint — we'll inject it during
+    // the transformation reveal. Non-shiny just gets nothing.
     s.appendChild(el(`
       <div class="center" style="max-width: 720px; margin: 12px auto; padding: 0 12px;">
         <div class="subtle" style="color:var(--accent); letter-spacing:4px;">★ きょうの あいて ★</div>
         <h2 style="margin: 4px 0; color: var(--accent);">${escapeHTML(boss.name_jp)}</h2>
         <div class="subtle" style="font-size: 13px; opacity: .7;">${escapeHTML(boss.name_en||"")}</div>
-        ${shinyBanner}
-        <div class="stage" style="height:280px; max-width:520px; margin: 8px auto;">${Monsters.renderBossSVG(boss)}</div>
+        <div id="intro-shiny-banner-slot"></div>
+        <div class="stage" id="intro-stage" style="height:280px; max-width:520px; margin: 8px auto;">${initialSVG}</div>
         ${weaknessHint}
         <div style="background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow); text-align:left; max-width:520px; margin: 0 auto; line-height: 2.2;">
           <div style="font-size:14px; color:var(--accent); font-weight:900; margin-bottom:6px;">▶ ストーリー</div>
@@ -1332,16 +1345,76 @@ window.UI = (() => {
     // Loop the boss's theme song while the kid reads the backstory. The render
     // is reached as a result of a user tap, so iOS audio gesture is satisfied.
     SND.playTheme(boss.id, { loop: true, volume: 0.5, fadeIn: 600 });
-    // Boss says their catchphrase on entrance. Backstory is read silently
-    // (kid reads at their own pace under the looping theme music) — earlier
-    // attempts to voice a joined backstory paragraph 404'd because the
-    // build pipeline renders backstory lines individually, not as a joined
-    // block.
-    if (boss.catchphrase) SND.playBossLine(boss.id, boss.catchphrase);
-    tap($("intro-go"), () => { SND.stopBossVoice(); SND.stopTheme(400); onContinue(); });
-    if (onCycle) {
-      tap($("intro-cycle"), () => { SND.stopBossVoice(); SND.stopTheme(200); onCycle(); });
+    let introLeft = false;
+    if (isShiny) {
+      // Hold the "ordinary" state for a beat, then run the transformation.
+      // Catchphrase is delayed until after the swap so the alt-language voice
+      // lands on the shiny reveal, not the disguise.
+      setTimeout(() => {
+        if (introLeft) return;  // kid already tapped start/cycle — abort
+        const stageEl = $("intro-stage");
+        const slot = $("intro-shiny-banner-slot");
+        showShinyTransform(stageEl, boss, () => {
+          if (introLeft) return;
+          if (slot) {
+            slot.innerHTML = `
+              <div style="text-align:center; margin: 6px auto;">
+                <div class="shiny-warn-banner shiny-banner-reveal">✨ シャイニー ✨</div>
+              </div>
+              <div class="shiny-warn-sub shiny-banner-reveal" style="text-align:center; animation-delay:.15s;">⚠ つよく なってる！きをつけて！</div>`;
+          }
+          if (boss.catchphrase) SND.playBossLine(boss.id, boss.catchphrase);
+        });
+      }, 1100);
+    } else {
+      // Non-shiny: catchphrase plays immediately as before.
+      if (boss.catchphrase) SND.playBossLine(boss.id, boss.catchphrase);
     }
+    tap($("intro-go"), () => { introLeft = true; SND.stopBossVoice(); SND.stopTheme(400); onContinue(); });
+    if (onCycle) {
+      tap($("intro-cycle"), () => { introLeft = true; SND.stopBossVoice(); SND.stopTheme(200); onCycle(); });
+    }
+  }
+
+  // -------- SHINY TRANSFORMATION CINEMATIC --------
+  // Full-screen gold burst + central ✨ bolt + radial rays, with the boss
+  // SVG inside `stageEl` shaking and white-flashing. At the visual peak
+  // (~630ms) the SVG's innerHTML is replaced with the boss's shiny render
+  // so the kid sees the palette swap snap into place under the flash.
+  // Calls onDone after the cinematic finishes (~1.45s) so the caller can
+  // reveal banners / play the catchphrase / etc.
+  function showShinyTransform(stageEl, boss, onDone) {
+    if (!stageEl || !boss) { if (onDone) onDone(); return; }
+    if (SND && SND.sfxShinyTx) SND.sfxShinyTx();
+    if (SND && SND.duckTheme) SND.duckTheme(1400, 0.28);
+    const rays = document.createElement("div");
+    rays.className = "shiny-transform-rays";
+    document.body.appendChild(rays);
+    const overlay = document.createElement("div");
+    overlay.className = "shiny-transform-overlay";
+    document.body.appendChild(overlay);
+    const bolt = document.createElement("div");
+    bolt.className = "shiny-transform-bolt";
+    bolt.textContent = "✨";
+    document.body.appendChild(bolt);
+    stageEl.classList.add("shiny-tx-shake");
+    // Mid-flash SVG swap: the existing render is non-shiny; force the shiny
+    // variant by toggling the flag for a single render call. Sparkle layer
+    // is added inside the stage so the existing setInterval spawner picks
+    // it up and starts emitting ✨ continuously after the reveal.
+    setTimeout(() => {
+      const wasShiny = boss.shiny;
+      boss.shiny = true;
+      stageEl.innerHTML = Monsters.renderBossSVG(boss) + `<div class="shiny-sparkle-layer"></div>`;
+      boss.shiny = wasShiny;
+    }, 630);
+    setTimeout(() => {
+      try { rays.remove(); } catch(_) {}
+      try { overlay.remove(); } catch(_) {}
+      try { bolt.remove(); } catch(_) {}
+      stageEl.classList.remove("shiny-tx-shake");
+      if (onDone) onDone();
+    }, 1450);
   }
 
   // -------- MONSTER ATTACK PICKER (PvP) --------

@@ -187,6 +187,14 @@ window.SND = (() => {
   // Crit-hit sting: a quick rising chord that lands hard. Hooked from
   // applyDamageTier when tier === "crit" for satisfying big-damage feedback.
   function sfxCrit()    { tone(660,.04,"square",.22); setTimeout(()=>tone(880,.05,"square",.24),40); setTimeout(()=>tone(1320,.1,"sawtooth",.28),100); setTimeout(()=>tone(1760,.18,"triangle",.3),200); }
+  // Shiny-transformation sting: ascending arp + a final shimmer chord. Used
+  // by ui.showShinyTransform during the gold-burst cinematic on the bio
+  // screen. Long enough (~1.4s) to span the visual peak.
+  function sfxShinyTx() {
+    [523, 659, 784, 1047, 1319].forEach((f,i)=>setTimeout(()=>tone(f,.16,"triangle",.22), i*90));
+    setTimeout(()=>{ tone(1568,.35,"triangle",.26); tone(1976,.35,"sine",.18); tone(2349,.45,"sine",.14); }, 520);
+    setTimeout(()=>tone(2637,.6,"sine",.12), 880);
+  }
   // Subtle confirm tone for "I committed to an action" — distinct from
   // sfxPop's menu-tap timbre. Replaces sfxPop on wager-pick / target-pick /
   // attack-fire so kids hear an action complete vs a UI navigation.
@@ -1001,7 +1009,7 @@ window.SND = (() => {
   }
 
   return { speak, unlock, sfxCorrect, sfxWrong, sfxHit, sfxCard, sfxBoss, sfxVictory, sfxDefeat,
-           sfxPop, sfxFart, sfxBreak, sfxCrit, sfxConfirm, sfxNav, sfxSelect, crowdCheer,
+           sfxPop, sfxFart, sfxBreak, sfxCrit, sfxShinyTx, sfxConfirm, sfxNav, sfxSelect, crowdCheer,
            setMuted, isMuted, setVoice, listVoices,
            getSlingshot, setSlingshot, getBossAnim, setBossAnim,
            getThemes, setThemes, getSpellMode, setSpellMode, getA11y, setA11y,

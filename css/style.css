@@ -2616,6 +2616,109 @@ rt {
   margin-bottom: 8px;
 }
 
+/* Shiny transformation cinematic — triggered on the boss-intro screen
+ * when a shiny encounter rolls. Bio shows in the normal (non-shiny)
+ * state for a beat so the kid registers the boss as "ordinary," then
+ * the gold overlay slams in, the SVG flashes white, and the SVG
+ * swaps to the shiny variant under a sparkle burst. ~1.6s total. */
+.shiny-transform-overlay {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 950;
+  background: radial-gradient(circle at center,
+    rgba(255, 240, 160, 0) 0%,
+    rgba(255, 220, 90, 0.0) 30%,
+    rgba(255, 200, 50, 0.0) 60%,
+    rgba(120, 70, 0, 0.0) 100%);
+  animation: shiny-tx-flash 1.4s cubic-bezier(.18,.89,.32,1.28) forwards;
+}
+@keyframes shiny-tx-flash {
+  0%   { background: radial-gradient(circle at center, rgba(255,240,160,0) 0%, rgba(255,220,90,0) 30%, rgba(255,200,50,0) 60%, rgba(120,70,0,0) 100%); }
+  18%  { background: radial-gradient(circle at center, rgba(255,255,255,1) 0%, rgba(255,240,140,0.95) 25%, rgba(255,200,60,0.85) 55%, rgba(120,70,0,0.7) 100%); }
+  45%  { background: radial-gradient(circle at center, rgba(255,250,200,0.9) 0%, rgba(255,220,90,0.75) 30%, rgba(220,150,30,0.55) 60%, rgba(60,30,0,0.5) 100%); }
+  100% { background: radial-gradient(circle at center, rgba(255,250,200,0) 0%, rgba(255,220,90,0) 30%, rgba(220,150,30,0) 60%, rgba(60,30,0,0) 100%); }
+}
+.shiny-transform-bolt {
+  position: fixed;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 180px;
+  z-index: 952;
+  pointer-events: none;
+  filter: drop-shadow(0 0 40px #ffe85a) drop-shadow(0 0 18px #fff);
+  animation: shiny-tx-bolt 1.4s cubic-bezier(.18,.89,.32,1.28) forwards;
+}
+@keyframes shiny-tx-bolt {
+  0%   { transform: translate(-50%, -50%) scale(0) rotate(-30deg); opacity: 0; }
+  20%  { transform: translate(-50%, -50%) scale(1.6) rotate(15deg);  opacity: 1; }
+  55%  { transform: translate(-50%, -50%) scale(1.2) rotate(-5deg);  opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2.6) rotate(20deg);  opacity: 0; }
+}
+.shiny-transform-rays {
+  position: fixed;
+  left: 50%; top: 50%;
+  width: 200vmax; height: 200vmax;
+  transform: translate(-50%, -50%) rotate(0);
+  z-index: 949;
+  pointer-events: none;
+  background: conic-gradient(
+    rgba(255, 230, 120, 0) 0deg,
+    rgba(255, 230, 120, 0.55) 6deg,
+    rgba(255, 230, 120, 0) 12deg,
+    rgba(255, 230, 120, 0) 30deg,
+    rgba(255, 230, 120, 0.55) 36deg,
+    rgba(255, 230, 120, 0) 42deg,
+    rgba(255, 230, 120, 0) 60deg,
+    rgba(255, 230, 120, 0.55) 66deg,
+    rgba(255, 230, 120, 0) 72deg,
+    rgba(255, 230, 120, 0) 90deg,
+    rgba(255, 230, 120, 0.55) 96deg,
+    rgba(255, 230, 120, 0) 102deg,
+    rgba(255, 230, 120, 0) 120deg,
+    rgba(255, 230, 120, 0.55) 126deg,
+    rgba(255, 230, 120, 0) 132deg,
+    rgba(255, 230, 120, 0) 360deg
+  );
+  opacity: 0;
+  animation: shiny-tx-rays 1.4s linear forwards;
+  mix-blend-mode: screen;
+}
+@keyframes shiny-tx-rays {
+  0%   { opacity: 0; transform: translate(-50%, -50%) rotate(0); }
+  18%  { opacity: 0.85; }
+  55%  { opacity: 0.5; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(120deg); }
+}
+/* Stage SVG behavior during transform — shake, then white-flash, then
+ * the swap is performed by JS at ~45% of the cinematic. */
+.shiny-tx-shake {
+  animation: shiny-tx-shake 1.4s cubic-bezier(.36,.07,.19,.97) forwards;
+}
+@keyframes shiny-tx-shake {
+  0%   { transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); }
+  10%  { transform: translate3d(-8px, 4px, 0) scale(1.02); filter: brightness(1.4); }
+  20%  { transform: translate3d(9px, -5px, 0) scale(1.04); filter: brightness(2.5); }
+  30%  { transform: translate3d(-10px, 3px, 0) scale(1.06); filter: brightness(4); }
+  40%  { transform: translate3d(8px, -6px, 0) scale(1.08); filter: brightness(6) saturate(0); }
+  45%  { transform: translate3d(0, 0, 0) scale(1.12); filter: brightness(8) saturate(0); }
+  55%  { transform: translate3d(-6px, 4px, 0) scale(1.08); filter: brightness(2.5) saturate(1.4); }
+  70%  { transform: translate3d(5px, -3px, 0) scale(1.04); filter: brightness(1.4) saturate(1.2); }
+  85%  { transform: translate3d(-2px, 1px, 0) scale(1.02); filter: brightness(1.1) saturate(1.1); }
+  100% { transform: translate3d(0, 0, 0) scale(1); filter: brightness(1) saturate(1); }
+}
+/* Banner reveal-pop — swaps in after the transform peaks, springing into
+ * position above the (now-shiny) boss SVG. */
+.shiny-banner-reveal {
+  animation: shiny-banner-reveal 0.7s cubic-bezier(.18,.89,.32,1.28) forwards;
+  opacity: 0;
+  transform: scale(0);
+}
+@keyframes shiny-banner-reveal {
+  0%   { opacity: 0; transform: scale(0) rotate(-10deg); }
+  60%  { opacity: 1; transform: scale(1.2) rotate(3deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
 /* Boss-picker shiny refight button — clickable ✨ overlay on the tile of
  * any boss the kid has encountered in shiny form. Tap → guaranteed
  * shiny fight (skips the 10/20% random roll). Defeated shinies get the
