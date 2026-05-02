@@ -1871,19 +1871,50 @@ window.UI = (() => {
 
     // ----- Stage 2: emoji LAUNCH from boss center -----
     // Skipped for fizzle — the attack never materialized.
+    // Heavily layered FX: a shockwave ring pulses outward at burst peak,
+    // a type-colored aura glows behind the emoji, 4 orbiters (✨/⚡)
+    // rotate around it, and the emoji itself starts a hover-breathe
+    // animation after the launch keyframe completes. Reads as "this
+    // thing is dripping with energy", not just "an emoji at center".
     setTimeout(() => {
       if (isFizzle) return;
+      // Shockwave ring — fires once, expands fast, fades.
+      const shock = document.createElement("div");
+      shock.className = "boss-anim-emoji-shock";
+      shock.style.setProperty("--anim-color", telegraphColor);
+      overlay.appendChild(shock);
+      // Aura glow behind the emoji.
+      const aura = document.createElement("div");
+      aura.className = "boss-anim-emoji-aura";
+      if (isUltimate) aura.classList.add("ultimate");
+      aura.style.setProperty("--anim-color", telegraphColor);
+      overlay.appendChild(aura);
+      // The emoji itself — kept on the same z-index so the orbit container
+      // visually wraps around it.
       const burst = document.createElement("div");
       burst.className = "boss-anim-emoji";
       burst.textContent = emoji;
+      burst.style.setProperty("--anim-color", telegraphColor);
       overlay.appendChild(burst);
-      burst.animate(
+      // Orbiters rotating around the emoji. Default 4 sparks; ultimate
+      // gets 6 for denser intensity.
+      const orbit = document.createElement("div");
+      orbit.className = "boss-anim-emoji-orbit";
+      if (isUltimate) orbit.classList.add("ultimate");
+      orbit.style.setProperty("--anim-color", telegraphColor);
+      const orbiterIcons = isUltimate ? ["✨","⚡","✨","⚡","💫","🌟"] : ["✨","⚡","✨","⚡"];
+      orbit.innerHTML = orbiterIcons.map(c => `<div class="orbiter">${c}</div>`).join("");
+      overlay.appendChild(orbit);
+      // Launch keyframe — once it completes, swap to the breathing hover
+      // animation so the emoji feels alive while it hangs in the air.
+      const anim = burst.animate(
         [
-          { transform: "translate(-50%,-50%) scale(0) rotate(-30deg)", opacity: 1, filter: "brightness(2)" },
-          { transform: "translate(-50%,-50%) scale(1.8) rotate(15deg)", opacity: 1, filter: "brightness(1)" }
+          { transform: "translate(-50%,-50%) scale(0) rotate(-30deg)", opacity: 1, filter: "brightness(2.5) drop-shadow(0 0 24px " + telegraphColor + ")" },
+          { transform: "translate(-50%,-50%) scale(1.8) rotate(15deg)", opacity: 1, filter: "brightness(1) drop-shadow(0 0 14px " + telegraphColor + ")" }
         ],
         { duration: 500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
       );
+      anim.onfinish = () => burst.classList.add("hovering");
     }, T.burst);
 
     // ----- Stage 3 (extracted as a helper) -----
@@ -1894,6 +1925,19 @@ window.UI = (() => {
     // Fizzle: handled at Stage 1.5; this is a no-op
     function runBangStage() {
       if (isFizzle) return;
+      // Tear down the projectile FX (aura + orbit) so the impact frame reads
+      // clean. The shockwave already finished its 700ms one-shot; aura and
+      // orbit are continuous and would otherwise glow over the bang/per-miss
+      // visuals. Quick 250ms opacity fade on the aura so the transition isn't
+      // jarring.
+      const projAura = overlay.querySelector(".boss-anim-emoji-aura");
+      const projOrbit = overlay.querySelector(".boss-anim-emoji-orbit");
+      if (projOrbit) projOrbit.remove();
+      if (projAura) {
+        projAura.style.transition = "opacity 0.25s ease-out";
+        projAura.style.opacity = "0";
+        setTimeout(() => { try { projAura.remove(); } catch(_){} }, 280);
+      }
       const burst = overlay.querySelector(".boss-anim-emoji");
       if (missed) {
         if (missReason === "shield") {
