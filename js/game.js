@@ -135,6 +135,11 @@ window.Game = (() => {
       discard: [],
       log: [],
       pendingDamageBonus: 0,
+      // ID of the most recently played damage-bonus / double-next card. Read by
+      // the slingshot caller so the loaded projectile is the card's emoji
+      // (👊 mega_punch, 💨 fart_bomb, 🔥 combo) instead of the generic 🪨.
+      // Cleared after the attack alongside pendingDamageBonus.
+      pendingCardId: null,
       pendingTeamShield: false,
       hintForCurrentQ: false,
       rerolledThisQ: false,
@@ -321,6 +326,7 @@ window.Game = (() => {
     S.players.forEach(p => { p.shield = false; p.skipBossAtk = false; p.attackPower = 0; });
     S.currentIdx = 0;
     S.pendingDamageBonus = 0;
+    S.pendingCardId = null;
     S.doubleNextAttack = false;
     // Jinro stealth: hide everyone's HP / exact part HP during the round so
     // teammates can't decode whether a teammate-tap was a buff or a sabotage
@@ -363,6 +369,7 @@ window.Game = (() => {
     const p = S.players[S.currentIdx];
     p.attackPower = 0;
     S.pendingDamageBonus = 0;
+    S.pendingCardId = null;
     S.hintForCurrentQ = false;
     S.rerolledThisQ = false;
     S.currentQuestion = null;
@@ -884,6 +891,7 @@ window.Game = (() => {
         UI.toast(`${p.name} → ${opponent.name} に ${plan.totalDmg} ダメージ！${def.label?` (${def.label})`:''}`, 1800);
         p.attackPower = 0;
         S.pendingDamageBonus = 0;
+    S.pendingCardId = null;
         const oppCore = opMon.parts.find(x => x.effect === "win");
         if (oppCore && oppCore.hp <= 0) {
           opponent.dead = true;
@@ -968,6 +976,7 @@ window.Game = (() => {
       UI.toast(`🌀 ${t.name} に なにか おこった！`, 1700);
       p.attackPower = 0;
       S.pendingDamageBonus = 0;
+    S.pendingCardId = null;
       if (S.players.every(x => x.dead)) return doDefeat();
       setTimeout(() => endTurn(), 1400);
       return;
@@ -996,6 +1005,17 @@ window.Game = (() => {
       // both onConnect and onFire callbacks see the same final value.
       let finalDmg = dmg;
       let releaseBonus = 0;
+      // Card-specific projectile: if the kid played a damage-bonus or
+      // combo card before this attack, load that card's icon as the
+      // slingshot ball so the shot reads as the card-themed move.
+      const projOpts = {};
+      if (S.pendingCardId) {
+        const cardDef = Cards.byId && Cards.byId(S.pendingCardId);
+        if (cardDef && cardDef.icon) {
+          projOpts.projectile = cardDef.icon;
+          projOpts.pouchEmoji = cardDef.icon;
+        }
+      }
       UI.showSlingshot(
         S.boss, part.name_jp,
         (releaseQ) => {
@@ -1007,7 +1027,8 @@ window.Game = (() => {
           }
           applyPartHitVisual(p, part, finalDmg);
         },
-        () => applyPartHit(p, part, finalDmg, true)
+        () => applyPartHit(p, part, finalDmg, true),
+        projOpts
       );
       return;
     }
@@ -1087,6 +1108,7 @@ window.Game = (() => {
     UI.toast(JP.hit_part(p.name, part.name_jp, dmg), 1800);
     p.attackPower = 0;
     S.pendingDamageBonus = 0;
+    S.pendingCardId = null;
     p._attackBlockedReason = "attacked";
     S.log.push(`${p.name} → ${part.name_jp}: ${dmg} ダメージ！`);
     if (part.hp === 0) {
@@ -1147,6 +1169,7 @@ window.Game = (() => {
     // cleared at end-of-turn, scoped to the activating turn only.
     S.doubleNextAttack = false;
     S.pendingDamageBonus = 0;
+    S.pendingCardId = null;
     S.currentIdx++;
     nextTurn();
   }
@@ -1335,6 +1358,10 @@ window.Game = (() => {
     const ef = card.effect, C = Cards.C;
     if (ef.type === C.DMG_BONUS) {
       S.pendingDamageBonus += ef.v;
+      // Remember which card buffed the next attack so the slingshot can
+      // load that card's emoji as the projectile (👊 / 💨 / etc.). Stacked
+      // bonuses keep the most-recent card id (visually that card "wins").
+      S.pendingCardId = card.id;
       UI.toast(`つぎの こうげきに +${ef.v}！`);
     } else if (ef.type === C.HEAL_TARGET) {
       if (S.mode === "pvp") healMostDamagedPart(p, ef.v);
@@ -1359,6 +1386,10 @@ window.Game = (() => {
       UI.toast(`カードを ${ef.v}まい ひいた`);
     } else if (ef.type === C.DOUBLE_NEXT) {
       S.doubleNextAttack = true;
+      // Combo card also drives the projectile emoji on the buffed attack
+      // — only override pendingCardId if no DMG_BONUS card was already
+      // queued (that one wins for projectile identity).
+      if (!S.pendingCardId) S.pendingCardId = card.id;
       UI.toast(`つぎの こうげき ×2！`);
     } else if (ef.type === C.HIT_RANDOM_2) {
       // PvP: hit a random opponent's parts. Hero: hit boss parts.
