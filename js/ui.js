@@ -1366,24 +1366,25 @@ window.UI = (() => {
         <line x1="200" y1="290" x2="280" y2="190" stroke="#7a4520" stroke-width="20" stroke-linecap="round"/>
         <line x1="120" y1="190" x2="200" y2="310" stroke="#222" stroke-width="6" id="band-l" stroke-linecap="round"/>
         <line x1="280" y1="190" x2="200" y2="310" stroke="#222" stroke-width="6" id="band-r" stroke-linecap="round"/>
-        <!-- Pull-strength meter: vertical zone bars on the right side of the
-             slingshot frame so the kid SEES where the perfect sweet spot is.
-             Bands map directly to pullQualityFor() ranges:
-                pull 0–24   → red  (won't fire)
-                pull 25–59  → gray (weak)
-                pull 60–89  → yellow (good +1)
-                pull 90–119 → gold (PERFECT +2)
-                pull 120–130→ yellow (good +1)
-             A triangular marker tracks the current pull position. -->
-        <g id="meter" opacity="0.85">
-          <rect x="335" y="310" width="22" height="25"  fill="#aa1f1f" stroke="#000" stroke-width="1.5"/>
-          <rect x="335" y="335" width="22" height="35"  fill="#5a5a5a" stroke="#000" stroke-width="1.5"/>
-          <rect x="335" y="370" width="22" height="30"  fill="#e8c844" stroke="#000" stroke-width="1.5"/>
-          <rect x="335" y="400" width="22" height="30"  fill="#ffe85a" stroke="#000" stroke-width="1.5">
-            <animate attributeName="opacity" values="0.8;1;0.8" dur="1.1s" repeatCount="indefinite"/>
+        <!-- Timing meter: a vertical track on the right of the slingshot.
+             A static red won't-fire band sits at the top. The GOLD perfect
+             band #meter-gold OSCILLATES up and down (sin wave, ~1.2s
+             period) — release when the pouch marker overlaps the gold
+             band's CURRENT position. This is real timing, not pull-
+             strength: the kid has to read the moving target and time
+             their release. The triangular marker tracks live pull. -->
+        <g id="meter">
+          <!-- Track background. -->
+          <rect x="335" y="310" width="22" height="130" fill="#1a0d2e" stroke="#000" stroke-width="1.5" rx="4"/>
+          <!-- Static won't-fire band at the top (pull < 25). -->
+          <rect x="335" y="310" width="22" height="25"  fill="#aa1f1f" stroke="#000" stroke-width="1.5" rx="3"/>
+          <!-- Moving "good" halo (yellow glow extending 17 units around gold). -->
+          <rect id="meter-good" x="335" y="383" width="22" height="64" fill="#e8c844" opacity="0.55" stroke="#000" stroke-width="1.5" rx="3"/>
+          <!-- Moving GOLD perfect band (30 units tall, oscillates). -->
+          <rect id="meter-gold" x="335" y="400" width="22" height="30" fill="#ffe85a" stroke="#000" stroke-width="2" rx="3">
+            <animate attributeName="opacity" values="0.85;1;0.85" dur="0.8s" repeatCount="indefinite"/>
           </rect>
-          <rect x="335" y="430" width="22" height="10"  fill="#e8c844" stroke="#000" stroke-width="1.5"/>
-          <text x="346" y="418" font-size="9" font-weight="900" fill="#3a1a00" text-anchor="middle" pointer-events="none">★</text>
+          <text id="meter-star" x="346" y="418" font-size="11" font-weight="900" fill="#3a1a00" text-anchor="middle" pointer-events="none">★</text>
         </g>
         <g id="meter-marker">
           <polygon points="328,310 318,303 318,317" fill="#fff" stroke="#000" stroke-width="2"/>
@@ -1393,7 +1394,7 @@ window.UI = (() => {
           ${pouchInnerHTML}
         </g>
       </svg>
-      <div class="sling-text">ひっぱって はなして！👇</div>`;
+      <div class="sling-text">ひっぱって、きんいろ に あわせて はなして！⭐</div>`;
     document.body.appendChild(modal);
     const bandL = modal.querySelector("#band-l");
     const bandR = modal.querySelector("#band-r");
@@ -1405,25 +1406,53 @@ window.UI = (() => {
     // A second pointerdown→drag→release inside that window must not fire
     // a second projectile / call onFire() twice. This flag locks it down.
     let fired = false;
-    // ----- Perfect-release meter (skill-timing layer) -----
-    // Pull range maps to 0..130 (pulledY 310..440). Releasing in the GOOD or
-    // PERFECT band grants bonus damage. The widened perfect window (30 units
-    // vs. earlier 16) is much easier for kids to hit. Visible zone meter on
-    // the right side of the slingshot SVG shows the bands; an arrow marker
-    // tracks the current pull position so the kid can SEE the sweet spot.
-    //   pull <  25  → won't fire (red bar)
-    //   25..59      → "weak"   → no bonus (gray bar)
-    //   60..89      → "good"   → +1 damage, yellow pouch glow (yellow bar)
-    //   90..119     → "PERFECT"→ +2 damage + crit visuals, gold glow (gold bar)
-    //   120..130    → "good"   → +1 damage (yellow bar — overpull still scores)
-    function pullQualityFor(pull) {
-      if (pull < 25)  return { quality: "miss",    bonus: 0 };
-      if (pull < 60)  return { quality: "weak",    bonus: 0 };
-      if (pull < 90)  return { quality: "good",    bonus: 1 };
-      if (pull < 120) return { quality: "perfect", bonus: 2 };
-      return { quality: "good", bonus: 1 };
+    // ----- Real-timing release meter -----
+    // The GOLD perfect band oscillates up and down on the meter (sin wave,
+    // ~1.2s period). Kid pulls back enough to fire (>= 25) and releases when
+    // their pouch position overlaps the CURRENT position of the gold band.
+    // Skill is timing the release, not picking a fixed pull depth.
+    //   distance to gold center < 16  → PERFECT (+2)
+    //   distance to gold center < 33  → GOOD    (+1)
+    //   else                          → WEAK    (no bonus)
+    //   pull < 25                     → won't fire (still need a real pull)
+    const GOLD_CENTER_BASE = 385;     // mid-line of the oscillation (Y in viewBox units)
+    const GOLD_AMPLITUDE   = 38;      // ± from base — total swing 350..420
+    const GOLD_PERIOD_MS   = 1200;    // full cycle
+    const PERFECT_HALF     = 16;      // half-height of perfect zone (so 32 total)
+    const GOOD_HALF        = 33;      // half-height of "good" halo
+    let goldCenterY = GOLD_CENTER_BASE; // updated each animation frame
+    function pullQualityFor(pulledY) {
+      const pull = pulledY - 310;
+      if (pull < 25) return { quality: "miss", bonus: 0 };
+      const dist = Math.abs(pulledY - goldCenterY);
+      if (dist < PERFECT_HALF) return { quality: "perfect", bonus: 2 };
+      if (dist < GOOD_HALF)    return { quality: "good",    bonus: 1 };
+      return { quality: "weak", bonus: 0 };
     }
     const meterMarker = modal.querySelector("#meter-marker");
+    const meterGold   = modal.querySelector("#meter-gold");
+    const meterGood   = modal.querySelector("#meter-good");
+    const meterStar   = modal.querySelector("#meter-star");
+    // Animation loop: drive the gold band's Y position with a sin wave so
+    // the sweet spot is a moving target. Loop runs from modal-open until
+    // fire(), at which point fired=true terminates the rAF chain.
+    const oscStart = performance.now();
+    function tickMeter(t) {
+      if (fired) return;
+      const phase = ((t - oscStart) / GOLD_PERIOD_MS) * 2 * Math.PI;
+      goldCenterY = GOLD_CENTER_BASE + GOLD_AMPLITUDE * Math.sin(phase);
+      if (meterGold) meterGold.setAttribute("y", goldCenterY - 15);
+      if (meterGood) meterGood.setAttribute("y", goldCenterY - GOOD_HALF);
+      if (meterStar) meterStar.setAttribute("y", goldCenterY + 4);
+      // Live pouch glow feedback so the kid SEES their alignment with the
+      // moving gold band, not just at release.
+      const q = pullQualityFor(pulledY).quality;
+      pouchG.classList.remove("zone-good", "zone-perfect");
+      if (q === "good") pouchG.classList.add("zone-good");
+      else if (q === "perfect") pouchG.classList.add("zone-perfect");
+      requestAnimationFrame(tickMeter);
+    }
+    requestAnimationFrame(tickMeter);
     function setY(y) {
       pulledY = Math.max(310, Math.min(440, y));
       pouchG.setAttribute("transform", `translate(0, ${pulledY - 310})`);
@@ -1432,13 +1461,7 @@ window.UI = (() => {
       if (meterMarker) {
         meterMarker.setAttribute("transform", `translate(0, ${pulledY - 310})`);
       }
-      // Live glow feedback so the kid sees they're approaching the sweet spot.
-      // Reset all zone classes then apply the current one — the CSS shifts the
-      // pouch's drop-shadow / saturation per zone (yellow → gold sparkle).
-      const q = pullQualityFor(pulledY - 310).quality;
-      pouchG.classList.remove("zone-good", "zone-perfect");
-      if (q === "good") pouchG.classList.add("zone-good");
-      else if (q === "perfect") pouchG.classList.add("zone-perfect");
+      // tickMeter handles the glow class — setY just updates positions.
     }
     function svgY(clientY) {
       const r = svg.getBoundingClientRect();
@@ -1484,7 +1507,7 @@ window.UI = (() => {
       // visual treatment (gold trail, "PERFECT!" callout, brighter bang)
       // also keys off this. Capture early because the pouch keyframes
       // immediately overwrite pulledY visually.
-      const releaseQ = pullQualityFor(pulledY - 310);
+      const releaseQ = pullQualityFor(pulledY);
       const isPerfect = releaseQ.quality === "perfect";
       // Slingshot snaps forward (the actual shot mechanic — rock leaves the
       // pouch). The slingshot SVG itself fades to 0 right after via the
