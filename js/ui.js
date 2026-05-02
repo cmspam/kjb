@@ -1457,10 +1457,21 @@ window.UI = (() => {
     // attackTypeBadge supplies the optional emoji-coded type readout under the
     // attack name on the reveal stage ("💪 ヘビー" / "⚡ クイック" / etc.).
     const attackerLabel = opts.attackerName || (boss && boss.name_jp) || "";
-    // Stage timings — compact (~5s) for player attacks, full (~7s) for boss.
+    // Stage timings — compact for PvP, longer for PvE drama.
+    // The new pipeline is: warning → charge (aura+particles) → hold+flash →
+    // emoji-launch → bang → reveal. For fizzle the launch and bang are
+    // replaced by the orb-sputter+smoke-puff at the bang slot.
+    //   charge:  start of charge stage (boss SVG appears, aura/particles begin)
+    //   hold:    aura orb peaks, screen flash punches white
+    //   burst:   attack emoji launches from boss center
+    //   bang:    impact (or miss-specific outcome — shield/escape/dodge/fizzle)
+    //   reveal:  attack-name + damage/miss-reveal text
+    //   end:     overlay teardown
     const T = byPlayer
-      ? { charge: 700,  burst: 2300, bang: 3000, reveal: 3500, end: 5400 }
-      : { charge: 1700, burst: 3400, bang: 4300, reveal: 4800, end: 7200 };
+      ? { charge: 600,  hold: 1900, burst: 2150, bang: 2900, reveal: 3500, end: 5800 }
+      : { charge: 1500, hold: 3000, burst: 3300, bang: 4250, reveal: 4900, end: 7800 };
+    // Fizzle skips burst and bang; the sputter+puff happens at the bang slot.
+    const isFizzle = missed && missReason === "fizzle";
     const phrase = pickRand(attack.phrases || [attack.name]);
     const m = (attack.name || "").match(/(\p{Extended_Pictographic}️?)\s*$/u);
     const emoji = m ? m[1] : "💥";
@@ -1480,17 +1491,11 @@ window.UI = (() => {
     };
     // Stage-3 visual + final reveal text vary by why the attack didn't land.
     // Hits use the default 💥 / damage flow.
-    const missVisual = (
-      missReason === "shield" ? { sweep: "🛡️", label: "ふせいだ！" } :
-      missReason === "escape" ? { sweep: "🏃", label: "にげた！" } :
-      missReason === "fizzle" ? { sweep: "💤", label: "しっぱい…" } :
-                                { sweep: "💨", label: "はずれ！" }
-    );
     const missRevealHTML = (
       missReason === "shield" ? `→ ${escapeHTML(targetName)} は シールドで ふせいだ！ 🛡️` :
       missReason === "escape" ? `→ ${escapeHTML(targetName)} は うまく にげた！ 🏃` :
-      missReason === "fizzle" ? `→ よわくなりすぎて こうげき しっぱい！ 💤` :
-                                `→ ${escapeHTML(targetName)} は かわした！ ✨`
+      missReason === "fizzle" ? `→ ${escapeHTML(attackerLabel || "")} は こうげきを かたちに できなかった！ 💤` :
+                                `→ ${escapeHTML(targetName)} は ひらりと かわした！ ✨`
     );
 
     const overlay = document.createElement("div");
@@ -1539,26 +1544,74 @@ window.UI = (() => {
 
     // Boss theme snippet runs the FULL attack — from the WARNING flash all the
     // way through the attack-name reveal — fading out as the overlay closes.
-    // Total animation is 7200ms; snippet length is 7100ms which includes a 350ms
-    // built-in tail fade, so the music ends right as we tear down the overlay.
-    if (boss && boss.id) SND.playThemeSnippet(boss.id, 7100, 0.4);
+    // Snippet length matches the new total animation duration so the music
+    // ends right as we tear down the overlay.
+    if (boss && boss.id) SND.playThemeSnippet(boss.id, T.end - 100, 0.4);
 
-    // ----- Stage 1: monster charges with phrase -----
-    // Compact path (byPlayer) at 700ms, full at 1700ms so the WARNING text gets a real beat to read.
+    // ----- Stage 1: anime/RPG-style charge-up -----
+    // Replaces the previous boss-zoom-only charge. Now layered:
+    //   1. Stage container with boss SVG + phrase bubble
+    //   2. Vignette darkens the periphery (focus on attacker)
+    //   3. Type-colored energy orb forms behind the boss
+    //   4. ~14 particles converge from screen edges into the boss center,
+    //      "powering it up" — staggered start delays so they trickle in
+    //   5. Boss SVG runs the existing per-type charge animation alongside
+    //      the orb growth
+    //   6. Camera-shake escalates by adding `.shaking` to the overlay 200ms
+    //      into the charge
     setTimeout(() => {
       overlay.innerHTML = `
+        <div class="boss-anim-vignette"></div>
         <div class="boss-anim-stage">
           <div class="boss-anim-svg-wrap"></div>
-          <div class="boss-anim-bubble">${escapeHTML(phrase)}</div>
-        </div>`;
+        </div>
+        <div class="boss-anim-bubble">${escapeHTML(phrase)}</div>`;
       // Boss voices the charge phrase as the bubble pops in
       if (boss && boss.id) SND.playBossLine(boss.id, phrase);
+      const stage = overlay.querySelector(".boss-anim-stage");
       const svgWrap = overlay.querySelector(".boss-anim-svg-wrap");
       svgWrap.innerHTML = Monsters.renderBossSVG(boss);
-      // Type-telegraphed charge: distinct windup motion + glow per attack
-      // type so kids learn to read incoming threats. Heavy = wind-back-then-
-      // slam, Quick = rapid jitter, Wild = spinning, Pierce = focus narrow,
-      // Stun = ice freeze. Glow color matches the warning flash.
+      // Vignette pulse — fades in to focus the eye on the attacker.
+      overlay.querySelector(".boss-anim-vignette").animate(
+        [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 600, fill: "forwards" }
+      );
+      // Energy orb (behind boss SVG, type-colored). Both PvE and PvP get this;
+      // duration shorter for PvP so it's still over before the slingshot
+      // hand-off in Phase 2.
+      const orbDur = byPlayer ? 900 : 1300;
+      const orb = document.createElement("div");
+      orb.className = "boss-anim-orb charging";
+      orb.style.setProperty("--anim-color", telegraphColor);
+      orb.style.setProperty("--charge-dur", orbDur + "ms");
+      stage.appendChild(orb);
+      // Particle convergence. Each particle starts at a randomized screen-
+      // edge offset (variant per particle so they fly in from all directions)
+      // and animates back to (0, 0) — the stage center, which is the boss.
+      // Staggered delays so the energy gathers gradually, not all at once.
+      const PARTICLE_COUNT = byPlayer ? 8 : 14;
+      const PARTICLE_DUR = byPlayer ? 600 : 850;
+      const PARTICLE_WINDOW = orbDur - PARTICLE_DUR;
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const angle = (i / PARTICLE_COUNT) * Math.PI * 2 + Math.random() * 0.4;
+        // Distance large enough to start outside the stage.
+        const dist = 280 + Math.random() * 180;
+        const fx = Math.cos(angle) * dist;
+        const fy = Math.sin(angle) * dist;
+        const p = document.createElement("div");
+        p.className = "boss-anim-particle flying";
+        p.style.setProperty("--from-x", fx + "px");
+        p.style.setProperty("--from-y", fy + "px");
+        p.style.setProperty("--anim-color", telegraphColor);
+        p.style.setProperty("--duration", PARTICLE_DUR + "ms");
+        p.style.setProperty("--delay", Math.floor(Math.random() * PARTICLE_WINDOW) + "ms");
+        // Random size variation 10-22px
+        const sz = 10 + Math.random() * 12;
+        p.style.width = sz + "px";
+        p.style.height = sz + "px";
+        stage.appendChild(p);
+      }
+      // Type-telegraphed charge keyframes for the boss SVG itself.
       const tg = telegraphColor;
       const chargeKeyframes = (() => {
         const t = attack && attack.type;
@@ -1566,7 +1619,7 @@ window.UI = (() => {
           { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
           { transform: "scale(0.85) rotate(-8deg)", filter: `brightness(1.2) drop-shadow(0 0 14px ${tg})`, offset: 0.4 },
           { transform: "scale(1.30) rotate(6deg)",  filter: `brightness(2.2) drop-shadow(0 0 36px ${tg})`, offset: 0.85 },
-          { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
+          { transform: "scale(1) rotate(0)",       filter: `brightness(1.4) drop-shadow(0 0 20px ${tg})` },
         ];
         if (t === "quick") return [
           { transform: "scale(1) translate(0,0)",          filter: "brightness(1)" },
@@ -1574,35 +1627,34 @@ window.UI = (() => {
           { transform: "scale(1.08) translate(6px, 0)",    filter: `brightness(1.5) drop-shadow(0 0 18px ${tg})`, offset: 0.36 },
           { transform: "scale(1.08) translate(-5px, 0)",   filter: `brightness(1.6) drop-shadow(0 0 20px ${tg})`, offset: 0.55 },
           { transform: "scale(1.08) translate(5px, 0)",    filter: `brightness(1.7) drop-shadow(0 0 22px ${tg})`, offset: 0.75 },
-          { transform: "scale(1) translate(0,0)",          filter: "brightness(1)" },
+          { transform: "scale(1.05) translate(0,0)",       filter: `brightness(1.5) drop-shadow(0 0 22px ${tg})` },
         ];
         if (t === "wild") return [
           { transform: "scale(1) rotate(0)",      filter: "brightness(1)" },
           { transform: "scale(1.1) rotate(180deg)", filter: `brightness(1.5) hue-rotate(60deg) drop-shadow(0 0 24px ${tg})`, offset: 0.5 },
           { transform: "scale(1.1) rotate(360deg)", filter: `brightness(1.8) hue-rotate(180deg) drop-shadow(0 0 30px ${tg})`, offset: 0.85 },
-          { transform: "scale(1) rotate(360deg)", filter: "brightness(1)" },
+          { transform: "scale(1.05) rotate(360deg)", filter: `brightness(1.5) drop-shadow(0 0 24px ${tg})` },
         ];
         if (t === "pierce") return [
           { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
           { transform: "scale(0.92) rotate(0)",    filter: `brightness(1.3) drop-shadow(0 0 16px ${tg}) contrast(1.3)`, offset: 0.5 },
           { transform: "scale(1.25) rotate(0)",    filter: `brightness(2.4) drop-shadow(0 0 40px ${tg}) contrast(1.5)`, offset: 0.85 },
-          { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
+          { transform: "scale(1.1) rotate(0)",     filter: `brightness(1.6) drop-shadow(0 0 24px ${tg})` },
         ];
         if (t === "stun") return [
           { transform: "scale(1) rotate(0)",       filter: "brightness(1) saturate(1)" },
           { transform: "scale(1.05) rotate(-2deg)",filter: `brightness(1.4) saturate(0.6) drop-shadow(0 0 22px ${tg}) hue-rotate(180deg)`, offset: 0.5 },
           { transform: "scale(1.08) rotate(2deg)", filter: `brightness(1.6) saturate(0.5) drop-shadow(0 0 30px ${tg}) hue-rotate(180deg)`, offset: 0.85 },
-          { transform: "scale(1) rotate(0)",       filter: "brightness(1) saturate(1)" },
+          { transform: "scale(1.05) rotate(0)",    filter: `brightness(1.4) drop-shadow(0 0 24px ${tg})` },
         ];
-        // Default / untyped — original generic charge.
         return [
           { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
           { transform: "scale(1.12) rotate(-4deg)", filter: `brightness(1.6) drop-shadow(0 0 18px ${tg})`, offset: 0.35 },
-          { transform: "scale(1.18) rotate(4deg)",  filter: `brightness(2) drop-shadow(0 0 32px #ffcc00)`, offset: 0.7 },
-          { transform: "scale(1) rotate(0)",       filter: "brightness(1)" },
+          { transform: "scale(1.18) rotate(4deg)",  filter: `brightness(2) drop-shadow(0 0 32px ${tg})`, offset: 0.7 },
+          { transform: "scale(1.05) rotate(0)",    filter: `brightness(1.4) drop-shadow(0 0 22px ${tg})` },
         ];
       })();
-      svgWrap.animate(chargeKeyframes, { duration: 1000, easing: "ease-in-out", fill: "forwards" });
+      svgWrap.animate(chargeKeyframes, { duration: orbDur, easing: "ease-in-out", fill: "forwards" });
       const bubble = overlay.querySelector(".boss-anim-bubble");
       bubble.animate(
         [
@@ -1611,53 +1663,95 @@ window.UI = (() => {
         ],
         { duration: 350, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
       );
+      // Camera shake kicks in 200ms into the charge so the early "settling"
+      // beat is calm and the energy-build feels like it's RAMPING UP.
+      setTimeout(() => overlay.classList.add("shaking"), 200);
     }, T.charge);
 
-    // ----- Stage 2: emoji burst -----
+    // ----- Stage 1.5: HOLD + FLASH (or fizzle for can't-attack) -----
+    // For a normal attack: orb peaks, white screen-flash punches, then we
+    // launch the emoji from the boss center. For fizzle (boss frozen / can't
+    // muster the attack): the orb sputters out and a 💨 smoke puff replaces
+    // the launch — no emoji, no bang.
     setTimeout(() => {
+      overlay.classList.remove("shaking");
+      if (isFizzle) {
+        // Fizzle path: orb wobbles + collapses, smoke puff. No flash.
+        const orb = overlay.querySelector(".boss-anim-orb");
+        if (orb) {
+          orb.classList.remove("charging");
+          orb.classList.add("fizzling");
+        }
+        const puff = document.createElement("div");
+        puff.className = "boss-anim-fizzle-puff";
+        puff.textContent = "💨";
+        overlay.appendChild(puff);
+        if (SND.sfxPop) SND.sfxPop();
+        return; // no flash, no launch
+      }
+      // Normal path: white flash punches across the whole overlay.
+      const flash = document.createElement("div");
+      flash.className = "boss-anim-flash";
+      overlay.appendChild(flash);
+      // Auto-removes via animation; remove from DOM after ~300ms so it
+      // doesn't intercept later content stacking.
+      setTimeout(() => { try { flash.remove(); } catch(_){} }, 280);
+    }, T.hold);
+
+    // ----- Stage 2: emoji LAUNCH from boss center -----
+    // Skipped for fizzle — the attack never materialized.
+    setTimeout(() => {
+      if (isFizzle) return;
       const burst = document.createElement("div");
       burst.className = "boss-anim-emoji";
       burst.textContent = emoji;
       overlay.appendChild(burst);
       burst.animate(
         [
-          { transform: "translate(-50%,-50%) scale(0) rotate(-30deg)", opacity: 1 },
-          { transform: "translate(-50%,-50%) scale(1.8) rotate(15deg)", opacity: 1 }
+          { transform: "translate(-50%,-50%) scale(0) rotate(-30deg)", opacity: 1, filter: "brightness(2)" },
+          { transform: "translate(-50%,-50%) scale(1.8) rotate(15deg)", opacity: 1, filter: "brightness(1)" }
         ],
         { duration: 500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
       );
     }, T.burst);
 
-    // ----- Stage 3: bang (hit) or whoosh+MISS (miss) -----
+    // ----- Stage 3: bang (hit) or per-miss-type outcome -----
+    // Hit:    💥 explodes at center
+    // Shield: 🛡️ pops up + the emoji ricochets off (bouncing class)
+    // Escape: 🏃 runs across, emoji passes through (passing class)
+    // Dodge:  emoji whooshes past + ✨ sparkle puff
+    // Fizzle: handled at Stage 1.5; nothing extra here
     setTimeout(() => {
+      if (isFizzle) return;
+      const burst = overlay.querySelector(".boss-anim-emoji");
       if (missed) {
-        // Whoosh: emoji streaks across screen instead of crashing into target.
-        const whoosh = document.createElement("div");
-        whoosh.className = "boss-anim-bang";
-        whoosh.textContent = missVisual.sweep;
-        overlay.appendChild(whoosh);
-        whoosh.animate(
-          [
-            { transform: "translate(-150%,-50%) scale(1.2) rotate(-10deg)", opacity: 0 },
-            { transform: "translate(-50%,-50%) scale(1.6) rotate(0)", opacity: 1, offset: 0.5 },
-            { transform: "translate(80%,-50%) scale(1.2) rotate(20deg)", opacity: 0 }
-          ],
-          { duration: 500, easing: "ease-out", fill: "forwards" }
-        );
-        const miss = document.createElement("div");
-        miss.className = "boss-anim-bang boss-anim-miss";
-        miss.textContent = missVisual.label;
-        overlay.appendChild(miss);
-        miss.animate(
-          [
-            { transform: "translate(-50%,-50%) scale(0) rotate(-20deg)", opacity: 0 },
-            { transform: "translate(-50%,-50%) scale(1.3) rotate(8deg)", opacity: 1, offset: 0.55 },
-            { transform: "translate(-50%,-50%) scale(1) rotate(0)", opacity: 1 }
-          ],
-          { duration: 500, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
-        );
-        SND.sfxPop();
+        if (missReason === "shield") {
+          // Defender's shield pops up; emoji bounces off it.
+          const shield = document.createElement("div");
+          shield.className = "boss-anim-shield";
+          shield.textContent = "🛡️";
+          overlay.appendChild(shield);
+          if (burst) burst.classList.add("bouncing");
+          if (SND.sfxBreak) SND.sfxBreak();
+        } else if (missReason === "escape") {
+          // Defender slides off-screen; emoji whooshes through where they were.
+          const runner = document.createElement("div");
+          runner.className = "boss-anim-escape-runner";
+          runner.textContent = "🏃";
+          overlay.appendChild(runner);
+          if (burst) burst.classList.add("passing");
+          if (SND.sfxPop) SND.sfxPop();
+        } else {
+          // Generic dodge — emoji passes harmlessly + sparkle puff.
+          const puff = document.createElement("div");
+          puff.className = "boss-anim-dodge-puff";
+          puff.textContent = "✨";
+          overlay.appendChild(puff);
+          if (burst) burst.classList.add("passing");
+          if (SND.sfxPop) SND.sfxPop();
+        }
       } else {
+        // Direct hit — the existing impact frame.
         const bang = document.createElement("div");
         bang.className = "boss-anim-bang";
         bang.textContent = "💥";
@@ -1691,8 +1785,9 @@ window.UI = (() => {
         { duration: 450, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
       );
       // Dramatic attack-name shout — the build script tunes these clips with
-      // higher intonation/volume so they sound shouted, not spoken.
-      if (boss && boss.id && attack && attack.name) SND.playBossLine(boss.id, attack.name);
+      // higher intonation/volume so they sound shouted, not spoken. Skipped
+      // on fizzle since the attack never actually formed.
+      if (!isFizzle && boss && boss.id && attack && attack.name) SND.playBossLine(boss.id, attack.name);
     }, T.reveal);
 
     // ----- End: clean up + callback -----
