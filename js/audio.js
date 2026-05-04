@@ -294,14 +294,39 @@ window.SND = (() => {
   // mid-way through a newer theme and pause it.
   let _snippetTimeout = null;
 
-  function getThemeAudio(bossId) {
-    if (!themeCache[bossId]) {
-      const a = new Audio(`assets/themes/${bossId}.mp3`);
+  // Cache key is "<id>" for normal themes, "<id>_shiny" for shiny variants.
+  // Shiny themes are alt-language tracks scored to match the alt-language
+  // voice cast (Spanish for tako, Italian for tral, etc). Falls back to the
+  // normal theme on load error so a missing _shiny.mp3 just plays the
+  // ordinary theme instead of going silent.
+  function getThemeAudio(bossId, shiny) {
+    const key = shiny ? `${bossId}_shiny` : bossId;
+    if (!themeCache[key]) {
+      const a = new Audio(`assets/themes/${key}.mp3`);
       a.preload = "auto";
       a.crossOrigin = "anonymous"; // harmless if not needed
-      themeCache[bossId] = a;
+      if (shiny) {
+        // One-shot fallback: if the shiny mp3 errors, swap currentTheme to
+        // the non-shiny equivalent and resume from where we were.
+        a.addEventListener("error", () => {
+          if (currentTheme === a) {
+            const meta = _themeMeta;
+            const fb = getThemeAudio(bossId, false);
+            currentTheme = fb;
+            if (meta) _themeMeta = { ...meta, shiny: false };
+            try {
+              fb.loop = a.loop;
+              fb.volume = 0;
+              const p = fb.play();
+              if (p && p.then) p.then(() => fadeTo(fb, meta ? meta.volume : 0.55, 250)).catch(() => {});
+              else fadeTo(fb, meta ? meta.volume : 0.55, 250);
+            } catch(_) {}
+          }
+        }, { once: true });
+      }
+      themeCache[key] = a;
     }
-    return themeCache[bossId];
+    return themeCache[key];
   }
 
   function fadeTo(audio, targetVol, ms, onDone) {
@@ -463,8 +488,11 @@ window.SND = (() => {
     const target  = (opts.volume ?? 0.55);
     const fadeIn  = (opts.fadeIn  ?? 250);
     const startAt = (opts.startAt ?? 0);
+    // Shiny resolution: explicit opts.shiny wins, else consult the global
+    // markShiny tracker. Shiny themes live at assets/themes/<id>_shiny.mp3.
+    const shiny = (opts.shiny != null) ? !!opts.shiny : _shinyIds.has(bossId);
 
-    const a = getThemeAudio(bossId);
+    const a = getThemeAudio(bossId, shiny);
 
     // Fade out + pause any *other* theme. For the same element we just reuse
     // it; pausing then re-playing the same element rapidly is what tripped iOS
@@ -474,7 +502,7 @@ window.SND = (() => {
       fadeTo(old, 0, 150, () => { try { old.pause(); } catch(_){} });
     }
     currentTheme = a;
-    _themeMeta = { bossId, volume: target, loop };
+    _themeMeta = { bossId, volume: target, loop, shiny };
 
     a.loop = loop;
     a.volume = 0;
@@ -512,13 +540,14 @@ window.SND = (() => {
     // Cancel any prior pending snippet stop — without this, the old one would
     // fire mid-way through this snippet and silently kill it.
     if (_snippetTimeout) { clearTimeout(_snippetTimeout); _snippetTimeout = null; }
-    const a = getThemeAudio(bossId);
+    const shiny = _shinyIds.has(bossId);
+    const a = getThemeAudio(bossId, shiny);
     const start = () => {
       const dur = (Number.isFinite(a.duration) && a.duration > 1) ? a.duration : 30;
       const snip = durationMs / 1000;
       const maxStart = Math.max(0, dur - snip - 0.3);
       const startAt = Math.random() * maxStart;
-      playTheme(bossId, { startAt, volume, fadeIn: 200 });
+      playTheme(bossId, { startAt, volume, fadeIn: 200, shiny });
       // Schedule the fade-out tail. Stored in _snippetTimeout so a subsequent
       // playTheme/stopTheme/playThemeSnippet can cancel it.
       _snippetTimeout = setTimeout(() => {
@@ -797,6 +826,7 @@ window.SND = (() => {
             loop:   themeToResume.loop,
             volume: themeToResume.volume,
             fadeIn: 200,
+            shiny:  themeToResume.shiny,
           });
         }, 120);
       }
