@@ -372,7 +372,7 @@ window.Stages = (() => {
     </svg>`;
   }
 
-  const SCENES = { tako, unko, tral, pamp, parfait, anpan, brainrot };
+  const SCENES = { tako, unko, tral, pamp, parfait, anpan, temee, brainrot };
 
   function exists(bossId) { return !!SCENES[bossId]; }
   function render(bossId) {
