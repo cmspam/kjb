@@ -783,31 +783,32 @@ window.Monsters = (() => {
         <!-- Belly highlight -->
         <ellipse cx="400" cy="320" rx="140" ry="22" fill="#fff" opacity=".15"/>
         <!-- Long camel neck rising from front-right of body up to monkey head -->
-        <path d="M 540 240 Q 600 180 615 130 Q 615 90 600 75"
+        <path d="M 540 240 Q 605 175 622 120 Q 622 85 605 65"
               stroke="#000" stroke-width="44" fill="none" stroke-linecap="round"/>
-        <path d="M 540 240 Q 600 180 615 130 Q 615 90 600 75"
+        <path d="M 540 240 Q 605 175 622 120 Q 622 85 605 65"
               stroke="#c89a5a" stroke-width="36" fill="none" stroke-linecap="round"/>
         <!-- Neck shading stripe -->
-        <path d="M 545 245 Q 605 185 618 128"
+        <path d="M 545 245 Q 610 180 625 118"
               stroke="rgba(255,255,255,.25)" stroke-width="8" fill="none" stroke-linecap="round"/>
-        <!-- Monkey head — ape-style, distinct from camel body -->
-        <ellipse cx="600" cy="80" rx="58" ry="50" fill="#000"/>
-        <ellipse cx="600" cy="80" rx="52" ry="44" fill="#7a4a25"/>
+        <!-- Monkey head — ape-style, distinct from camel body. Bigger so the
+             eye parts can move with bob without clipping the head edge. -->
+        <ellipse cx="605" cy="65" rx="78" ry="68" fill="#000"/>
+        <ellipse cx="605" cy="65" rx="72" ry="62" fill="#7a4a25"/>
         <!-- Monkey face plate -->
-        <ellipse cx="600" cy="86" rx="40" ry="32" fill="url(#temeeMonkeyFace)"/>
+        <ellipse cx="605" cy="74" rx="56" ry="46" fill="url(#temeeMonkeyFace)"/>
         <!-- Monkey ears -->
-        <circle cx="552" cy="65" r="14" fill="#000"/>
-        <circle cx="552" cy="65" r="10" fill="#7a4a25"/>
-        <circle cx="552" cy="65" r="5"  fill="#f5d6a8"/>
-        <circle cx="648" cy="65" r="14" fill="#000"/>
-        <circle cx="648" cy="65" r="10" fill="#7a4a25"/>
-        <circle cx="648" cy="65" r="5"  fill="#f5d6a8"/>
+        <circle cx="540" cy="48" r="18" fill="#000"/>
+        <circle cx="540" cy="48" r="13" fill="#7a4a25"/>
+        <circle cx="540" cy="48" r="6"  fill="#f5d6a8"/>
+        <circle cx="670" cy="48" r="18" fill="#000"/>
+        <circle cx="670" cy="48" r="13" fill="#7a4a25"/>
+        <circle cx="670" cy="48" r="6"  fill="#f5d6a8"/>
         <!-- Monkey brow tuft -->
-        <path d="M 575 50 Q 600 35 625 50" stroke="#3a2010" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M 572 30 Q 605 12 638 30" stroke="#3a2010" stroke-width="7" fill="none" stroke-linecap="round"/>
         <!-- Old-man wisp beard hanging off monkey chin -->
-        <path d="M 590 110 Q 595 130 588 145" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
-        <path d="M 600 112 Q 600 140 596 158" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
-        <path d="M 610 110 Q 612 130 615 145" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
+        <path d="M 590 108 Q 595 132 585 150" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
+        <path d="M 605 112 Q 605 142 600 162" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
+        <path d="M 620 108 Q 622 132 628 150" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
         <!-- Hooves on visible legs (decorative — actual leg parts drawn over) -->
         <ellipse cx="320" cy="425" rx="22" ry="10" fill="#3a2010"/>
         <ellipse cx="380" cy="425" rx="20" ry="9"  fill="#3a2010"/>
@@ -816,18 +817,19 @@ window.Monsters = (() => {
         <!-- Ambient sand puffs at hooves -->
         <ellipse cx="290" cy="430" rx="14" ry="5" fill="#e7c08a" opacity=".55"/>
         <ellipse cx="510" cy="430" rx="14" ry="5" fill="#e7c08a" opacity=".55"/>
-        ${blushPair(600, 95, 28)}
+        ${blushPair(605, 92, 32)}
       `,
       parts: [
         // Two humps on top of camel body — the signature attackable parts.
         // Destroying both removes the boss's heavy attack power.
         { id:"h1",   type:"limb",  name_jp:pn.h1,   maxHP:12, hp:12, geom:{x:340, y:215, w:55, h:60}, draw:(p)=>drawHump(p,"#b07a3a"), effect:"atk-1" },
         { id:"h2",   type:"limb",  name_jp:pn.h2,   maxHP:12, hp:12, geom:{x:455, y:215, w:55, h:60}, draw:(p)=>drawHump(p,"#b07a3a"), effect:"atk-1" },
-        // Monkey eyes
-        { id:"eL",   type:"eye",   name_jp:pn.eL,   maxHP:7,  hp:7,  geom:{x:585, y:78, r:14, delay:0},  draw:(p)=>drawEye(p,color), effect:"miss-50" },
-        { id:"eR",   type:"eye",   name_jp:pn.eR,   maxHP:7,  hp:7,  geom:{x:615, y:78, r:14, delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+        // Monkey eyes — sized + spaced for the bigger head, far enough from
+        // edge that the bob animation doesn't visually clip them off.
+        { id:"eL",   type:"eye",   name_jp:pn.eL,   maxHP:7,  hp:7,  geom:{x:582, y:62, r:13, delay:0},  draw:(p)=>drawEye(p,color), effect:"miss-50" },
+        { id:"eR",   type:"eye",   name_jp:pn.eR,   maxHP:7,  hp:7,  geom:{x:628, y:62, r:13, delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
         // Monkey mouth — disables sand/poison attacks
-        { id:"mouth",type:"mouth", name_jp:pn.mouth,maxHP:9,  hp:9,  geom:{x:600, y:104, w:24, h:12},    draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        { id:"mouth",type:"mouth", name_jp:pn.mouth,maxHP:9,  hp:9,  geom:{x:605, y:100, w:28, h:14},    draw:(p)=>drawMouth(p,color), effect:"no-poison" },
         // Two of the four visible legs are attackable; rear leg slows boss.
         { id:"L1",   type:"limb",  name_jp:pn.L1,   maxHP:9,  hp:9,  geom:{x:340, y:340, dir:90, len:80}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"atk-1" },
         { id:"L2",   type:"limb",  name_jp:pn.L2,   maxHP:9,  hp:9,  geom:{x:470, y:340, dir:90, len:80}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },

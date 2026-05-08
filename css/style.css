@@ -17,7 +17,16 @@ html, body {
   height: 100%;
   background: linear-gradient(180deg, var(--bg1), var(--bg2));
   color: var(--ink);
-  font-family: "Hiragino Maru Gothic Pro","Hiragino Sans","Yu Gothic UI","Meiryo","MS Gothic", system-ui, sans-serif;
+  /* Browsers walk the stack per-character. JP fonts come first so kana/kanji
+     get the kid-game rounded look; Latin/Cyrillic/Greek fonts come after
+     since the JP fonts often ship cramped-or-missing coverage for those
+     scripts (which broke shiny Greek brainrot taunts and Mongolian Cyrillic
+     temee taunts). Modern Hiragino + Yu Gothic UI lack proper Cyrillic/Greek
+     so the browser falls through to Segoe UI / Helvetica / Arial which all
+     handle those scripts cleanly. system-ui at the tail for everything else. */
+  font-family: "Hiragino Maru Gothic Pro","Hiragino Sans","Yu Gothic UI","Meiryo",
+               "Segoe UI","Helvetica Neue","Arial","Noto Sans","DejaVu Sans",
+               "MS Gothic", system-ui, sans-serif;
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
@@ -595,9 +604,9 @@ h3 { font-size: 28px; margin: 4px 0; }
    one rigid block. */
 @keyframes bob {
   0%, 100% { transform: translateY(0)    rotate(0)      scale(1); }
-  25%      { transform: translateY(-5px) rotate(-1.5deg) scale(1.02); }
-  50%      { transform: translateY(-8px) rotate(0)      scale(1); }
-  75%      { transform: translateY(-4px) rotate(1.5deg)  scale(1.02); }
+  25%      { transform: translateY(-2px) rotate(-0.6deg) scale(1.01); }
+  50%      { transform: translateY(-3px) rotate(0)      scale(1); }
+  75%      { transform: translateY(-2px) rotate(0.6deg)  scale(1.01); }
 }
 .bob { animation: bob 1.8s ease-in-out infinite; }
 /* Occasional twitch — fires every ~7s on .part elements regardless of

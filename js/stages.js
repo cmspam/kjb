@@ -267,6 +267,86 @@ window.Stages = (() => {
     </svg>`;
   }
 
+  // temee — Gobi desert at golden hour. Endless dunes, distant ger
+  // (yurt) camp on the horizon, low sun, and a few wisp clouds. Camel
+  // tracks in the foreground sand to suggest the boss has been here a
+  // while. Aesthetic matches the old-warrior 300-year-Gobi-nomad vibe.
+  function temee() {
+    return `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%;">
+      <defs>
+        <linearGradient id="temeeSky" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0"   stop-color="#f5b56a"/>
+          <stop offset="0.55" stop-color="#e88040"/>
+          <stop offset="1"    stop-color="#c0532a"/>
+        </linearGradient>
+        <linearGradient id="temeeSand1" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stop-color="#e7c08a"/>
+          <stop offset="1" stop-color="#a07338"/>
+        </linearGradient>
+        <linearGradient id="temeeSand2" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stop-color="#d4a868"/>
+          <stop offset="1" stop-color="#7a531e"/>
+        </linearGradient>
+        <radialGradient id="temeeSun" cx=".5" cy=".5" r=".5">
+          <stop offset="0"    stop-color="#fff5d0"/>
+          <stop offset="0.5"  stop-color="#ffe085"/>
+          <stop offset="1"    stop-color="#ffe085" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="800" height="480" fill="url(#temeeSky)"/>
+      <!-- Low sun + halo -->
+      <circle cx="640" cy="220" r="100" fill="url(#temeeSun)"/>
+      <circle cx="640" cy="220" r="38"  fill="#fff5a0" opacity="0.95"/>
+      <!-- Wisp clouds -->
+      <g fill="#fff" opacity="0.4">
+        <ellipse cx="180" cy="110" rx="60" ry="6"/>
+        <ellipse cx="220" cy="125" rx="40" ry="4"/>
+        <ellipse cx="500" cy="90"  rx="55" ry="5"/>
+      </g>
+      <!-- Distant mountain range silhouette -->
+      <path d="M 0 280 L 80 230 L 140 260 L 220 220 L 320 250 L 420 215 L 520 245 L 620 225 L 720 250 L 800 235 L 800 320 L 0 320 Z"
+            fill="#7a3a1a" opacity="0.85"/>
+      <!-- Distant ger (yurt) camp on the horizon -->
+      <g transform="translate(310, 290)">
+        <ellipse cx="0" cy="3" rx="22" ry="3" fill="#000" opacity="0.3"/>
+        <path d="M -18 0 Q -18 -16 0 -22 Q 18 -16 18 0 Z" fill="#f0e0c0" stroke="#000" stroke-width="1.5"/>
+        <path d="M -6 -22 L 0 -32 L 6 -22 Z" fill="#3a2010"/>
+      </g>
+      <g transform="translate(355, 295)">
+        <ellipse cx="0" cy="3" rx="18" ry="2.5" fill="#000" opacity="0.3"/>
+        <path d="M -14 0 Q -14 -13 0 -18 Q 14 -13 14 0 Z" fill="#e8d8b8" stroke="#000" stroke-width="1.5"/>
+        <path d="M -5 -18 L 0 -26 L 5 -18 Z" fill="#3a2010"/>
+      </g>
+      <g transform="translate(395, 292)">
+        <ellipse cx="0" cy="3" rx="20" ry="3" fill="#000" opacity="0.3"/>
+        <path d="M -16 0 Q -16 -14 0 -20 Q 16 -14 16 0 Z" fill="#f0e0c0" stroke="#000" stroke-width="1.5"/>
+        <path d="M -5 -20 L 0 -28 L 5 -20 Z" fill="#3a2010"/>
+      </g>
+      <!-- Wisp of smoke from middle ger -->
+      <path d="M 355 268 Q 350 250 360 235 Q 350 220 358 205" stroke="#bbb" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.65"/>
+      <!-- Foreground dunes — layered for depth -->
+      <path d="M 0 340 Q 200 290 400 320 T 800 305 L 800 480 L 0 480 Z" fill="url(#temeeSand1)"/>
+      <path d="M 0 400 Q 250 360 500 390 T 800 380 L 800 480 L 0 480 Z" fill="url(#temeeSand2)"/>
+      <!-- Camel-track scuffs in the foreground sand -->
+      <g fill="#7a531e" opacity="0.45">
+        <ellipse cx="120" cy="430" rx="9" ry="3"/>
+        <ellipse cx="160" cy="442" rx="9" ry="3"/>
+        <ellipse cx="220" cy="438" rx="10" ry="3.5"/>
+        <ellipse cx="280" cy="450" rx="10" ry="3.5"/>
+        <ellipse cx="640" cy="445" rx="9" ry="3"/>
+        <ellipse cx="685" cy="455" rx="10" ry="3.5"/>
+      </g>
+      <!-- A few drifting sand-dust specks -->
+      <g fill="#fff" opacity="0.4">
+        <circle cx="120" cy="180" r="1.4"/>
+        <circle cx="240" cy="220" r="1.2"/>
+        <circle cx="380" cy="195" r="1.6"/>
+        <circle cx="540" cy="210" r="1.3"/>
+        <circle cx="700" cy="180" r="1.4"/>
+      </g>
+    </svg>`;
+  }
+
   // brainrot — chaotic interdimensional rift. Already alluded to in the boss
   // SVG itself, but we add a more dramatic backdrop here.
   function brainrot() {

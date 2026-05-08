@@ -515,7 +515,173 @@ window.Endings = (() => {
     return { svg, captionJp: "6つの 野望[やぼう]が ぜんぶ 同時[どうじ]に 実現[じつげん]してしまった…", captionEn: "All six kaiju ambitions came true at once. The world is theirs now." };
   }
 
-  const SCENES = { tako, unko, tral, pamp, parfait, anpan, brainrot };
+  // ----------------------------------------------------------------------
+  // 8. temee — Genghis-style brainrot empire: every living thing has humps,
+  //    everyone rides a camel to school, every meal is buuz, the planet
+  //    runs at -40°C year-round. Cartoon-bleak.
+  // ----------------------------------------------------------------------
+  function temee() {
+    const humpyPerson = (cx, cy, n=2, color="#3a2210") => {
+      // tiny silhouette person with N humps growing from their back
+      let humps = "";
+      for (let i = 0; i < n; i++) {
+        humps += `<ellipse cx="${cx-3 + i*5}" cy="${cy-12}" rx="3.5" ry="5" fill="${color}"/>`;
+      }
+      return `<g>
+        <circle cx="${cx}" cy="${cy-18}" r="4.5" fill="${color}"/>
+        <rect x="${cx-3.5}" y="${cy-13}" width="7" height="14" fill="${color}"/>
+        ${humps}
+      </g>`;
+    };
+    const buuzCloud = (cx, cy, r=14) => `
+      <g transform="translate(${cx},${cy})">
+        <ellipse cx="0" cy="0" rx="${r}" ry="${r*0.8}" fill="#e8d8b0" stroke="#3a2210" stroke-width="2"/>
+        <path d="M ${-r*0.4} ${-r*0.5} Q 0 ${-r*0.95} ${r*0.4} ${-r*0.5}" stroke="#3a2210" stroke-width="1.6" fill="none"/>
+        <path d="M ${-r*0.55} ${-r*0.25} Q ${-r*0.2} ${-r*0.7} ${r*0.15} ${-r*0.35}" stroke="#3a2210" stroke-width="1.6" fill="none"/>
+        <path d="M ${-r*0.15} ${-r*0.35} Q ${r*0.2} ${-r*0.7} ${r*0.55} ${-r*0.25}" stroke="#3a2210" stroke-width="1.6" fill="none"/>
+        <ellipse cx="0" cy="${-r*0.1}" rx="${r*0.35}" ry="${r*0.2}" fill="#fff" opacity=".5"/>
+      </g>`;
+    const camelKidSchool = (cx, cy, scale=1) => `
+      <g transform="translate(${cx},${cy}) scale(${scale})">
+        <!-- camel body -->
+        <ellipse cx="0" cy="0" rx="40" ry="14" fill="#c89a5a" stroke="#000" stroke-width="2.5"/>
+        <!-- two humps -->
+        <path d="M -22 -2 Q -18 -16 -10 -16 Q -2 -16 -2 -2 Z" fill="#a07338" stroke="#000" stroke-width="2"/>
+        <path d="M  4 -2 Q  8 -18 16 -18 Q 24 -18 24 -2 Z" fill="#a07338" stroke="#000" stroke-width="2"/>
+        <!-- camel neck + head -->
+        <path d="M 30 -4 Q 44 -22 50 -32" stroke="#000" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <path d="M 30 -4 Q 44 -22 50 -32" stroke="#c89a5a" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <ellipse cx="52" cy="-34" rx="9" ry="7" fill="#c89a5a" stroke="#000" stroke-width="2"/>
+        <ellipse cx="55" cy="-35" rx="2" ry="1.5" fill="#000"/>
+        <!-- legs -->
+        <line x1="-20" y1="12" x2="-20" y2="32" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+        <line x1="-8"  y1="12" x2="-8"  y2="32" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+        <line x1="6"   y1="12" x2="6"   y2="32" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+        <line x1="20"  y1="12" x2="20"  y2="32" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+        <!-- kid riding (between humps), with a backpack -->
+        <circle cx="-3" cy="-26" r="5.5" fill="#ffd6a8" stroke="#000" stroke-width="1.5"/>
+        <rect x="-7" y="-22" width="8" height="10" fill="#ee3344" stroke="#000" stroke-width="1.5"/>
+        <rect x="-9" y="-21" width="3" height="9" fill="#aa1a22" stroke="#000" stroke-width="1.2"/>
+      </g>`;
+    const svg = `
+      <svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="ed-temee-sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0"  stop-color="#5a7a9a"/>
+            <stop offset="0.6" stop-color="#a89888"/>
+            <stop offset="1"   stop-color="#d4a868"/>
+          </linearGradient>
+          <radialGradient id="ed-temee-coldsun" cx=".5" cy=".5" r=".5">
+            <stop offset="0"   stop-color="#fff" stop-opacity="0.85"/>
+            <stop offset="0.6" stop-color="#cce0f0" stop-opacity="0.45"/>
+            <stop offset="1"   stop-color="#cce0f0" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="800" height="500" fill="url(#ed-temee-sky)"/>
+        <!-- pale cold sun + ❄️ snowflakes drifting -->
+        <circle cx="660" cy="100" r="100" fill="url(#ed-temee-coldsun)"/>
+        <circle cx="660" cy="100" r="32"  fill="#fff" opacity="0.85"/>
+        <text x="120" y="80"  font-size="22">❄️</text>
+        <text x="280" y="60"  font-size="18">❄️</text>
+        <text x="440" y="90"  font-size="20">❄️</text>
+        <text x="540" y="50"  font-size="16">❄️</text>
+        <text x="380" y="180" font-size="20">❄️</text>
+        <text x="160" y="200" font-size="18">❄️</text>
+        <text x="700" y="220" font-size="16">❄️</text>
+        <!-- distant Mongolian-empire flag with monkey + camel -->
+        <g transform="translate(60, 70)">
+          <rect x="0" y="0" width="6" height="240" fill="#3a2210"/>
+          <rect x="6" y="0" width="170" height="100" fill="#a02020" stroke="#3a1010" stroke-width="3"/>
+          <text x="91" y="40" text-anchor="middle" font-size="22" fill="#ffe45c" font-weight="900">テメー</text>
+          <text x="91" y="68" text-anchor="middle" font-size="14" fill="#ffe45c" font-weight="900">ハーン</text>
+          <text x="91" y="92" text-anchor="middle" font-size="22">🐒🐫</text>
+        </g>
+        <!-- giant title banner -->
+        <rect x="80" y="20" width="640" height="48" rx="14" fill="#a02020" stroke="#ffe45c" stroke-width="4"/>
+        <text x="400" y="54" text-anchor="middle" fill="#ffe45c" font-size="24" font-weight="900" style="text-shadow:0 2px 0 #000">こぶ ぎむ法[ほう]、せかい じゅう に てきよう！</text>
+        <!-- Frozen ground -->
+        <rect x="0" y="380" width="800" height="120" fill="#cdb999"/>
+        <!-- patches of snow -->
+        <ellipse cx="120" cy="395" rx="60" ry="6" fill="#fff" opacity="0.7"/>
+        <ellipse cx="380" cy="408" rx="80" ry="7" fill="#fff" opacity="0.6"/>
+        <ellipse cx="640" cy="395" rx="70" ry="6" fill="#fff" opacity="0.7"/>
+        <!-- camel-school caravan in the foreground -->
+        ${camelKidSchool(180, 360, 1.0)}
+        ${camelKidSchool(440, 365, 1.0)}
+        ${camelKidSchool(680, 358, 1.0)}
+        <!-- panicked humpy citizens (humans, dogs, even a goldfish bowl!) -->
+        ${humpyPerson(280, 460, 1)}
+        ${humpyPerson(320, 458, 2)}
+        ${humpyPerson(355, 462, 1)}
+        ${humpyPerson(540, 460, 3)}
+        ${humpyPerson(580, 462, 2)}
+        ${humpyPerson(615, 460, 1)}
+        <!-- humpy dog -->
+        <g transform="translate(260, 472)">
+          <ellipse cx="0" cy="0" rx="9" ry="5" fill="#7a4a25"/>
+          <ellipse cx="-2" cy="-6" rx="3" ry="4" fill="#7a4a25"/>
+          <ellipse cx="2" cy="-6" rx="3" ry="4" fill="#7a4a25"/>
+          <line x1="-7" y1="3" x2="-7" y2="7" stroke="#7a4a25" stroke-width="2"/>
+          <line x1="7" y1="3" x2="7" y2="7" stroke="#7a4a25" stroke-width="2"/>
+          <ellipse cx="-3" cy="-4" rx="1.5" ry="0.8" fill="#3a2210"/>
+        </g>
+        <!-- humpy goldfish bowl -->
+        <g transform="translate(490, 470)">
+          <ellipse cx="0" cy="0" rx="10" ry="8" fill="#a8d8f0" stroke="#3a4050" stroke-width="1.5"/>
+          <ellipse cx="0" cy="-2" rx="5" ry="2.5" fill="#ff8800"/>
+          <ellipse cx="-1" cy="-5" rx="0.6" ry="0.6" fill="#000"/>
+          <!-- tiny hump on the goldfish -->
+          <ellipse cx="2" cy="-4" rx="1.5" ry="2" fill="#cc6600"/>
+        </g>
+        <!-- floating mantuun buuz, drifting like blimps -->
+        ${buuzCloud(220, 130, 18)}
+        ${buuzCloud(360, 100, 14)}
+        ${buuzCloud(480, 130, 22)}
+        ${buuzCloud(280, 220, 14)}
+        ${buuzCloud(560, 240, 18)}
+        <!-- background ger camp on the horizon -->
+        <g transform="translate(300, 365)">
+          <path d="M -24 0 Q -24 -22 0 -28 Q 24 -22 24 0 Z" fill="#f0e0c0" stroke="#000" stroke-width="2"/>
+          <path d="M -8 -28 L 0 -42 L 8 -28 Z" fill="#3a2010"/>
+        </g>
+        <g transform="translate(360, 372)">
+          <path d="M -20 0 Q -20 -18 0 -23 Q 20 -18 20 0 Z" fill="#e8d8b8" stroke="#000" stroke-width="2"/>
+          <path d="M -7 -23 L 0 -36 L 7 -23 Z" fill="#3a2010"/>
+        </g>
+        <!-- The boss himself, towering on the horizon -->
+        <g transform="translate(680, 280) scale(0.9)">
+          <ellipse cx="0" cy="0" rx="42" ry="14" fill="#c89a5a" stroke="#000" stroke-width="2"/>
+          <path d="M -22 -1 Q -18 -22 -8 -22 Q 2 -22 2 -1 Z" fill="#a07338" stroke="#000" stroke-width="2"/>
+          <path d="M 6 -1 Q 12 -24 22 -24 Q 32 -24 32 -1 Z" fill="#a07338" stroke="#000" stroke-width="2"/>
+          <path d="M 38 -4 Q 50 -28 56 -45" stroke="#000" stroke-width="11" fill="none" stroke-linecap="round"/>
+          <path d="M 38 -4 Q 50 -28 56 -45" stroke="#c89a5a" stroke-width="8" fill="none" stroke-linecap="round"/>
+          <circle cx="58" cy="-50" r="14" fill="#7a4a25" stroke="#000" stroke-width="2"/>
+          <ellipse cx="62" cy="-52" rx="7" ry="5" fill="#f5d6a8"/>
+          <circle cx="60" cy="-53" r="1.5" fill="#000"/>
+          <circle cx="65" cy="-53" r="1.5" fill="#000"/>
+          <!-- crown -->
+          <path d="M 48 -64 L 52 -54 L 56 -68 L 60 -54 L 64 -68 L 68 -54 L 72 -64 Z" fill="#ffd24a" stroke="#000" stroke-width="1.5"/>
+          <line x1="-22" y1="14" x2="-22" y2="36" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+          <line x1="-8"  y1="14" x2="-8"  y2="36" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+          <line x1="8"   y1="14" x2="8"   y2="36" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+          <line x1="22"  y1="14" x2="22"  y2="36" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+        </g>
+        <!-- thermometer reading -40°C -->
+        <g transform="translate(540, 320)">
+          <rect x="-3" y="-44" width="6" height="40" fill="#fff" stroke="#000" stroke-width="2"/>
+          <rect x="-2" y="-12" width="4" height="14" fill="#3060c0"/>
+          <circle cx="0" cy="0" r="9" fill="#3060c0" stroke="#000" stroke-width="2"/>
+          <text x="14" y="-10" font-size="16" font-weight="900" fill="#fff" stroke="#000" stroke-width="0.4">-40°C</text>
+        </g>
+      </svg>`;
+    return {
+      svg,
+      captionJp: "ぜんいん こぶ。 みんな ラクダ つうがく。 まいにち ブーズ。 マイナス40度[ど]。 テメー・ハーンの 帝国[ていこく] や〜！",
+      captionEn: "Humps are mandatory. Every kid rides a camel to school. Every meal is buuz. The world is locked at -40°C. The Khan of camels reigns."
+    };
+  }
+
+  const SCENES = { tako, unko, tral, pamp, parfait, anpan, temee, brainrot };
 
   function render(bossId) {
     const fn = SCENES[bossId];

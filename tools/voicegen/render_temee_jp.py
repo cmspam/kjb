@@ -175,12 +175,17 @@ def synth_line(speaker_id, text, out_wav):
     return True
 
 def encode_opus(in_wav, out_opus):
+    # VOICEVOX output is already clean (no leading/trailing silence to speak
+    # of). The previous aggressive silenceremove (-45dB threshold, 0.4s
+    # stop_duration) was clipping the tails of words that ended on a soft
+    # consonant or trailing vowel — kid heard "ぞい" cut to "ぞ", "じゃ〜！"
+    # cut to "じゃ". Just trim a tiny bit of leading silence and leave the
+    # tail completely alone.
     subprocess.run(
         ["ffmpeg", "-y", "-loglevel", "error",
          "-i", str(in_wav),
          "-c:a", "libopus", "-b:a", "32k", "-ac", "1", "-ar", "48000",
-         "-af", "silenceremove=start_periods=1:start_silence=0.06:start_duration=0.1:start_threshold=-45dB:"
-                "stop_periods=1:stop_silence=0.18:stop_duration=0.4:stop_threshold=-45dB",
+         "-af", "silenceremove=start_periods=1:start_silence=0.04:start_duration=0.08:start_threshold=-50dB",
          str(out_opus)],
         check=True,
     )
