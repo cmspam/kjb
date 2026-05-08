@@ -2636,13 +2636,13 @@ rt {
 }
 .dream-shatter-overlay.phase-cracks .ds-cracks {
   opacity: 1;
-  animation: ds-cracks-in 0.3s ease-out forwards;
+  animation: ds-cracks-in 0.4s ease-out forwards;
 }
 .dream-shatter-overlay.phase-cracks .ds-cracks path {
-  animation: ds-crack-draw 0.32s ease-out forwards;
+  animation: ds-crack-draw 0.7s ease-out forwards;
 }
 .dream-shatter-overlay.phase-cracks .ds-image {
-  animation: ds-image-shake 0.3s linear forwards;
+  animation: ds-image-shake 0.7s linear forwards;
 }
 @keyframes ds-cracks-in {
   0% { opacity: 0; }

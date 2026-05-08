@@ -3130,12 +3130,17 @@ window.UI = (() => {
       shard.dataset.rot = ((Math.random() - 0.5) * 720).toFixed(0);
       shardsContainer.appendChild(shard);
     });
-    // Phase B — cracks slam in (~1.7s). Image shakes + brightens, sfxBreak.
+    // Phase A — dream visible for ~3s (image fades up over 700ms, then
+    // sits still for ~2.8s so the kid actually reads the dystopia).
+    // Phase B — cracks slowly spread across the image with sfxBreak.
     setTimeout(() => {
       overlay.classList.add("phase-cracks");
       if (SND && SND.sfxBreak) SND.sfxBreak();
-    }, 1700);
-    // Phase C — image dissolves and shards fly outward (~2.0s).
+    }, 3500);
+    // Phase C — image dissolves; shards drift outward over 2.5s with
+    // ease-out so they decelerate as they fly. Slower than the earlier
+    // build — feels less like an explosion, more like the dream
+    // slowly coming apart.
     setTimeout(() => {
       overlay.classList.add("phase-shatter");
       overlay.querySelectorAll(".ds-shard").forEach(shard => {
@@ -3144,26 +3149,27 @@ window.UI = (() => {
         const rot = parseFloat(shard.dataset.rot);
         shard.animate(
           [
-            { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
-            { transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)`, opacity: 0 }
+            { transform: "translate(0, 0) rotate(0deg)", opacity: 1, offset: 0 },
+            { transform: `translate(${dx*0.45}px, ${dy*0.45}px) rotate(${rot*0.4}deg)`, opacity: 1, offset: 0.5 },
+            { transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)`, opacity: 0, offset: 1 }
           ],
-          { duration: 1200, easing: "cubic-bezier(.3,.7,.5,1)", fill: "forwards" }
+          { duration: 2500, easing: "cubic-bezier(.18,.55,.4,1)", fill: "forwards" }
         );
       });
       if (SND && SND.sfxBreak) SND.sfxBreak();
-    }, 2000);
-    // Phase D — banner pops in + crowd cheer + confetti (~3.2s).
+    }, 4200);
+    // Phase D — banner pops in + crowd cheer + confetti.
     setTimeout(() => {
       overlay.classList.add("phase-banner");
-      if (SND && SND.crowdCheer) SND.crowdCheer(0.9, 1500);
+      if (SND && SND.crowdCheer) SND.crowdCheer(0.9, 1700);
       const confettiLayer = overlay.querySelector(".ds-confetti-layer");
-      spawnConfetti(confettiLayer, 32);
-    }, 3200);
-    // End — clean up, hand back control (~4.4s).
+      spawnConfetti(confettiLayer, 36);
+    }, 6200);
+    // End — clean up, hand back control.
     setTimeout(() => {
       try { overlay.remove(); } catch(_){}
       if (onDone) onDone();
-    }, 4400);
+    }, 7600);
   }
 
   // Confetti spawner — used by K.O. cinematic and victory screen.
