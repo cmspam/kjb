@@ -721,16 +721,14 @@ window.Monsters = (() => {
     </g>`;
   }
 
-  // Genghis-Khan-style white facial hair as a destructible part. Three
-  // states for visible damage feedback:
+  // Genghis-Khan-style facial hair as a destructible part. Three states:
   //   • state 0 (full HP): mustache + long chin beard
   //   • state 1 (damaged): only the mustache survives — the chin beard
   //     has been "shaved" off
-  //   • state 2 (destroyed): clean-shaven (renders nothing — the kid sees
-  //     the bare face under where the beard used to be)
-  // Used only by ティメー サルマクチン today; geom { x, y } is the chin
-  // anchor point (top-center of the chin beard / mustache base).
-  function drawBeard(part, color) {
+  //   • state 2 (destroyed): clean-shaven
+  // The third arg `dark` switches the palette to black-bristle (shiny
+  // temee variant) instead of the default elder white.
+  function drawBeard(part, color, dark) {
     const s = partState(part);
     const { x, y } = part.geom;
     if (s === 2) {
@@ -738,6 +736,10 @@ window.Monsters = (() => {
         <text x="${x}" y="${y+30}" text-anchor="middle" font-size="22">💥</text>
       </g>`;
     }
+    const fillCol   = dark ? "#1a1410" : "#fafafa";
+    const strokeCol = dark ? "#000"     : "#888";
+    const wispCol   = dark ? "#3a2820" : "#cccccc";
+    const stubbleCol= dark ? "#3a2820" : "#ddd";
     // Mustache always present in states 0 + 1 — single shape that curls
     // out and down on both sides of the upper lip.
     const mustache = `
@@ -752,17 +754,17 @@ window.Monsters = (() => {
                Q ${x+53} ${y+20} ${x+55} ${y+8}
                Q ${x+43} ${y-7} ${x+27} ${y-10}
                Q ${x+12} ${y-12} ${x} ${y-8} Z"
-            fill="#fafafa" stroke="#888" stroke-width="1.4"/>
-      <path d="M ${x-37} ${y+10} Q ${x-25} ${y+13} ${x-15} ${y+8}" stroke="#cccccc" stroke-width="1" fill="none" opacity="0.85"/>
-      <path d="M ${x+37} ${y+10} Q ${x+25} ${y+13} ${x+15} ${y+8}" stroke="#cccccc" stroke-width="1" fill="none" opacity="0.85"/>`;
+            fill="${fillCol}" stroke="${strokeCol}" stroke-width="1.4"/>
+      <path d="M ${x-37} ${y+10} Q ${x-25} ${y+13} ${x-15} ${y+8}" stroke="${wispCol}" stroke-width="1" fill="none" opacity="0.85"/>
+      <path d="M ${x+37} ${y+10} Q ${x+25} ${y+13} ${x+15} ${y+8}" stroke="${wispCol}" stroke-width="1" fill="none" opacity="0.85"/>`;
     if (s === 1) {
       // Damaged: chin beard shaved off, only mustache remains. Show a
       // little stubble dust under the chin to sell the haircut.
       return `<g class="part">
         ${mustache}
-        <circle cx="${x-8}" cy="${y+30}" r="1.4" fill="#ddd" opacity="0.7"/>
-        <circle cx="${x+5}" cy="${y+34}" r="1.2" fill="#ddd" opacity="0.7"/>
-        <circle cx="${x+12}" cy="${y+28}" r="1.6" fill="#ddd" opacity="0.7"/>
+        <circle cx="${x-8}" cy="${y+30}" r="1.4" fill="${stubbleCol}" opacity="0.7"/>
+        <circle cx="${x+5}" cy="${y+34}" r="1.2" fill="${stubbleCol}" opacity="0.7"/>
+        <circle cx="${x+12}" cy="${y+28}" r="1.6" fill="${stubbleCol}" opacity="0.7"/>
       </g>`;
     }
     // Full HP: mustache + long pointed chin beard, Genghis-Khan style.
@@ -776,10 +778,10 @@ window.Monsters = (() => {
                Q ${x+33} ${y+32} ${x+22} ${y+13}
                Q ${x+12} ${y+20} ${x} ${y+20}
                Q ${x-12} ${y+20} ${x-22} ${y+13} Z"
-            fill="#fafafa" stroke="#888" stroke-width="1.4"/>
-      <path d="M ${x-13} ${y+32} Q ${x-15} ${y+65} ${x-10} ${y+100} Q ${x-5} ${y+122} ${x} ${y+132}" stroke="#d0d0d0" stroke-width="1.2" fill="none" opacity="0.75"/>
-      <path d="M ${x} ${y+30}    Q ${x} ${y+70}    ${x} ${y+115}" stroke="#d0d0d0" stroke-width="1.2" fill="none" opacity="0.75"/>
-      <path d="M ${x+13} ${y+32} Q ${x+15} ${y+65} ${x+10} ${y+100} Q ${x+5} ${y+122} ${x} ${y+132}" stroke="#d0d0d0" stroke-width="1.2" fill="none" opacity="0.75"/>`;
+            fill="${fillCol}" stroke="${strokeCol}" stroke-width="1.4"/>
+      <path d="M ${x-13} ${y+32} Q ${x-15} ${y+65} ${x-10} ${y+100} Q ${x-5} ${y+122} ${x} ${y+132}" stroke="${wispCol}" stroke-width="1.2" fill="none" opacity="0.75"/>
+      <path d="M ${x} ${y+30}    Q ${x} ${y+70}    ${x} ${y+115}" stroke="${wispCol}" stroke-width="1.2" fill="none" opacity="0.75"/>
+      <path d="M ${x+13} ${y+32} Q ${x+15} ${y+65} ${x+10} ${y+100} Q ${x+5} ${y+122} ${x} ${y+132}" stroke="${wispCol}" stroke-width="1.2" fill="none" opacity="0.75"/>`;
     return `<g class="part">
       ${chinBeard}
       ${mustache}
@@ -817,7 +819,10 @@ window.Monsters = (() => {
     const color = "#c89a5a"; // sandy camel-tan
     const f = window.I18N.boss(id);
     const pn = f.parts || {};
-    return {
+    // Build as a named const so bodySVG / drawBeard closures can read
+    // boss.shiny live (applyShiny mutates the flag AFTER factory returns
+    // but BEFORE the first render).
+    const boss = {
       id,
       name_jp: f.name_jp,
       name_en: f.name_en,
@@ -829,7 +834,38 @@ window.Monsters = (() => {
       weakness_label: f.weakness_label,
       color,
       attacksPerRound: 2,
-      bodySVG: () => `
+      hits: f.hits || []
+    };
+    boss.bodySVG = () => {
+      // Shiny variant gets a Mongolian-herder hat (Toortsog-style pointed
+      // cap with gold band, fur brim, finial knot) and the brow tuft is
+      // hidden because the hat covers it.
+      const shinyHat = boss.shiny ? `
+        <!-- Mongolian herder hat (Toortsog pointed cap) -->
+        <!-- back / dark panel -->
+        <path d="M 552 28 Q 605 -56 658 28 Q 605 36 552 28 Z" fill="#3a1a08" stroke="#000" stroke-width="2.5"/>
+        <!-- front lighter panel for highlight -->
+        <path d="M 580 28 Q 605 -52 630 28 Q 605 33 580 28 Z" fill="#6a3018" stroke="#000" stroke-width="1.5" opacity="0.9"/>
+        <!-- Vertical seam stripe -->
+        <line x1="605" y1="-50" x2="605" y2="30" stroke="#1a0a02" stroke-width="2"/>
+        <!-- Gold trim band at base -->
+        <rect x="550" y="22" width="110" height="8" fill="#e8b832" stroke="#000" stroke-width="1.5" rx="2"/>
+        <!-- Subtle pattern on gold band -->
+        <line x1="572" y1="26" x2="572" y2="26" stroke="#a07810" stroke-width="2"/>
+        <line x1="592" y1="26" x2="592" y2="26" stroke="#a07810" stroke-width="2"/>
+        <line x1="612" y1="26" x2="612" y2="26" stroke="#a07810" stroke-width="2"/>
+        <line x1="632" y1="26" x2="632" y2="26" stroke="#a07810" stroke-width="2"/>
+        <!-- Fur brim (fluffy band below gold) -->
+        <ellipse cx="605" cy="36" rx="58" ry="6" fill="#1a0a02" stroke="#000" stroke-width="1.5"/>
+        <ellipse cx="605" cy="36" rx="58" ry="6" fill="url(#temeeFurBrim)"/>
+        <!-- Finial knot at peak with red tassel -->
+        <circle cx="605" cy="-52" r="5" fill="#e8b832" stroke="#000" stroke-width="1.5"/>
+        <path d="M 605 -47 Q 612 -32 610 -16" stroke="#cc2233" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 605 -47 Q 600 -32 602 -16" stroke="#aa1a22" stroke-width="2.5" fill="none" stroke-linecap="round"/>` : '';
+      // Brow tuft only when not wearing the hat
+      const browTuft = boss.shiny ? '' :
+        `<path d="M 572 30 Q 605 12 638 30" stroke="#3a2010" stroke-width="7" fill="none" stroke-linecap="round"/>`;
+      return `
         <defs>
           <linearGradient id="temeeBody" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0"  stop-color="#e7c08a"/>
@@ -839,6 +875,11 @@ window.Monsters = (() => {
             <stop offset="0"  stop-color="#f5d6a8"/>
             <stop offset="1"  stop-color="#b07a3a"/>
           </radialGradient>
+          <linearGradient id="temeeFurBrim" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0"   stop-color="#3a2010"/>
+            <stop offset="0.5" stop-color="#5a3a1a"/>
+            <stop offset="1"   stop-color="#1a0a02"/>
+          </linearGradient>
         </defs>
         <!-- Gobi sand floor shadow -->
         <ellipse cx="400" cy="430" rx="280" ry="22" fill="#000" opacity=".25"/>
@@ -868,8 +909,8 @@ window.Monsters = (() => {
         <circle cx="670" cy="48" r="18" fill="#000"/>
         <circle cx="670" cy="48" r="13" fill="#7a4a25"/>
         <circle cx="670" cy="48" r="6"  fill="#f5d6a8"/>
-        <!-- Monkey brow tuft -->
-        <path d="M 572 30 Q 605 12 638 30" stroke="#3a2010" stroke-width="7" fill="none" stroke-linecap="round"/>
+        ${browTuft}
+        ${shinyHat}
         <!-- Beard is rendered as a destructible PART (drawBeard) so it can
              shrink mustache → bald as it takes damage. Not drawn here. -->
         <!-- Tiny mouth peek — stays under the beard but visible if beard
@@ -884,32 +925,30 @@ window.Monsters = (() => {
         <ellipse cx="290" cy="430" rx="14" ry="5" fill="#e7c08a" opacity=".55"/>
         <ellipse cx="510" cy="430" rx="14" ry="5" fill="#e7c08a" opacity=".55"/>
         ${blushPair(605, 92, 32)}
-      `,
-      parts: [
-        // Two humps on top of camel body — the signature attackable parts.
-        // Destroying both removes the boss's heavy attack power.
-        { id:"h1",   type:"limb",  name_jp:pn.h1,   maxHP:12, hp:12, geom:{x:340, y:215, w:55, h:60}, draw:(p)=>drawHump(p,"#b07a3a"), effect:"atk-1" },
-        { id:"h2",   type:"limb",  name_jp:pn.h2,   maxHP:12, hp:12, geom:{x:455, y:215, w:55, h:60}, draw:(p)=>drawHump(p,"#b07a3a"), effect:"atk-1" },
-        // Monkey eyes — sized + spaced for the bigger head, far enough from
-        // edge that the bob animation doesn't visually clip them off.
-        { id:"eL",   type:"eye",   name_jp:pn.eL,   maxHP:7,  hp:7,  geom:{x:582, y:62, r:13, delay:0},  draw:(p)=>drawEye(p,color), effect:"miss-50" },
-        { id:"eR",   type:"eye",   name_jp:pn.eR,   maxHP:7,  hp:7,  geom:{x:628, y:62, r:13, delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
-        // White Genghis-Khan beard as the destructible part. Shave off the
-        // chin beard at half HP (only mustache remains), shave off the
-        // mustache too at zero HP (clean-shaven). Same "no-poison" effect
-        // as a regular boss mouth — without his beard he can't intone the
-        // sandstorm/winter chants.
-        { id:"mouth",type:"mouth", name_jp:pn.mouth,maxHP:9,  hp:9,  geom:{x:605, y:100},                draw:(p)=>drawBeard(p,color), effect:"no-poison" },
-        // Two of the four visible legs are attackable; rear leg slows boss.
-        { id:"L1",   type:"limb",  name_jp:pn.L1,   maxHP:9,  hp:9,  geom:{x:340, y:340, dir:90, len:80}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"atk-1" },
-        { id:"L2",   type:"limb",  name_jp:pn.L2,   maxHP:9,  hp:9,  geom:{x:470, y:340, dir:90, len:80}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
-        // Camel tail — slow effect when destroyed
-        { id:"tail", type:"limb",  name_jp:pn.tail, maxHP:7,  hp:7,  geom:{x:200, y:280, dir:200, len:60}, draw:(p)=>drawTail(p,color), effect:"slow" },
-        // Heart core in the camel chest
-        { id:"core", type:"core",  name_jp:pn.core, maxHP:32, hp:32, geom:{x:400, y:295, r:22},           draw:(p)=>drawCore(p,color), effect:"win" },
-      ],
-      hits: f.hits || []
+      `;
     };
+    boss.parts = [
+      // Two humps on top of camel body — the signature attackable parts.
+      // Destroying both removes the boss's heavy attack power.
+      { id:"h1",   type:"limb",  name_jp:pn.h1,   maxHP:12, hp:12, geom:{x:340, y:215, w:55, h:60}, draw:(p)=>drawHump(p,"#b07a3a"), effect:"atk-1" },
+      { id:"h2",   type:"limb",  name_jp:pn.h2,   maxHP:12, hp:12, geom:{x:455, y:215, w:55, h:60}, draw:(p)=>drawHump(p,"#b07a3a"), effect:"atk-1" },
+      // Monkey eyes — sized + spaced for the bigger head, far enough from
+      // edge that the bob animation doesn't visually clip them off.
+      { id:"eL",   type:"eye",   name_jp:pn.eL,   maxHP:7,  hp:7,  geom:{x:582, y:62, r:13, delay:0},  draw:(p)=>drawEye(p,color), effect:"miss-50" },
+      { id:"eR",   type:"eye",   name_jp:pn.eR,   maxHP:7,  hp:7,  geom:{x:628, y:62, r:13, delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+      // Genghis-Khan beard — destructible. Closure reads boss.shiny so the
+      // shiny variant gets a black beard (vs white) without changing the
+      // shape logic. Same "no-poison" gameplay effect as a normal mouth.
+      { id:"mouth",type:"mouth", name_jp:pn.mouth,maxHP:9,  hp:9,  geom:{x:605, y:100},                draw:(p)=>drawBeard(p, color, !!boss.shiny), effect:"no-poison" },
+      // Two of the four visible legs are attackable; rear leg slows boss.
+      { id:"L1",   type:"limb",  name_jp:pn.L1,   maxHP:9,  hp:9,  geom:{x:340, y:340, dir:90, len:80}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"atk-1" },
+      { id:"L2",   type:"limb",  name_jp:pn.L2,   maxHP:9,  hp:9,  geom:{x:470, y:340, dir:90, len:80}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+      // Camel tail — slow effect when destroyed
+      { id:"tail", type:"limb",  name_jp:pn.tail, maxHP:7,  hp:7,  geom:{x:200, y:280, dir:200, len:60}, draw:(p)=>drawTail(p,color), effect:"slow" },
+      // Heart core in the camel chest
+      { id:"core", type:"core",  name_jp:pn.core, maxHP:32, hp:32, geom:{x:400, y:295, r:22},           draw:(p)=>drawCore(p,color), effect:"win" },
+    ];
+    return boss;
   }
 
   // ---------- FINAL BOSS: ブレインロット・キング ----------
