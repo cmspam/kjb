@@ -3054,6 +3054,118 @@ window.UI = (() => {
     setTimeout(() => { overlay.remove(); if (onDone) onDone(); }, 2400);
   }
 
+  // -------- DREAM SHATTER (boss-defeat reveal cinematic) --------
+  // Shown between showKO and the victory screen. The boss's would-be
+  // dystopian future (the same Endings PNG that plays on a *loss*) flashes
+  // up for a beat — kid sees "this is the world that almost was" — then
+  // glass-cracks across the image, shatters into 14 triangular shards that
+  // fly off in different directions, and a gold "あくむ を こわした！"
+  // banner pops in. ~4.4s total. No-skip per design — the slow read of the
+  // dystopia is the whole point of the moment. Falls through silently if
+  // the boss has no Endings entry.
+  function showDreamShatter(boss, onDone) {
+    if (!boss || !boss.id || !window.Endings || !Endings.exists(boss.id)) {
+      if (onDone) onDone();
+      return;
+    }
+    const imgUrl = `assets/images/endings/${boss.id}.png`;
+    const overlay = document.createElement("div");
+    overlay.className = "dream-shatter-overlay";
+    overlay.innerHTML = `
+      <div class="ds-vignette"></div>
+      <div class="ds-subtitle">これが あいてが つくる せかい…</div>
+      <div class="ds-frame">
+        <img class="ds-image" src="${imgUrl}" alt=""/>
+        <svg class="ds-cracks" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 50 0 L 48 28 L 56 58 L 50 100" stroke="#fff" stroke-width="0.5" fill="none"/>
+          <path d="M 0 50 L 32 48 L 60 56 L 100 52"  stroke="#fff" stroke-width="0.5" fill="none"/>
+          <path d="M 50 28 L 72 36 L 84 70 L 78 96"  stroke="#fff" stroke-width="0.4" fill="none"/>
+          <path d="M 32 48 L 50 60 L 60 56"          stroke="#fff" stroke-width="0.35" fill="none"/>
+          <path d="M 18 0  L 26 30 L 32 48"          stroke="#fff" stroke-width="0.3" fill="none"/>
+          <path d="M 84 70 L 100 78"                 stroke="#fff" stroke-width="0.3" fill="none"/>
+        </svg>
+        <div class="ds-shards"></div>
+      </div>
+      <div class="ds-banner-wrap">
+        <div class="ds-banner">あくむ を こわした！</div>
+        <div class="ds-banner-en">EVIL DREAM SHATTERED!</div>
+      </div>
+      <div class="ds-confetti-layer"></div>
+    `;
+    document.body.appendChild(overlay);
+    // Fourteen triangle shards tiling the image — irregular so the break
+    // pattern looks organic. Coordinates are percentages.
+    const SHARDS = [
+      [[0,0],   [35,0],  [18,42]],
+      [[35,0],  [68,0],  [50,30]],
+      [[68,0],  [100,0], [85,38]],
+      [[0,0],   [18,42], [0,55]],
+      [[18,42], [50,30], [35,58]],
+      [[50,30], [85,38], [70,58]],
+      [[85,38], [100,0], [100,58]],
+      [[0,55],  [35,58], [20,82]],
+      [[35,58], [70,58], [55,80]],
+      [[70,58], [100,58],[90,82]],
+      [[0,55],  [20,82], [0,100]],
+      [[20,82], [55,80], [35,100]],
+      [[55,80], [90,82], [75,100]],
+      [[90,82], [100,58],[100,100]],
+    ];
+    const shardsContainer = overlay.querySelector(".ds-shards");
+    SHARDS.forEach(tri => {
+      const polygon = tri.map(([x,y]) => `${x}% ${y}%`).join(", ");
+      const shard = document.createElement("div");
+      shard.className = "ds-shard";
+      shard.style.clipPath = `polygon(${polygon})`;
+      shard.style.webkitClipPath = `polygon(${polygon})`;
+      shard.style.backgroundImage = `url('${imgUrl}')`;
+      // Centroid → fly direction radiates outward from image center.
+      const cx = (tri[0][0] + tri[1][0] + tri[2][0]) / 3;
+      const cy = (tri[0][1] + tri[1][1] + tri[2][1]) / 3;
+      const dx = cx - 50;
+      const dy = cy - 50;
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      shard.dataset.dx  = ((dx / dist) * 540 + (Math.random()-0.5) * 80).toFixed(0);
+      shard.dataset.dy  = ((dy / dist) * 540 + 220 + (Math.random()-0.5) * 80).toFixed(0);
+      shard.dataset.rot = ((Math.random() - 0.5) * 720).toFixed(0);
+      shardsContainer.appendChild(shard);
+    });
+    // Phase B — cracks slam in (~1.7s). Image shakes + brightens, sfxBreak.
+    setTimeout(() => {
+      overlay.classList.add("phase-cracks");
+      if (SND && SND.sfxBreak) SND.sfxBreak();
+    }, 1700);
+    // Phase C — image dissolves and shards fly outward (~2.0s).
+    setTimeout(() => {
+      overlay.classList.add("phase-shatter");
+      overlay.querySelectorAll(".ds-shard").forEach(shard => {
+        const dx = parseFloat(shard.dataset.dx);
+        const dy = parseFloat(shard.dataset.dy);
+        const rot = parseFloat(shard.dataset.rot);
+        shard.animate(
+          [
+            { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
+            { transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)`, opacity: 0 }
+          ],
+          { duration: 1200, easing: "cubic-bezier(.3,.7,.5,1)", fill: "forwards" }
+        );
+      });
+      if (SND && SND.sfxBreak) SND.sfxBreak();
+    }, 2000);
+    // Phase D — banner pops in + crowd cheer + confetti (~3.2s).
+    setTimeout(() => {
+      overlay.classList.add("phase-banner");
+      if (SND && SND.crowdCheer) SND.crowdCheer(0.9, 1500);
+      const confettiLayer = overlay.querySelector(".ds-confetti-layer");
+      spawnConfetti(confettiLayer, 32);
+    }, 3200);
+    // End — clean up, hand back control (~4.4s).
+    setTimeout(() => {
+      try { overlay.remove(); } catch(_){}
+      if (onDone) onDone();
+    }, 4400);
+  }
+
   // Confetti spawner — used by K.O. cinematic and victory screen.
   function spawnConfetti(layer, count) {
     if (!layer) return;
@@ -4657,7 +4769,7 @@ window.UI = (() => {
            renderBossIntro, showSlingshot, showMonsterAttackPicker, showBossAttackAnim, showMonsterPvpAttack,
            renderMonsterPick, renderPvpAction, renderPrivateScan, showRareEventIntro,
            showMatchTitleCard, renderBossPickerMap, showCardPlay, showKillingBlow,
-           showRoundIntro, showRageIntro, showPhase2Intro, showKO, showFightStinger, spawnConfetti,
+           showRoundIntro, showRageIntro, showPhase2Intro, showKO, showDreamShatter, showFightStinger, spawnConfetti,
            showComboSplash, showFirstBloodSplash, showPartDestroyedSplash, showPartDestroyedZoom, showSpeechBonusSplash,
            showCompendium, runSpeechChallenge,
            menuModal, showPvpFaceoff, showCliffhanger,

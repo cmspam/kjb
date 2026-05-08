@@ -1842,6 +1842,14 @@ window.Game = (() => {
       UI.showKO(S.boss, () => doVictory(opts));
       return;
     }
+    // After K.O., flash the boss's would-be dystopian future (the same
+    // ending PNG the kid would see if they LOST) and shatter it — drives
+    // home what their win prevented. Same _shatterShown re-entry guard.
+    if (S.boss && !S.boss._shatterShown && UI.showDreamShatter) {
+      S.boss._shatterShown = true;
+      UI.showDreamShatter(S.boss, () => doVictory(opts));
+      return;
+    }
     // Persistent progress: mark this boss as defeated and unlock its tied card
     // on first defeat. The victory screen will show the unlock banner.
     let unlockedCardId = null;
