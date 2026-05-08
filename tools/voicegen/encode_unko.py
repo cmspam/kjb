@@ -3,10 +3,10 @@
 Encode user-recorded m4a unko-shiny lines into the runtime opus pipeline.
 
 Inputs:
-  C:/Users/charlesmiller/Documents/Sound Recordings/Recording.m4a       (line 1)
-  C:/Users/charlesmiller/Documents/Sound Recordings/Recording (2).m4a   (line 2)
+  ~/Documents/Sound Recordings/Recording.m4a       (line 1)
+  ~/Documents/Sound Recordings/Recording (2).m4a   (line 2)
   ...
-  C:/Users/charlesmiller/Documents/Sound Recordings/Recording (54).m4a  (line 54)
+  ~/Documents/Sound Recordings/Recording (54).m4a  (line 54)
 
 Hashes each line text via djb2 (matching js/audio.js _hashFor / playBossLine
 runtime path), encodes the corresponding m4a → 32 kbps mono 48 kHz opus, and
@@ -22,7 +22,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-RECORDINGS = Path("C:/Users/charlesmiller/Documents/Sound Recordings")
+RECORDINGS = Path.home() / "Documents" / "Sound Recordings"
 OUT_DIR = ROOT / "assets" / "voices" / "unko_shiny"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 

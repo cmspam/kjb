@@ -379,7 +379,7 @@ window.UI = (() => {
           ${_shinyPvpUnlocked ? `<div style="color:#ffe85a; font-weight:900; letter-spacing:3px; font-size:13px; margin-top:4px; text-shadow:0 2px 0 #000, 0 0 8px #ffd24a;">✨ SHINY MODE ✨<div style="font-size:10px; letter-spacing:1px; margin-top:2px; color:#ffd24a; font-weight:700;">PvP えらべる ・ ヒーロー 50%</div></div>` : ''}
           <div class="row" style="margin-top:8px;">
             <button class="btn ghost" id="btn-rules">あそびかた ❓</button>
-            <button class="btn ghost" id="btn-compendium">📖 ずかん${(window.Progress&&Progress.totalDefeated())?` (${Progress.totalDefeated()}/6)`:''}</button>
+            <button class="btn ghost" id="btn-compendium">📖 ずかん${(window.Progress&&Progress.totalDefeated())?` (${Progress.totalDefeated()}/${(window.Monsters&&Monsters.listFactories)?Monsters.listFactories().length:7})`:''}</button>
             <button class="btn ghost" id="btn-settings">せってい ⚙️</button>
           </div>
           <div class="subtle" style="margin-top: 10px;">タップで おとが でます 🔊</div>

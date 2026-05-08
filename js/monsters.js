@@ -721,6 +721,125 @@ window.Monsters = (() => {
     </g>`;
   }
 
+  // ---------- ティメー サルマクチン (Mongolian camel-monkey) ----------
+  // Camel body + monkey head. Two attackable humps on the back are the
+  // signature feature — destroying both strips the boss's heavy attack.
+  function drawHump(part, color) {
+    const s = partState(part);
+    const { x, y, w, h } = part.geom;
+    if (s === 2) {
+      return `<g class="part">
+        <path d="M ${x-w} ${y} Q ${x} ${y-h*0.4} ${x+w} ${y}" fill="${color}" stroke="#000" stroke-width="3" opacity=".5"/>
+        <text x="${x}" y="${y-4}" text-anchor="middle" font-size="28">💥</text>
+      </g>`;
+    }
+    const cracks = s===1
+      ? `<path d="M ${x-w*0.3} ${y-h*0.6} L ${x+w*0.1} ${y-h*0.4} L ${x-w*0.05} ${y-h*0.2}" stroke="#000" stroke-width="2" fill="none"/>`
+      : "";
+    return `<g class="part">
+      <path d="M ${x-w} ${y} Q ${x-w*0.5} ${y-h*1.3} ${x} ${y-h*1.4} Q ${x+w*0.5} ${y-h*1.3} ${x+w} ${y} Z"
+            fill="#000"/>
+      <path d="M ${x-w+3} ${y} Q ${x-w*0.5} ${y-h*1.25} ${x} ${y-h*1.32} Q ${x+w*0.5} ${y-h*1.25} ${x+w-3} ${y} Z"
+            fill="${color}"/>
+      <path d="M ${x-w*0.5} ${y-h*0.4} Q ${x-w*0.2} ${y-h*1.0} ${x+w*0.1} ${y-h*1.1}"
+            stroke="rgba(255,255,255,.35)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      ${cracks}
+    </g>`;
+  }
+
+  function makeTemeeSarmagchin() {
+    const id = "temee";
+    const color = "#c89a5a"; // sandy camel-tan
+    const f = window.I18N.boss(id);
+    const pn = f.parts || {};
+    return {
+      id,
+      name_jp: f.name_jp,
+      name_en: f.name_en,
+      catchphrase: f.catchphrase,
+      attacks: f.attacks,
+      taunts: f.taunts,
+      backstory: f.backstory,
+      weakness: f.weakness,
+      weakness_label: f.weakness_label,
+      color,
+      attacksPerRound: 2,
+      bodySVG: () => `
+        <defs>
+          <linearGradient id="temeeBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0"  stop-color="#e7c08a"/>
+            <stop offset="1"  stop-color="#a07338"/>
+          </linearGradient>
+          <radialGradient id="temeeMonkeyFace" cx=".5" cy=".5" r=".6">
+            <stop offset="0"  stop-color="#f5d6a8"/>
+            <stop offset="1"  stop-color="#b07a3a"/>
+          </radialGradient>
+        </defs>
+        <!-- Gobi sand floor shadow -->
+        <ellipse cx="400" cy="430" rx="280" ry="22" fill="#000" opacity=".25"/>
+        <!-- Camel torso (long horizontal body) -->
+        <ellipse cx="400" cy="290" rx="200" ry="80" fill="#000"/>
+        <ellipse cx="400" cy="290" rx="192" ry="72" fill="url(#temeeBody)"/>
+        <!-- Belly highlight -->
+        <ellipse cx="400" cy="320" rx="140" ry="22" fill="#fff" opacity=".15"/>
+        <!-- Long camel neck rising from front-right of body up to monkey head -->
+        <path d="M 540 240 Q 600 180 615 130 Q 615 90 600 75"
+              stroke="#000" stroke-width="44" fill="none" stroke-linecap="round"/>
+        <path d="M 540 240 Q 600 180 615 130 Q 615 90 600 75"
+              stroke="#c89a5a" stroke-width="36" fill="none" stroke-linecap="round"/>
+        <!-- Neck shading stripe -->
+        <path d="M 545 245 Q 605 185 618 128"
+              stroke="rgba(255,255,255,.25)" stroke-width="8" fill="none" stroke-linecap="round"/>
+        <!-- Monkey head — ape-style, distinct from camel body -->
+        <ellipse cx="600" cy="80" rx="58" ry="50" fill="#000"/>
+        <ellipse cx="600" cy="80" rx="52" ry="44" fill="#7a4a25"/>
+        <!-- Monkey face plate -->
+        <ellipse cx="600" cy="86" rx="40" ry="32" fill="url(#temeeMonkeyFace)"/>
+        <!-- Monkey ears -->
+        <circle cx="552" cy="65" r="14" fill="#000"/>
+        <circle cx="552" cy="65" r="10" fill="#7a4a25"/>
+        <circle cx="552" cy="65" r="5"  fill="#f5d6a8"/>
+        <circle cx="648" cy="65" r="14" fill="#000"/>
+        <circle cx="648" cy="65" r="10" fill="#7a4a25"/>
+        <circle cx="648" cy="65" r="5"  fill="#f5d6a8"/>
+        <!-- Monkey brow tuft -->
+        <path d="M 575 50 Q 600 35 625 50" stroke="#3a2010" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <!-- Old-man wisp beard hanging off monkey chin -->
+        <path d="M 590 110 Q 595 130 588 145" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
+        <path d="M 600 112 Q 600 140 596 158" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
+        <path d="M 610 110 Q 612 130 615 145" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
+        <!-- Hooves on visible legs (decorative — actual leg parts drawn over) -->
+        <ellipse cx="320" cy="425" rx="22" ry="10" fill="#3a2010"/>
+        <ellipse cx="380" cy="425" rx="20" ry="9"  fill="#3a2010"/>
+        <ellipse cx="430" cy="425" rx="20" ry="9"  fill="#3a2010"/>
+        <ellipse cx="490" cy="425" rx="22" ry="10" fill="#3a2010"/>
+        <!-- Ambient sand puffs at hooves -->
+        <ellipse cx="290" cy="430" rx="14" ry="5" fill="#e7c08a" opacity=".55"/>
+        <ellipse cx="510" cy="430" rx="14" ry="5" fill="#e7c08a" opacity=".55"/>
+        ${blushPair(600, 95, 28)}
+      `,
+      parts: [
+        // Two humps on top of camel body — the signature attackable parts.
+        // Destroying both removes the boss's heavy attack power.
+        { id:"h1",   type:"limb",  name_jp:pn.h1,   maxHP:12, hp:12, geom:{x:340, y:215, w:55, h:60}, draw:(p)=>drawHump(p,"#b07a3a"), effect:"atk-1" },
+        { id:"h2",   type:"limb",  name_jp:pn.h2,   maxHP:12, hp:12, geom:{x:455, y:215, w:55, h:60}, draw:(p)=>drawHump(p,"#b07a3a"), effect:"atk-1" },
+        // Monkey eyes
+        { id:"eL",   type:"eye",   name_jp:pn.eL,   maxHP:7,  hp:7,  geom:{x:585, y:78, r:14, delay:0},  draw:(p)=>drawEye(p,color), effect:"miss-50" },
+        { id:"eR",   type:"eye",   name_jp:pn.eR,   maxHP:7,  hp:7,  geom:{x:615, y:78, r:14, delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
+        // Monkey mouth — disables sand/poison attacks
+        { id:"mouth",type:"mouth", name_jp:pn.mouth,maxHP:9,  hp:9,  geom:{x:600, y:104, w:24, h:12},    draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        // Two of the four visible legs are attackable; rear leg slows boss.
+        { id:"L1",   type:"limb",  name_jp:pn.L1,   maxHP:9,  hp:9,  geom:{x:340, y:340, dir:90, len:80}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"atk-1" },
+        { id:"L2",   type:"limb",  name_jp:pn.L2,   maxHP:9,  hp:9,  geom:{x:470, y:340, dir:90, len:80}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },
+        // Camel tail — slow effect when destroyed
+        { id:"tail", type:"limb",  name_jp:pn.tail, maxHP:7,  hp:7,  geom:{x:200, y:280, dir:200, len:60}, draw:(p)=>drawTail(p,color), effect:"slow" },
+        // Heart core in the camel chest
+        { id:"core", type:"core",  name_jp:pn.core, maxHP:32, hp:32, geom:{x:400, y:295, r:22},           draw:(p)=>drawCore(p,color), effect:"win" },
+      ],
+      hits: f.hits || []
+    };
+  }
+
   // ---------- FINAL BOSS: ブレインロット・キング ----------
   // The fusion overmind that emerges when all 6 kaiju have been defeated.
   // A glowing chaos core in the middle, with one iconic limb from each of
@@ -785,7 +904,7 @@ window.Monsters = (() => {
     };
   }
 
-  const factories = [makeTakoTakoSahur, makeBombardiroUnkodilo, makeTralaleroPakupaku, makeBrrPampamu, makeParfaitIwashi, makeAnpanmaguro];
+  const factories = [makeTakoTakoSahur, makeBombardiroUnkodilo, makeTralaleroPakupaku, makeBrrPampamu, makeParfaitIwashi, makeAnpanmaguro, makeTemeeSarmagchin];
   const finalFactories = [makeBrainrotKing];
 
   function randomBoss() { return factories[Math.floor(Math.random()*factories.length)](); }

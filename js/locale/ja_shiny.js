@@ -8,14 +8,17 @@
 // assets/voices/<bossId>_shiny/<hash>.opus first; if missing it falls back
 // to the normal-language opus so the kid never hits a silent line.
 //
-// Voice/language per boss (rendered with Edge TTS). Voices match the
-// gender of the original Japanese ずんだもん / 春日部つむぎ / etc. casting:
+// Voice/language per boss. Most are rendered via Edge TTS; tagged "user"
+// means human-recorded by the project author and encoded via the m4a→opus
+// pipeline in tools/voicegen/. Voices match the gender of the original
+// Japanese ずんだもん / 春日部つむぎ / etc. casting:
 //   tako     → es-ES-ElviraNeural (Spanish, female — energetic vendor)
-//   unko     → en-US-ChristopherNeural (American English, deep authoritative — NYC mafia-boss energy)
+//   unko     → user (English NYC, recorded — Christopher TTS replaced)
 //   tral     → it-IT-DiegoNeural  (Italian, male — theatrical opera)
 //   pamp     → ko-KR-SunHiNeural  (Korean, female — soft K-pop aegyo)
 //   parfait  → fr-FR-DeniseNeural (French, female — sophisticated)
 //   anpan    → zh-CN-YunxiNeural  (Mandarin Chinese, male — hero bravado)
+//   temee    → user (Mongolian, recorded — old-warrior Genghis-Khan-via-Roshi)
 //   brainrot → el-GR-AthinaNeural (Greek, female — dramatic chaos)
 window.I18N = window.I18N || {};
 window.I18N.shinyOverrides = {
@@ -219,6 +222,52 @@ window.I18N.shinyOverrides = {
       player_low_hp: ["你完了!", "弱啊!", "再见!", "胆小鬼!"],
       high_combo:    ["停!", "连击疯了!", "妈呀!", "慌张!"],
       part_lost:     ["我的部分!", "作弊!", "痛!", "别拿!", "啊啊啊!"],
+    },
+  },
+
+  // temee (Mongolian) — old-warrior camel-monkey speaks his ancestral tongue.
+  // VOICE IS USER-RECORDED: lines are recorded by the user (a native Mongolian
+  // speaker) into ~/Documents/Sound Recordings/ following the script in
+  // tools/voicegen/temee_shiny_script.md, then encoded by encode_temee.py
+  // to assets/voices/temee_shiny/<hash>.opus. The taunt categories that
+  // weren't independently recorded (healthy/hurt/raged/player_low_hp) reuse
+  // strings from the recorded pool — same trick unko_shiny uses — so no
+  // extra recording is needed for them.
+  temee: {
+    voice: "user",  // human voice acting, see tools/voicegen/temee_shiny_script.md
+    catchphrase: "Би Тэмээ Сармагчин энд байна! Бөхгүй хүн бүхэн, бөх ургуул!",
+    attacks: [
+      // Names stay in Mongolian for visual override; only phrases get voiced.
+      { name: "Хөлдсөн бууз 🥟",         type: "heavy",  phrases: ["Хөлдөөсөн бууз ниснэ!", "Хатуу хөлдсөн!", "Энэ миний оройн хоол!"] },
+      { name: "Говийн шуурга 🌪️",       type: "wild",   phrases: ["Говийн шуурга!", "Элсэнд булагд!", "Нүдээ нээж чадахгүй биз?"] },
+      { name: "-40°C Өвөл ❄️",           type: "stun",   phrases: ["Говийн өвлийг мэдэх үү?", "Хасах дөчин градус, хөлдөөнө!", "Чичирч унт!"] },
+      { name: "Талын зүсэлт 🌿",         type: "pierce", phrases: ["Талын өвс хутга мэт!", "Шааж явъя!", "Монгол өвсийг бүү басамжил!"] },
+      { name: "Хоёр бөхт цохилт 🐫",     type: "quick",  phrases: ["Бөхөөрөө дарна!", "Хоёр бөхтэй шүү!", "Тэмээний хүч!"] },
+    ],
+    hits: [
+      "За, чи их сайн юм байна", "Сахал минь...!", "Бөхөнд минь хүрчихлээ", "Сайн юм байна, бяцхан",
+      "Хэхэхэ...", "Сармагчин толгой минь өвдөж байна!", "Юу гэж...!", "Элс нүдэнд орлоо",
+      "Тэмээ ч бас өвддөг шүү!", "Би өвгөн шүү дээ...?", "Бөх минь хонхойлоо...", "Ммм, хүчтэй юм байна",
+      "Сүүл минь...", "Гнг, хараахан...", "Би хараахан унаагүй ээ", "Үнэхээр өвдөж байна...",
+      "Гнг, бууз минь...!"
+    ],
+    taunts: {
+      slingshot:     ["Чиг нь сулхан байна!", "Хүрэх болов уу?", "Би тэмээ шүү, хурдан зугтдаг!", "Бууд л доо!", "Өвгөнийг бүү басамжил!", "Над хүрэхэд зуун жил эрт байна!"],
+      rage:          ["БИ УУРЛАЛАА!", "ӨРШӨӨХГҮЙ ЭЭ!", "ГОВИД ТЭМЦЭЛДЬЕ!", "САРМАГЧНЫ УУРЫГ МЭД!", "ЧИНГИС ХААНЫ ҮР УДАМ!"],
+      // boss confident at full HP — reuse slingshot taunts (cocky energy)
+      healthy:       ["Чиг нь сулхан байна!", "Хүрэх болов уу?", "Би тэмээ шүү, хурдан зугтдаг!", "Бууд л доо!", "Өвгөнийг бүү басамжил!", "Над хүрэхэд зуун жил эрт байна!"],
+      // boss took some damage — defiant hit-pool reactions
+      hurt:          ["За, чи их сайн юм байна", "Би хараахан унаагүй ээ", "Үнэхээр өвдөж байна...", "Ммм, хүчтэй юм байна", "Юу гэж...!"],
+      // boss almost dead — panicky cries
+      desperate:     ["Ммм, энэ муу боллоо...", "Бөх минь...!", "Хараахан болоогүй..."],
+      // post-rage — same as rage cries
+      raged:         ["БИ УУРЛАЛАА!", "ӨРШӨӨХГҮЙ ЭЭ!", "ГОВИД ТЭМЦЭЛДЬЕ!", "САРМАГЧНЫ УУРЫГ МЭД!", "ЧИНГИС ХААНЫ ҮР УДАМ!"],
+      // gloating at weak player
+      player_low_hp: ["Хөлдөөсөн бууз ниснэ!", "Тэмээний хүч!", "Бууд л доо!", "Над хүрэхэд зуун жил эрт байна!"],
+      // rattled by a high combo
+      high_combo:    ["Хайхрамжгүй байжээ...", "Сайн юм байна, хүүхэд!", "Зогсохгүй байна, энэ..."],
+      // boss lost a body part — complaining
+      part_lost:     ["Бие минь...!", "Нэг бөхөө алдчихлаа!", "Аа, сармагчны сүүл..."],
     },
   },
 
