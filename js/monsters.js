@@ -721,6 +721,71 @@ window.Monsters = (() => {
     </g>`;
   }
 
+  // Genghis-Khan-style white facial hair as a destructible part. Three
+  // states for visible damage feedback:
+  //   • state 0 (full HP): mustache + long chin beard
+  //   • state 1 (damaged): only the mustache survives — the chin beard
+  //     has been "shaved" off
+  //   • state 2 (destroyed): clean-shaven (renders nothing — the kid sees
+  //     the bare face under where the beard used to be)
+  // Used only by ティメー サルマクチン today; geom { x, y } is the chin
+  // anchor point (top-center of the chin beard / mustache base).
+  function drawBeard(part, color) {
+    const s = partState(part);
+    const { x, y } = part.geom;
+    if (s === 2) {
+      return `<g class="part">
+        <text x="${x}" y="${y+30}" text-anchor="middle" font-size="22">💥</text>
+      </g>`;
+    }
+    // Mustache always present in states 0 + 1 — single shape that curls
+    // out and down on both sides of the upper lip.
+    const mustache = `
+      <path d="M ${x} ${y-8}
+               Q ${x-12} ${y-12} ${x-27} ${y-10}
+               Q ${x-43} ${y-7} ${x-55} ${y+8}
+               Q ${x-53} ${y+20} ${x-40} ${y+19}
+               Q ${x-27} ${y+17} ${x-17} ${y+10}
+               Q ${x-7} ${y+2} ${x} ${y+2}
+               Q ${x+7} ${y+2} ${x+17} ${y+10}
+               Q ${x+27} ${y+17} ${x+40} ${y+19}
+               Q ${x+53} ${y+20} ${x+55} ${y+8}
+               Q ${x+43} ${y-7} ${x+27} ${y-10}
+               Q ${x+12} ${y-12} ${x} ${y-8} Z"
+            fill="#fafafa" stroke="#888" stroke-width="1.4"/>
+      <path d="M ${x-37} ${y+10} Q ${x-25} ${y+13} ${x-15} ${y+8}" stroke="#cccccc" stroke-width="1" fill="none" opacity="0.85"/>
+      <path d="M ${x+37} ${y+10} Q ${x+25} ${y+13} ${x+15} ${y+8}" stroke="#cccccc" stroke-width="1" fill="none" opacity="0.85"/>`;
+    if (s === 1) {
+      // Damaged: chin beard shaved off, only mustache remains. Show a
+      // little stubble dust under the chin to sell the haircut.
+      return `<g class="part">
+        ${mustache}
+        <circle cx="${x-8}" cy="${y+30}" r="1.4" fill="#ddd" opacity="0.7"/>
+        <circle cx="${x+5}" cy="${y+34}" r="1.2" fill="#ddd" opacity="0.7"/>
+        <circle cx="${x+12}" cy="${y+28}" r="1.6" fill="#ddd" opacity="0.7"/>
+      </g>`;
+    }
+    // Full HP: mustache + long pointed chin beard, Genghis-Khan style.
+    const chinBeard = `
+      <path d="M ${x-22} ${y+13}
+               Q ${x-33} ${y+32} ${x-33} ${y+58}
+               Q ${x-29} ${y+88} ${x-17} ${y+112}
+               Q ${x-7}  ${y+128} ${x} ${y+135}
+               Q ${x+7}  ${y+128} ${x+17} ${y+112}
+               Q ${x+29} ${y+88} ${x+33} ${y+58}
+               Q ${x+33} ${y+32} ${x+22} ${y+13}
+               Q ${x+12} ${y+20} ${x} ${y+20}
+               Q ${x-12} ${y+20} ${x-22} ${y+13} Z"
+            fill="#fafafa" stroke="#888" stroke-width="1.4"/>
+      <path d="M ${x-13} ${y+32} Q ${x-15} ${y+65} ${x-10} ${y+100} Q ${x-5} ${y+122} ${x} ${y+132}" stroke="#d0d0d0" stroke-width="1.2" fill="none" opacity="0.75"/>
+      <path d="M ${x} ${y+30}    Q ${x} ${y+70}    ${x} ${y+115}" stroke="#d0d0d0" stroke-width="1.2" fill="none" opacity="0.75"/>
+      <path d="M ${x+13} ${y+32} Q ${x+15} ${y+65} ${x+10} ${y+100} Q ${x+5} ${y+122} ${x} ${y+132}" stroke="#d0d0d0" stroke-width="1.2" fill="none" opacity="0.75"/>`;
+    return `<g class="part">
+      ${chinBeard}
+      ${mustache}
+    </g>`;
+  }
+
   // ---------- ティメー サルマクチン (Mongolian camel-monkey) ----------
   // Camel body + monkey head. Two attackable humps on the back are the
   // signature feature — destroying both strips the boss's heavy attack.
@@ -805,10 +870,11 @@ window.Monsters = (() => {
         <circle cx="670" cy="48" r="6"  fill="#f5d6a8"/>
         <!-- Monkey brow tuft -->
         <path d="M 572 30 Q 605 12 638 30" stroke="#3a2010" stroke-width="7" fill="none" stroke-linecap="round"/>
-        <!-- Old-man wisp beard hanging off monkey chin -->
-        <path d="M 590 108 Q 595 132 585 150" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
-        <path d="M 605 112 Q 605 142 600 162" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
-        <path d="M 620 108 Q 622 132 628 150" stroke="#eee" stroke-width="4" fill="none" stroke-linecap="round" opacity=".85"/>
+        <!-- Beard is rendered as a destructible PART (drawBeard) so it can
+             shrink mustache → bald as it takes damage. Not drawn here. -->
+        <!-- Tiny mouth peek — stays under the beard but visible if beard
+             is destroyed. Just a small dark line so the face isn't blank. -->
+        <ellipse cx="605" cy="100" rx="6" ry="2" fill="#3a2010" opacity="0.6"/>
         <!-- Hooves on visible legs (decorative — actual leg parts drawn over) -->
         <ellipse cx="320" cy="425" rx="22" ry="10" fill="#3a2010"/>
         <ellipse cx="380" cy="425" rx="20" ry="9"  fill="#3a2010"/>
@@ -828,8 +894,12 @@ window.Monsters = (() => {
         // edge that the bob animation doesn't visually clip them off.
         { id:"eL",   type:"eye",   name_jp:pn.eL,   maxHP:7,  hp:7,  geom:{x:582, y:62, r:13, delay:0},  draw:(p)=>drawEye(p,color), effect:"miss-50" },
         { id:"eR",   type:"eye",   name_jp:pn.eR,   maxHP:7,  hp:7,  geom:{x:628, y:62, r:13, delay:.3}, draw:(p)=>drawEye(p,color), effect:"miss-30" },
-        // Monkey mouth — disables sand/poison attacks
-        { id:"mouth",type:"mouth", name_jp:pn.mouth,maxHP:9,  hp:9,  geom:{x:605, y:100, w:28, h:14},    draw:(p)=>drawMouth(p,color), effect:"no-poison" },
+        // White Genghis-Khan beard as the destructible part. Shave off the
+        // chin beard at half HP (only mustache remains), shave off the
+        // mustache too at zero HP (clean-shaven). Same "no-poison" effect
+        // as a regular boss mouth — without his beard he can't intone the
+        // sandstorm/winter chants.
+        { id:"mouth",type:"mouth", name_jp:pn.mouth,maxHP:9,  hp:9,  geom:{x:605, y:100},                draw:(p)=>drawBeard(p,color), effect:"no-poison" },
         // Two of the four visible legs are attackable; rear leg slows boss.
         { id:"L1",   type:"limb",  name_jp:pn.L1,   maxHP:9,  hp:9,  geom:{x:340, y:340, dir:90, len:80}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"atk-1" },
         { id:"L2",   type:"limb",  name_jp:pn.L2,   maxHP:9,  hp:9,  geom:{x:470, y:340, dir:90, len:80}, draw:(p)=>drawLeg(p,color,{foot:true}), effect:"slow" },

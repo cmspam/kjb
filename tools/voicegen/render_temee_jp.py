@@ -114,8 +114,18 @@ def djb2(s):
 
 def strip_emoji(s):
     """Remove emojis for synthesis (VOICEVOX would otherwise pronounce them
-    as their text fallback names). Hash is computed on the original."""
-    return EMOJI_RE.sub("", strip_furigana(s)).strip()
+    as their text fallback names). Hash is computed on the original.
+
+    ALSO collapse all whitespace including U+3000 (ideographic space). The
+    locale strings use spaces between words for kid-readability, but
+    VOICEVOX treats each as a phrase boundary and inserts a noticeable
+    pause — making the boss sound like it's pausing between every word.
+    Hash uses re.sub(r"\\s+", " ") which preserves a single space, but the
+    spoken pass strips them entirely so words flow together."""
+    s = strip_furigana(s)
+    s = EMOJI_RE.sub("", s)
+    s = re.sub(r"[\s　]+", "", s)  # remove ASCII + ideographic spaces
+    return s.strip()
 
 # ---- VOICEVOX HTTP API ----
 def http_get(url):

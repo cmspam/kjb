@@ -556,7 +556,7 @@ window.I18N.register("ja", {
       parts: {
         h1: "こぶ1", h2: "こぶ2",
         eL: "ひだりめ", eR: "みぎめ",
-        mouth: "くち",
+        mouth: "ヒゲ",
         L1: "まえあし", L2: "うしろあし",
         tail: "しっぽ",
         core: "ハート"
