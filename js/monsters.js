@@ -951,12 +951,90 @@ window.Monsters = (() => {
     return boss;
   }
 
-  // ---------- FINAL BOSS: ブレインロット・キング ----------
-  // The fusion overmind that emerges when all 6 kaiju have been defeated.
-  // A glowing chaos core in the middle, with one iconic limb from each of
-  // the 6 bosses orbiting it. Reuses every existing draw helper; no new art.
-  // Higher HP + 3 attacks/round + own attack pool. Only spawns from the boss
-  // picker map after Progress.isDefeated() reports all 6 normal bosses cleared.
+  // Galactic mane half — a cluster of stars + nebula tufts radiating
+  // outward from the lion's head on one side. geom: { cx, cy, side: -1|+1,
+  // sweep }. State 0 = full cluster; state 1 = half the stars dimmed;
+  // state 2 = burst-puff and gone.
+  function drawStarMane(part) {
+    const s = partState(part);
+    const { cx, cy, side } = part.geom;
+    if (s === 2) {
+      const ex = cx + side * 80;
+      return `<g class="part">
+        <text x="${ex}" y="${cy}" text-anchor="middle" font-size="32">💥</text>
+      </g>`;
+    }
+    // 18 star positions in a sweep around the side of the head. Polar
+    // coordinates: angle from straight-up (0°) going OUTWARD per side.
+    const stars = [];
+    const RING_INNER = 78;
+    const RING_OUTER = 168;
+    for (let i = 0; i < 18; i++) {
+      const t = i / 17;                  // 0..1 along the sweep
+      const ang = (side < 0 ? Math.PI : 0) + (Math.PI * (t * 0.9 + 0.05));
+      const r   = RING_INNER + (RING_OUTER - RING_INNER) * (0.25 + 0.75 * Math.sin(t * Math.PI));
+      const x   = cx + Math.cos(ang) * r;
+      const y   = cy + Math.sin(ang) * r * 0.85;       // slight vertical squash
+      const sz  = 4 + (Math.abs(Math.sin(i * 1.3)) * 8);
+      const dim = (s === 1 && (i % 2 === 0)) ? 0.18 : 1; // half the stars fade when damaged
+      stars.push({ x, y, sz, dim });
+    }
+    // Nebula puff backing — colored blobs behind the stars for body
+    const puffs = `
+      <ellipse cx="${cx + side*60}" cy="${cy-20}" rx="80" ry="50" fill="#6a2a9a" opacity="${s===1?0.18:0.32}"/>
+      <ellipse cx="${cx + side*90}" cy="${cy+30}" rx="70" ry="40" fill="#a04ad8" opacity="${s===1?0.12:0.22}"/>
+      <ellipse cx="${cx + side*110}" cy="${cy-10}" rx="55" ry="35" fill="#ff66cc" opacity="${s===1?0.10:0.18}"/>
+    `;
+    const starsSVG = stars.map(({x,y,sz,dim}) => `
+      <g opacity="${dim}">
+        <circle cx="${x}" cy="${y}" r="${sz*0.7}" fill="#fff" opacity="0.85"/>
+        <path d="M ${x-sz} ${y} L ${x+sz} ${y} M ${x} ${y-sz} L ${x} ${y+sz}" stroke="#fff" stroke-width="${sz*0.18}" stroke-linecap="round"/>
+      </g>`).join("");
+    const cracks = s === 1
+      ? `<path d="M ${cx + side*50} ${cy-30} L ${cx + side*70} ${cy} L ${cx + side*55} ${cy+30}" stroke="#3a0a4a" stroke-width="3" fill="none" opacity="0.6"/>`
+      : "";
+    return `<g class="part">
+      ${puffs}
+      ${starsSVG}
+      ${cracks}
+    </g>`;
+  }
+
+  // Black-hole chest core — dark center with a bright accretion ring.
+  // The actual weak point; destroying it ends the fight.
+  function drawBlackHoleCore(part) {
+    const s = partState(part);
+    const { x, y, r } = part.geom;
+    if (s === 2) {
+      return `<g class="part">
+        <text x="${x}" y="${y+r*0.5}" text-anchor="middle" font-size="${r*2}">💥</text>
+      </g>`;
+    }
+    const cracks = s === 1
+      ? `<path d="M ${x-r*0.6} ${y-r*0.4} L ${x+r*0.2} ${y+r*0.1} L ${x-r*0.1} ${y+r*0.5}" stroke="#ffd24a" stroke-width="2.5" fill="none"/>`
+      : "";
+    return `<g class="part bob" style="transform-origin:${x}px ${y}px">
+      <!-- accretion-disk halo (bright orange-pink) -->
+      <ellipse cx="${x}" cy="${y}" rx="${r*1.95}" ry="${r*0.5}" fill="none" stroke="#ffaa44" stroke-width="3.5" opacity="0.85"/>
+      <ellipse cx="${x}" cy="${y}" rx="${r*2.15}" ry="${r*0.6}" fill="none" stroke="#ff6688" stroke-width="2.2" opacity="0.7"/>
+      <ellipse cx="${x}" cy="${y}" rx="${r*1.7}"  ry="${r*0.4}" fill="none" stroke="#ffe45c" stroke-width="2"   opacity="0.9"/>
+      <!-- glow halo behind the void -->
+      <circle cx="${x}" cy="${y}" r="${r*1.25}" fill="#ff9844" opacity="0.25"/>
+      <!-- dark event horizon -->
+      <circle cx="${x}" cy="${y}" r="${r}" fill="#000" stroke="#220a40" stroke-width="3"/>
+      <!-- inner singularity highlight -->
+      <circle cx="${x-r*0.25}" cy="${y-r*0.25}" r="${r*0.18}" fill="#3a0a5a" opacity="0.6"/>
+      ${cracks}
+    </g>`;
+  }
+
+  // ---------- FINAL BOSS: ブレインロット・キング (Space Lion) ----------
+  // The cosmic lion final boss. Rides his own black hole — chest is a
+  // literal event horizon eating the world. Mane is two galactic clusters
+  // of stars (left half + right half), eyes glow, tail trails stardust,
+  // four legs visible (two attackable: front + back). Audio (catchphrase /
+  // attacks / hits / taunts) is the same as the prior fusion-overmind
+  // version so nothing needs re-recording.
   function makeBrainrotKing() {
     const id = "brainrot";
     const f = window.I18N.boss(id);
@@ -977,39 +1055,105 @@ window.Monsters = (() => {
       attacksPerRound: 3,        // higher than normal (2)
       bodySVG: () => `
         <defs>
-          <radialGradient id="brainrotBody" cx=".5" cy=".5" r=".75">
-            <stop offset="0"  stop-color="#5a1a8a" stop-opacity=".95"/>
-            <stop offset=".55" stop-color="#2a0a4a" stop-opacity=".7"/>
-            <stop offset="1"  stop-color="#1a0a2a" stop-opacity="0"/>
+          <radialGradient id="brSpaceBg" cx=".5" cy=".5" r=".9">
+            <stop offset="0"   stop-color="#3a0a5a" stop-opacity="0.55"/>
+            <stop offset="0.5" stop-color="#180630" stop-opacity="0.55"/>
+            <stop offset="1"   stop-color="#000"    stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="brLionBody" cx=".5" cy=".5" r=".7">
+            <stop offset="0"   stop-color="#5a2a8a"/>
+            <stop offset="0.7" stop-color="#3a1568"/>
+            <stop offset="1"   stop-color="#1a0a3a"/>
+          </radialGradient>
+          <radialGradient id="brLionFace" cx=".5" cy=".5" r=".6">
+            <stop offset="0"   stop-color="#a060d8"/>
+            <stop offset="1"   stop-color="#5a2090"/>
+          </radialGradient>
+          <radialGradient id="brEventHorizon" cx=".5" cy=".5" r=".5">
+            <stop offset="0"   stop-color="#ffe45c"/>
+            <stop offset="0.5" stop-color="#ff8844"/>
+            <stop offset="1"   stop-color="#ff3366" stop-opacity="0"/>
           </radialGradient>
         </defs>
-        <ellipse cx="400" cy="240" rx="360" ry="220" fill="url(#brainrotBody)"/>
-        <!-- Aura rings around the core -->
-        <circle cx="400" cy="240" r="100" fill="none" stroke="${color}"   stroke-width="2"   opacity=".55"/>
-        <circle cx="400" cy="240" r="150" fill="none" stroke="#ff66cc"    stroke-width="1.5" opacity=".4"/>
-        <circle cx="400" cy="240" r="200" fill="none" stroke="#ffcc00"    stroke-width="1"   opacity=".25"/>
-        <!-- Sparks scattered around the void -->
-        <text x="120" y="120" font-size="22">✨</text>
-        <text x="660" y="130" font-size="22">✨</text>
-        <text x="160" y="380" font-size="22">⚡</text>
-        <text x="640" y="380" font-size="22">⚡</text>
-        <text x="60"  y="240" font-size="22">🌟</text>
-        <text x="730" y="240" font-size="22">🌟</text>
-        <text x="400" y="60"  font-size="20" text-anchor="middle">💫</text>
-        <text x="400" y="450" font-size="20" text-anchor="middle">💫</text>
+        <!-- Deep-space cosmic backdrop wash -->
+        <ellipse cx="400" cy="240" rx="360" ry="220" fill="url(#brSpaceBg)"/>
+        <!-- Stars being sucked toward the core — small fixed dots -->
+        <g fill="#fff">
+          <circle cx="60"  cy="80"  r="1.5" opacity="0.85"/>
+          <circle cx="120" cy="60"  r="1.2" opacity="0.7"/>
+          <circle cx="700" cy="70"  r="1.4" opacity="0.85"/>
+          <circle cx="760" cy="120" r="1.2" opacity="0.7"/>
+          <circle cx="40"  cy="380" r="1.4" opacity="0.85"/>
+          <circle cx="100" cy="430" r="1.0" opacity="0.6"/>
+          <circle cx="750" cy="390" r="1.5" opacity="0.85"/>
+          <circle cx="690" cy="440" r="1.0" opacity="0.6"/>
+        </g>
+        <!-- Spiral motion lines suggesting gravity toward the core -->
+        <g stroke="#ff8844" stroke-width="1" fill="none" opacity="0.35">
+          <path d="M 80 100  Q 200 200 360 240"/>
+          <path d="M 720 100 Q 600 200 440 240"/>
+          <path d="M 80 380  Q 200 300 360 240"/>
+          <path d="M 720 380 Q 600 300 440 240"/>
+        </g>
+        <!-- Tail trail of stardust — drawn behind body, before parts overlay -->
+        <path d="M 540 320 Q 640 280 720 220 Q 760 170 770 130"
+              stroke="#aa66ff" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.55"/>
+        <path d="M 540 320 Q 640 280 720 220 Q 760 170 770 130"
+              stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+        <circle cx="640" cy="278" r="2" fill="#fff" opacity="0.85"/>
+        <circle cx="700" cy="232" r="1.5" fill="#fff" opacity="0.7"/>
+        <circle cx="745" cy="180" r="1.8" fill="#fff" opacity="0.85"/>
+        <!-- Lion torso (cosmic purple silhouette) -->
+        <ellipse cx="400" cy="320" rx="135" ry="68" fill="#0a0418" opacity="0.6"/>
+        <ellipse cx="400" cy="320" rx="128" ry="62" fill="url(#brLionBody)" stroke="#1a0a3a" stroke-width="3"/>
+        <!-- Belly highlight -->
+        <ellipse cx="400" cy="350" rx="80" ry="14" fill="#fff" opacity="0.08"/>
+        <!-- Decorative non-attackable legs (4 visible — 2 are real parts) -->
+        <ellipse cx="325" cy="395" rx="14" ry="10" fill="#3a1a5a"/>
+        <ellipse cx="475" cy="395" rx="14" ry="10" fill="#3a1a5a"/>
+        <!-- Neck connecting body to head -->
+        <path d="M 400 260 Q 400 240 400 220" stroke="#3a1568" stroke-width="50" stroke-linecap="round"/>
+        <!-- Lion head -->
+        <ellipse cx="400" cy="180" rx="78" ry="70" fill="#0a0418"/>
+        <ellipse cx="400" cy="180" rx="72" ry="64" fill="url(#brLionFace)"/>
+        <!-- Face details — snout + nose + mouth -->
+        <ellipse cx="400" cy="200" rx="34" ry="22" fill="#7a3aa8"/>
+        <ellipse cx="400" cy="192" rx="9" ry="6" fill="#1a0028"/>
+        <path d="M 400 200 L 400 212 M 388 220 Q 400 226 412 220" stroke="#1a0028" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <!-- Lion ears (decorative, behind mane glow) -->
+        <path d="M 340 130 L 348 105 L 365 122 Z" fill="#3a1568"/>
+        <path d="M 460 130 L 452 105 L 435 122 Z" fill="#3a1568"/>
+        <!-- Brow detail -->
+        <path d="M 370 158 Q 380 152 392 158" stroke="#1a0028" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 408 158 Q 420 152 430 158" stroke="#1a0028" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <!-- Whiskers -->
+        <path d="M 366 210 Q 340 212 318 218" stroke="#fff" stroke-width="1.2" fill="none" opacity="0.55"/>
+        <path d="M 366 215 Q 340 220 320 230" stroke="#fff" stroke-width="1.2" fill="none" opacity="0.45"/>
+        <path d="M 434 210 Q 460 212 482 218" stroke="#fff" stroke-width="1.2" fill="none" opacity="0.55"/>
+        <path d="M 434 215 Q 460 220 480 230" stroke="#fff" stroke-width="1.2" fill="none" opacity="0.45"/>
+        <!-- Star sparkles scattered across the background -->
+        <text x="80"  y="90"  font-size="14">✨</text>
+        <text x="710" y="90"  font-size="14">✨</text>
+        <text x="120" y="400" font-size="14">⭐</text>
+        <text x="680" y="400" font-size="14">⭐</text>
+        <text x="40"  y="220" font-size="12">·</text>
+        <text x="760" y="220" font-size="12">·</text>
       `,
       parts: [
-        // Six "trophy limbs" — one borrowed from each defeated boss. Damaging
-        // them strips armor from the core (existing armor mechanic = number
-        // of intact non-core parts).
-        { id:"tako_arm",    type:"limb", name_jp:pn.tako_arm    || "タコ うで",     maxHP:14, hp:14, geom:{x:230, y:140, dir:200, len:130}, draw:(p)=>drawTentacle(p,"#ff8ec7"), effect:"atk-1" },
-        { id:"parfait_top", type:"limb", name_jp:pn.parfait_top || "パフェ さくらんぼ", maxHP:14, hp:14, geom:{x:600, y:120, r:32},                draw:(p)=>drawCherryCore(p,"#ee2244"), effect:"miss-30" },
-        { id:"unko_belly",  type:"limb", name_jp:pn.unko_belly  || "ばくだん おなか", maxHP:18, hp:18, geom:{x:220, y:300, w:48, h:34},          draw:(p)=>drawBelly(p,"#a87245"), effect:"no-special" },
-        { id:"anpan_face",  type:"limb", name_jp:pn.anpan_face  || "アンパン かお",   maxHP:14, hp:14, geom:{x:600, y:300, r:34},                draw:(p)=>drawNoseCore(p,"#ee3344"), effect:"miss-40" },
-        { id:"tral_tongue", type:"limb", name_jp:pn.tral_tongue || "ベロ",            maxHP:12, hp:12, geom:{x:340, y:380, len:90},               draw:(p)=>drawTongue(p,"#ff5a8a"), effect:"atk-1" },
-        { id:"pampamu_arm", type:"limb", name_jp:pn.pampamu_arm || "ふわふわ あし",   maxHP:14, hp:14, geom:{x:500, y:380, dir:75, len:90},      draw:(p)=>drawLeg(p,"#ddaaff"), effect:"slow" },
-        // Central swirling chaos core — the actual weak point.
-        { id:"core",        type:"core", name_jp:pn.core         || "カオス コア",     maxHP:50, hp:50, geom:{x:400, y:240, r:34},                draw:(p)=>drawCore(p,"#ffcc00"), effect:"win" },
+        // The galactic mane — two destructible halves of star clusters.
+        // Each side covers half the wreath around the head.
+        { id:"maneL", type:"limb", name_jp:pn.maneL || "たてがみ・ひだり", maxHP:16, hp:16, geom:{cx:400, cy:180, side:-1}, draw:(p)=>drawStarMane(p), effect:"atk-1" },
+        { id:"maneR", type:"limb", name_jp:pn.maneR || "たてがみ・みぎ",   maxHP:16, hp:16, geom:{cx:400, cy:180, side:+1}, draw:(p)=>drawStarMane(p), effect:"atk-1" },
+        // Glowing cosmic eyes.
+        { id:"eL",    type:"eye",  name_jp:pn.eL    || "ひだりめ",        maxHP:10, hp:10, geom:{x:378, y:172, r:14, delay:0},  draw:(p)=>drawEye(p, "#88ddff"), effect:"miss-50" },
+        { id:"eR",    type:"eye",  name_jp:pn.eR    || "みぎめ",          maxHP:10, hp:10, geom:{x:422, y:172, r:14, delay:.3}, draw:(p)=>drawEye(p, "#88ddff"), effect:"miss-30" },
+        // Front + back attackable legs (other two visible legs are decorative).
+        { id:"legF",  type:"limb", name_jp:pn.legF  || "まえあし",        maxHP:12, hp:12, geom:{x:355, y:340, dir:90, len:90}, draw:(p)=>drawLeg(p, "#7a3aa8", {foot:true}), effect:"slow" },
+        { id:"legB",  type:"limb", name_jp:pn.legB  || "うしろあし",       maxHP:12, hp:12, geom:{x:445, y:340, dir:90, len:90}, draw:(p)=>drawLeg(p, "#7a3aa8", {foot:true}), effect:"slow" },
+        // Stardust comet tail.
+        { id:"tail",  type:"limb", name_jp:pn.tail  || "しっぽ",          maxHP:10, hp:10, geom:{x:520, y:320, dir:-20, len:140}, draw:(p)=>drawTail(p, "#aa66ff"), effect:"no-special" },
+        // Black hole at his chest — the actual weak point.
+        { id:"core",  type:"core", name_jp:pn.core  || "ブラックホール・コア", maxHP:54, hp:54, geom:{x:400, y:320, r:28},           draw:(p)=>drawBlackHoleCore(p), effect:"win" },
       ],
       hits: f.hits || []
     };

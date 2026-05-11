@@ -589,11 +589,13 @@ window.I18N.register("ja", {
       ]
     },
 
-    // === FINAL BOSS: ブレインロット・キング ===
-    // The fusion overmind. Only spawns from the boss-picker map after all
-    // 6 normal bosses have been defeated. Catchphrase chains all 6 names
-    // for narrative payoff. Attacks reference each origin boss's iconic
-    // move, one per attack type.
+    // === FINAL BOSS: ブレインロット・キング (Space Lion of the Black Hole) ===
+    // The cosmic-lion final boss. Only spawns from the boss-picker map
+    // after all normal bosses have been defeated. Audio (catchphrase /
+    // attacks / hits / taunts) was recorded against the prior "fusion
+    // overmind" lore so all voiced strings stay exactly the same here —
+    // only the silent text (backstory + part names) was rewritten when
+    // the design changed to a Space Lion riding a black hole.
     brainrot: {
       name_jp: "ブレインロット・キング",
       name_en: "Brainrot King",
@@ -612,15 +614,16 @@ window.I18N.register("ja", {
         { name: "ワニ がぶり 🐊",             type: "pierce", phrases: ["するどい 歯[は] だぜ！", "がぶっ！", "シールド むだだ ぜっ！"] },
         { name: "アイス・パフェ ❄️",          type: "stun",   phrases: ["こおる だべ〜！", "うごけない だじゃ！", "つめたい デザート だべ！"] },
       ],
-      backstory: "6体[たい]の カイジュウが たおされた しゅんかん…\nそれぞれの ブレインロット エネルギーが ひとつに ゆうごう！\n\nタコの 足[あし]、ウンコの ばくだん、トラララの ベロ、\nブルブルの ふわふわ、パフェの さくらんぼ、アンパンの 顔[かお]。\nぜんぶ あつまった 究極[きゅうきょく]の カイジュウ！\n\n🌍 ひみつ：\nワシ は 古[いにしえ] の ギリシャ、 オリンポス山[さん] から うまれた ブレインロット…\nギリシャ語[ご] が ワシの 母[はは]なる 言葉[ことば] や。\nそして… みんなの 物語[ものがたり] に かくされた 文字[もじ]・たたく・かず・はやさ、\nぜんぶ あわせ た 子[こ] だけ が、 シャイニー の ワシ を よびだせる で〜！\n\n👹 野望[やぼう]：\n6つの 野望[やぼう]を ぜんぶ 同時[どうじ]に 実現[じつげん]！\n世界[せかい]を タコ焼[や]きと うんこと パフェと ぬいぐるみと…\n「ぜんぶ ワシの もんやで〜！」",
+      backstory: "うちゅう の はて、 ブラックホール の 奥[おく] から…\nたてがみ が 100おく[億] の ほし で できた、 王[おう]の ライオン が めざめた！\nそれが ブレインロット・キング じゃ！\n\n6体[たい]の カイジュウの 力[ちから]を すいこんで、 さらに つよく なった。\n口[くち]を ひらく と、 ブラックホール が あらわれて、\nほし も つき も、 みんな すいこんで しまう…\n\n🌍 ひみつ：\nブレインロット・キング は うちゅう ぜんぶ を しはい する つもり じゃ。\nギリシャ語[ご] が ワシ の 母[はは]なる 言葉[ことば] や。\nだが しんの 力[ちから] は、 みんなの 物語[ものがたり] に かくされた\nあいことば を しった 子[こ] だけ が 引[ひ]き出[だ]せる…\n\n👹 野望[やぼう]：\nせかい ぜんぶ、 やまも うみも みんなの いえも、\nブラックホール に すいこんで しまう！\nひとつ の 「カイジュウ星[ぼし]」 に して、 自分[じぶん]の たてがみ に する のじゃ！\n「ほしも つきも、 ぜんぶ ワシの えさ や〜！」",
       parts: {
-        tako_arm:    "タコの あし",
-        parfait_top: "さくらんぼ",
-        unko_belly:  "ばくだん おなか",
-        anpan_face:  "アンパン かお",
-        tral_tongue: "ベロ",
-        pampamu_arm: "ふわふわ あし",
-        core:        "カオス コア"
+        maneL: "たてがみ・ひだり",
+        maneR: "たてがみ・みぎ",
+        eL:    "ひだりめ",
+        eR:    "みぎめ",
+        legF:  "まえあし",
+        legB:  "うしろあし",
+        tail:  "しっぽ",
+        core:  "ブラックホール・コア"
       },
       taunts: {
         slingshot: ["うってみい や〜！", "あたるかい てやんでぇ！", "やめて の〜 Mamma mia！", "あたるかな〜 でちゅ", "やめれ じゃ〜！", "かかってこい だっ！", "ワシ ぜんぶ や！", "Bellissimo うってこい〜！"],

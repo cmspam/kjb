@@ -347,28 +347,60 @@ window.Stages = (() => {
     </svg>`;
   }
 
-  // brainrot — chaotic interdimensional rift. Already alluded to in the boss
-  // SVG itself, but we add a more dramatic backdrop here.
+  // brainrot — deep-space black-hole arena. A swirling galaxy spirals
+  // around a central event horizon offset to the upper-right of frame;
+  // stars and distant moons are visibly bending toward it. The lion-king
+  // boss SVG layers ON TOP of this so the boss reads as standing in front
+  // of his own black hole, with the galaxy as backdrop.
   function brainrot() {
     return `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%;">
       <defs>
-        <radialGradient id="brSky" cx=".5" cy=".4" r=".8">
-          <stop offset="0"   stop-color="#7a2aaa"/>
-          <stop offset="0.5" stop-color="#2a0a4a"/>
+        <radialGradient id="brSky" cx=".5" cy=".5" r=".9">
+          <stop offset="0"   stop-color="#3a0a5a"/>
+          <stop offset="0.4" stop-color="#180630"/>
           <stop offset="1"   stop-color="#000"/>
+        </radialGradient>
+        <radialGradient id="brGalaxy" cx=".5" cy=".5" r=".5">
+          <stop offset="0"   stop-color="#fff5d0" stop-opacity="0.55"/>
+          <stop offset="0.35" stop-color="#ff9844" stop-opacity="0.35"/>
+          <stop offset="0.7" stop-color="#6a2aaa" stop-opacity="0.2"/>
+          <stop offset="1"   stop-color="#180630" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="brAccretion" cx=".5" cy=".5" r=".5">
+          <stop offset="0"   stop-color="#ffe45c"/>
+          <stop offset="0.5" stop-color="#ff7733"/>
+          <stop offset="1"   stop-color="#ff3366" stop-opacity="0"/>
         </radialGradient>
       </defs>
       <rect width="800" height="480" fill="url(#brSky)"/>
-      ${stars(80, 800, 480, "#fff")}
-      <!-- Rift cracks -->
-      <g stroke="#ff66cc" stroke-width="2" fill="none" opacity="0.7">
-        <path d="M 100 60 L 180 140 L 140 200 L 220 280"/>
-        <path d="M 700 80 L 620 160 L 660 240 L 580 320"/>
+      ${stars(120, 800, 480, "#fff")}
+      <!-- Distant nebula clouds floating in deep space -->
+      <ellipse cx="120" cy="120" rx="90" ry="40" fill="#aa44cc" opacity="0.18"/>
+      <ellipse cx="700" cy="80"  rx="110" ry="50" fill="#4488ff" opacity="0.15"/>
+      <ellipse cx="660" cy="380" rx="90" ry="40" fill="#ff5599" opacity="0.18"/>
+      <!-- A few drifting moons being pulled toward the center -->
+      <circle cx="80"  cy="220" r="9"  fill="#c8b8a0" opacity="0.85"/>
+      <circle cx="78"  cy="217" r="2.5" fill="#7a6a55" opacity="0.6"/>
+      <circle cx="720" cy="340" r="11" fill="#a8c8e8" opacity="0.85"/>
+      <circle cx="722" cy="338" r="3"  fill="#5a7898" opacity="0.6"/>
+      <circle cx="60"  cy="420" r="7"  fill="#d8c898" opacity="0.85"/>
+      <!-- Spiral arms of the galaxy bending toward the center black hole -->
+      <g fill="none" stroke="#ff8844" stroke-width="1.5" opacity="0.4">
+        <path d="M 60  100 Q 220 180 360 240"/>
+        <path d="M 740 110 Q 580 200 440 240"/>
+        <path d="M 90  400 Q 220 320 360 240"/>
+        <path d="M 720 400 Q 580 320 440 240"/>
       </g>
-      <g stroke="#ffcc00" stroke-width="1.5" fill="none" opacity="0.5">
-        <path d="M 50 380 L 130 320 L 90 260"/>
-        <path d="M 750 380 L 670 320 L 710 260"/>
+      <g fill="none" stroke="#aa66ff" stroke-width="1" opacity="0.35">
+        <path d="M 30  240 Q 180 220 360 240"/>
+        <path d="M 770 240 Q 620 260 440 240"/>
       </g>
+      <!-- Central galaxy / black-hole halo (acts as a backdrop circle so
+           the lion appears to stand in front of it) -->
+      <ellipse cx="400" cy="240" rx="280" ry="180" fill="url(#brGalaxy)" opacity="0.85"/>
+      <!-- Distant accretion-disk ring (small, in case the boss SVG is
+           rendered slightly off-center; gives a glowing core regardless) -->
+      <ellipse cx="400" cy="245" rx="160" ry="48" fill="none" stroke="url(#brAccretion)" stroke-width="3" opacity="0.6"/>
     </svg>`;
   }
 
