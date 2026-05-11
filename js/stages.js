@@ -347,6 +347,95 @@ window.Stages = (() => {
     </svg>`;
   }
 
+  // catcherski — Akihabara back-alley game center at night. Rows of other
+  // arcade cabinets in the background, neon signs flickering, vending
+  // machine glowing, scattered 100-yen coins on the floor. Russian
+  // graffiti on a side wall — a callout to the hacker crew that owns
+  // the cabinet. Cyberpunk pink-cyan glow with green hacker-screen
+  // accents bleeding from a broken upstairs window.
+  function catcherski() {
+    return `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%;">
+      <defs>
+        <linearGradient id="csSky" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0"   stop-color="#0a0418"/>
+          <stop offset="0.5" stop-color="#1a0a3a"/>
+          <stop offset="1"   stop-color="#2a0a4a"/>
+        </linearGradient>
+        <linearGradient id="csFloor" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2a0a35"/>
+          <stop offset="1" stop-color="#0a0418"/>
+        </linearGradient>
+      </defs>
+      <rect width="800" height="480" fill="url(#csSky)"/>
+      <!-- Back wall row of arcade cabinets (small silhouettes) -->
+      <g>
+        <rect x="40"  y="260" width="60"  height="160" fill="#1a0a3a" stroke="#000" stroke-width="2"/>
+        <rect x="48"  y="270" width="44"  height="34"  fill="#0a3a0a"/>
+        <rect x="48"  y="312" width="44"  height="50"  fill="#3a1568"/>
+        <circle cx="70" cy="380" r="6" fill="#ee2233"/>
+        <rect x="105" y="240" width="60" height="180" fill="#1a0a3a" stroke="#000" stroke-width="2"/>
+        <rect x="113" y="252" width="44" height="34"  fill="#3a0a3a"/>
+        <rect x="113" y="294" width="44" height="60"  fill="#3a1568"/>
+        <circle cx="135" cy="378" r="6" fill="#44aaff"/>
+        <rect x="170" y="270" width="60" height="150" fill="#1a0a3a" stroke="#000" stroke-width="2"/>
+        <rect x="178" y="280" width="44" height="34"  fill="#0a3a3a"/>
+        <rect x="178" y="322" width="44" height="40"  fill="#3a1568"/>
+        <circle cx="200" cy="384" r="6" fill="#ffe45c"/>
+        <rect x="565" y="250" width="60" height="170" fill="#1a0a3a" stroke="#000" stroke-width="2"/>
+        <rect x="573" y="262" width="44" height="34"  fill="#3a3a0a"/>
+        <rect x="573" y="304" width="44" height="50"  fill="#3a1568"/>
+        <circle cx="595" cy="378" r="6" fill="#ee44dd"/>
+        <rect x="630" y="270" width="60" height="150" fill="#1a0a3a" stroke="#000" stroke-width="2"/>
+        <rect x="638" y="280" width="44" height="34"  fill="#0a3a0a"/>
+        <rect x="638" y="322" width="44" height="40"  fill="#3a1568"/>
+        <circle cx="660" cy="384" r="6" fill="#44ee88"/>
+        <!-- Vending machine in the back-right corner -->
+        <rect x="700" y="240" width="70" height="180" fill="#ee2233" stroke="#000" stroke-width="2.5"/>
+        <rect x="708" y="252" width="54" height="60"  fill="#ffe45c"/>
+        <rect x="708" y="316" width="54" height="60"  fill="#1a0a3a"/>
+        <rect x="715" y="320" width="40" height="14"  fill="#fff" opacity="0.85"/>
+        <rect x="715" y="338" width="40" height="14"  fill="#fff" opacity="0.85"/>
+        <rect x="715" y="356" width="40" height="14"  fill="#fff" opacity="0.85"/>
+        <circle cx="735" cy="390" r="5" fill="#ffe45c"/>
+      </g>
+      <!-- Floor -->
+      <rect x="0" y="410" width="800" height="70" fill="url(#csFloor)"/>
+      <!-- Tile lines -->
+      <g stroke="#3a1568" stroke-width="1" opacity="0.6">
+        <line x1="0"   y1="420" x2="800" y2="420"/>
+        <line x1="0"   y1="440" x2="800" y2="440"/>
+        <line x1="0"   y1="460" x2="800" y2="460"/>
+      </g>
+      <!-- Neon "ゲームセンター" sign on the back wall -->
+      <rect x="290" y="40" width="220" height="32" rx="6" fill="#1a0030" stroke="#ff66ee" stroke-width="2"/>
+      <text x="400" y="62" text-anchor="middle" font-size="20" font-weight="900" fill="#ff66ee" style="letter-spacing:3px; filter:drop-shadow(0 0 4px #ff66ee);">ゲームセンター</text>
+      <!-- Smaller flickering neon sign -->
+      <text x="120" y="170" font-size="14" font-weight="900" fill="#44eeff" style="filter:drop-shadow(0 0 4px #44eeff);">100円</text>
+      <text x="680" y="170" font-size="14" font-weight="900" fill="#ffe45c" style="filter:drop-shadow(0 0 4px #ffe45c);">プライズ</text>
+      <!-- Russian graffiti spray-painted on the back wall -->
+      <g transform="translate(380, 200)" opacity="0.85">
+        <text x="0" y="0" text-anchor="middle" font-size="14" font-weight="900" fill="#44ff88" style="filter:drop-shadow(0 0 3px #44ff88); transform:rotate(-4deg);">СЛАВА КРАНОФУ</text>
+      </g>
+      <!-- Broken upstairs window with green hacker terminal glow -->
+      <rect x="55"  y="80"  width="80" height="60" fill="#0a3a0a" stroke="#000" stroke-width="2.5"/>
+      <rect x="60"  y="86"  width="70" height="48" fill="#0a2a0a" stroke="#1a5a1a" stroke-width="1"/>
+      <text x="65" y="100" font-size="6" fill="#0fff0f" font-family="monospace">{HACK} 0x4a2f</text>
+      <text x="65" y="110" font-size="6" fill="#0fff0f" font-family="monospace">SCAN..ok</text>
+      <text x="65" y="120" font-size="6" fill="#0fff0f" font-family="monospace">INJECT&gt;</text>
+      <text x="65" y="130" font-size="6" fill="#0fff0f" font-family="monospace">_</text>
+      <!-- Glow leaking out of the window -->
+      <ellipse cx="95" cy="140" rx="60" ry="20" fill="#0fff0f" opacity="0.15"/>
+      <!-- Scattered 100-yen coins on the floor -->
+      <ellipse cx="120" cy="438" rx="9" ry="3" fill="#d4a532" stroke="#5a3a0a" stroke-width="1"/>
+      <ellipse cx="175" cy="450" rx="9" ry="3" fill="#d4a532" stroke="#5a3a0a" stroke-width="1"/>
+      <ellipse cx="635" cy="442" rx="9" ry="3" fill="#d4a532" stroke="#5a3a0a" stroke-width="1"/>
+      <ellipse cx="685" cy="455" rx="9" ry="3" fill="#d4a532" stroke="#5a3a0a" stroke-width="1"/>
+      <!-- Floating cigarette-smoke wisps for atmosphere -->
+      <path d="M 100 300 Q 110 280 100 260 Q 90 240 100 220" stroke="#fff" stroke-width="2" fill="none" opacity="0.18"/>
+      <path d="M 700 310 Q 710 290 700 270 Q 690 250 700 230" stroke="#fff" stroke-width="2" fill="none" opacity="0.15"/>
+    </svg>`;
+  }
+
   // brainrot — deep-space black-hole arena. A swirling galaxy spirals
   // around a central event horizon offset to the upper-right of frame;
   // stars and distant moons are visibly bending toward it. The lion-king
@@ -404,7 +493,7 @@ window.Stages = (() => {
     </svg>`;
   }
 
-  const SCENES = { tako, unko, tral, pamp, parfait, anpan, temee, brainrot };
+  const SCENES = { tako, unko, tral, pamp, parfait, anpan, temee, catcherski, brainrot };
 
   function exists(bossId) { return !!SCENES[bossId]; }
   function render(bossId) {

@@ -40,6 +40,10 @@ window.Endings = (() => {
       captionJp: "ぜんいん こぶ。 みんな ラクダ つうがく。 まいにち ブーズ。 マイナス40度[ど]。 テメー・ハーンの 帝国[ていこく] や〜！",
       captionEn: "Humps are mandatory. Every kid rides a camel to school. Every meal is buuz. The world is locked at -40°C. The Khan of camels reigns.",
     },
+    catcherski: {
+      captionJp: "せかい じゅう の 絵文字[えもじ] が ぬすまれた…\nひとつ 見[み]る ために 100円[えん] とられる の じゃ ピッ！",
+      captionEn: "Every emoji on Earth has been stolen. To view one costs 100 yen. The hacked claw machine has won.",
+    },
     brainrot: {
       captionJp: "6つの 野望[やぼう]が ぜんぶ 同時[どうじ]に 実現[じつげん]してしまった…",
       captionEn: "All six kaiju ambitions came true at once. The world is theirs now.",

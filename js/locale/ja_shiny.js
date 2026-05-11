@@ -19,6 +19,7 @@
 //   parfait  → fr-FR-DeniseNeural (French, female — sophisticated)
 //   anpan    → zh-CN-YunxiNeural  (Mandarin Chinese, male — hero bravado)
 //   temee    → user (Mongolian, recorded — old-warrior Genghis-Khan-via-Roshi)
+//   catcherski → ru-RU-DmitryNeural (Russian, male — back-alley hacker)
 //   brainrot → el-GR-AthinaNeural (Greek, female — dramatic chaos)
 window.I18N = window.I18N || {};
 window.I18N.shinyOverrides = {
@@ -268,6 +269,48 @@ window.I18N.shinyOverrides = {
       high_combo:    ["Хайхрамжгүй байжээ...", "Сайн юм байна, хүүхэд!", "Зогсохгүй байна, энэ..."],
       // boss lost a body part — complaining
       part_lost:     ["Бие минь...!", "Нэг бөхөө алдчихлаа!", "Аа, сармагчны сүүл..."],
+    },
+  },
+
+  // catcherski (Russian) — hacked UFO catcher speaks pure Russian in shiny
+  // mode. Mafia-hacker bravado. Voice via Edge TTS Dmitry — deep adult
+  // male, fits the back-alley-hacker boss energy. Same Russian seasoning
+  // already peppers the regular JP catchphrase via Cyrillic glitch words,
+  // but here the WHOLE line goes Russian.
+  catcherski: {
+    voice: "ru-RU-DmitryNeural",
+    catchphrase: "Я Кранов, Catcherski! Брось сто йен, БИП!",
+    attacks: [
+      { name: "Хватающая Клешня 🦞", type: "heavy",  phrases: ["Клешня атакует!", "Хорошо, схватил!", "Готовься к захвату!"] },
+      { name: "Метель из Монет 🪙",  type: "wild",   phrases: ["Сто йен буря!", "Больше монет!", "Все ваши деньги — мои!"] },
+      { name: "Разочарование 🚫",     type: "stun",   phrases: ["Почти! Попробуй ещё раз!", "Жаль, промах!", "Замри в обиде!"] },
+      { name: "Душ из Эмодзи 💢",     type: "quick",  phrases: ["Эмодзи в атаку!", "Из коробки, лови!", "Эмодзи град!"] },
+      { name: "Хакер Луч 💻",         type: "pierce", phrases: ["Русский хакер луч!", "Антивирус? Бесполезно!", "Сила хакера, пробей щит!"] },
+    ],
+    hits: [
+      "Ой!", "Больно!", "Не работает!", "БИП БИП БИП!",
+      "Стоп!", "Сломался!", "Помогите!", "Перезагрузка!",
+      "Хорошо, продолжай!", "Жаль...", "Спасибо за монеты!", "Хакер злится!",
+      "Москва плачет!", "Привет, малыш!", "Не трогай!", "Где мои монеты?",
+      "Синий экран!", "Ошибка системы!", "Конец игры?", "Ха-ха!",
+    ],
+    taunts: {
+      slingshot:     ["Целься получше!", "Попадёшь ли?", "Дай сто йен!", "Давай, стреляй!", "Промахнёшься!", "Хорошо, попробуй!"],
+      rage:          ["БОМБА! Хакер режим!", "Гнев! ХАКЕР!", "Сейчас покажу!", "Русская сила!", "Никаких пощад!"],
+      // healthy: confident, cocky — reuse slingshot taunts
+      healthy:       ["Целься получше!", "Дай сто йен!", "Промахнёшься!", "Хорошо, попробуй!", "Я непобедим!", "Попадёшь ли?"],
+      // hurt: irritated — reuse hit reactions
+      hurt:          ["Ой!", "Больно!", "Хакер злится!", "Не работает!", "Жаль...", "Стоп!"],
+      // desperate: near death
+      desperate:     ["Помогите!", "Сломался...", "Не могу больше...", "Где мои монеты?", "Конец игры?"],
+      // raged: same as rage cries
+      raged:         ["БОМБА! Хакер режим!", "Гнев! ХАКЕР!", "Сейчас покажу!", "Русская сила!", "Никаких пощад!"],
+      // gloating at weak player
+      player_low_hp: ["Конец игры!", "Слабак!", "Прощай, малыш!", "Сто йен в гроб!"],
+      // rattled by a high combo
+      high_combo:    ["Стоп! Хватит!", "Комбо взлом!", "Ошибка! Ошибка!", "Невозможно!"],
+      // boss lost a body part
+      part_lost:     ["Моя деталь!", "Не трогай!", "Сломал, гад!", "Ой, моё!", "Хакеры, помогите!"],
     },
   },
 

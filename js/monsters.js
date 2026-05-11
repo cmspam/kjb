@@ -1028,6 +1028,214 @@ window.Monsters = (() => {
     </g>`;
   }
 
+  // ---------- キャッチャースキー クレーノフ (Hacked UFO Catcher) ----------
+  // Rectangular glass-cabinet UFO catcher kaiju, hacked by a crew of
+  // Russian hackers in the apartment above the arcade. The 5 emoji-doll
+  // plushes in the prize box are the easy targets; the claw pincers are
+  // sturdier; the CPU screen behind the glass is the actual weak point.
+
+  // Emoji-doll plush — round soft body with two little ears and the
+  // emoji as the face. Per-doll palette so the 5 plushes feel distinct.
+  function drawEmojiDoll(part, emoji, color) {
+    const s = partState(part);
+    const { x, y, r } = part.geom;
+    if (s === 2) {
+      return `<g class="part">
+        <text x="${x}" y="${y+r*0.4}" text-anchor="middle" font-size="${r*1.5}">💥</text>
+      </g>`;
+    }
+    const cracks = s === 1
+      ? `<path d="M ${x-r*0.5} ${y-r*0.3} L ${x+r*0.15} ${y+r*0.05} L ${x-r*0.2} ${y+r*0.5}"
+              stroke="#3a1010" stroke-width="2" fill="none" opacity="0.85"/>`
+      : "";
+    return `<g class="part">
+      <!-- doll plush body -->
+      <ellipse cx="${x-r*0.55}" cy="${y-r*0.6}" rx="${r*0.32}" ry="${r*0.36}" fill="${color}" stroke="#2a0a18" stroke-width="2"/>
+      <ellipse cx="${x+r*0.55}" cy="${y-r*0.6}" rx="${r*0.32}" ry="${r*0.36}" fill="${color}" stroke="#2a0a18" stroke-width="2"/>
+      <circle cx="${x}" cy="${y}" r="${r}" fill="${color}" stroke="#2a0a18" stroke-width="2.5"/>
+      <ellipse cx="${x-r*0.25}" cy="${y-r*0.35}" rx="${r*0.4}" ry="${r*0.22}" fill="#fff" opacity="0.45"/>
+      <!-- emoji face -->
+      <text x="${x}" y="${y+r*0.4}" text-anchor="middle" font-size="${r*1.15}" style="filter:drop-shadow(0 1px 0 rgba(0,0,0,0.4));">${emoji}</text>
+      ${cracks}
+    </g>`;
+  }
+
+  // Claw pincer — one half of the grabbing mechanism, hanging from the
+  // top track via a wire. side: -1 for left, +1 for right.
+  function drawClawPincer(part, side) {
+    const s = partState(part);
+    const { x, y } = part.geom;
+    if (s === 2) {
+      return `<g class="part">
+        <line x1="${x}" y1="${y-50}" x2="${x - side*5}" y2="${y-30}" stroke="#000" stroke-width="2"/>
+        <text x="${x}" y="${y-5}" text-anchor="middle" font-size="22">💥</text>
+      </g>`;
+    }
+    // Wire dropping from the track
+    const wire = `<line x1="${x - side*8}" y1="${y-60}" x2="${x - side*8}" y2="${y-22}" stroke="#222" stroke-width="2.5"/>`;
+    // Pincer body — hollow hook shape facing inward
+    const pincer = `
+      <path d="M ${x - side*14} ${y-22}
+               L ${x - side*14} ${y+8}
+               Q ${x - side*14} ${y+30} ${x + side*10} ${y+34}
+               L ${x + side*16} ${y+22}
+               Q ${x - side*4}  ${y+18}  ${x - side*4}  ${y-10}
+               L ${x + side*6}  ${y-22} Z"
+            fill="#cccccc" stroke="#000" stroke-width="2.5"/>
+      <path d="M ${x - side*12} ${y-18} L ${x - side*12} ${y+5}"
+            stroke="#fff" stroke-width="2" opacity="0.6"/>`;
+    // Damage sparks
+    const sparks = s === 1
+      ? `<circle cx="${x + side*4}" cy="${y+18}" r="3" fill="#ffe45c"/>
+         <circle cx="${x + side*10}" cy="${y+5}" r="2" fill="#ff6644"/>
+         <path d="M ${x-side*2} ${y-5} L ${x+side*4} ${y+4} L ${x-side*1} ${y+14}"
+               stroke="#ffe45c" stroke-width="1.8" fill="none" opacity="0.9"/>`
+      : "";
+    return `<g class="part">
+      ${wire}
+      ${pincer}
+      ${sparks}
+    </g>`;
+  }
+
+  // CPU screen / core — flickering green CRT with Cyrillic + JP text
+  // scrolling. The actual win-condition weak point.
+  function drawCpuCore(part) {
+    const s = partState(part);
+    const { x, y, w, h } = part.geom;
+    if (s === 2) {
+      return `<g class="part">
+        <rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" fill="#000" stroke="#3a2010" stroke-width="3" rx="5"/>
+        <text x="${x}" y="${y+10}" text-anchor="middle" font-size="${h*0.6}">💥</text>
+      </g>`;
+    }
+    const cracks = s === 1
+      ? `<path d="M ${x-w*0.35} ${y-h*0.3} L ${x+w*0.1} ${y+h*0.05} L ${x-w*0.1} ${y+h*0.35}
+                  M ${x+w*0.2} ${y-h*0.3} L ${x+w*0.05} ${y+h*0.1}"
+              stroke="#fff" stroke-width="2" fill="none" opacity="0.85"/>`
+      : "";
+    return `<g class="part bob" style="transform-origin:${x}px ${y}px">
+      <!-- CRT bezel -->
+      <rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" fill="#1a1a1a" stroke="#444" stroke-width="3" rx="6"/>
+      <!-- screen surface -->
+      <rect x="${x-w/2+4}" y="${y-h/2+4}" width="${w-8}" height="${h-8}" fill="#0a2a0a" stroke="#1a5a1a" stroke-width="1.5" rx="3"/>
+      <!-- scanline gradient hint -->
+      <rect x="${x-w/2+4}" y="${y-h/2+4}" width="${w-8}" height="${h-8}" fill="url(#catcherskiScan)" opacity="0.35" rx="3"/>
+      <!-- scrolling text -->
+      <text x="${x}" y="${y-3}" text-anchor="middle" font-size="11" fill="#0fff0f" font-family="monospace" style="letter-spacing:1px;">100円ヲイレロ</text>
+      <text x="${x}" y="${y+10}" text-anchor="middle" font-size="9" fill="#0fff0f" font-family="monospace" style="letter-spacing:1px;">ВВЕДИ 100 ЙЕН</text>
+      <!-- glitch line -->
+      <line x1="${x-w/2+4}" y1="${y-2}" x2="${x+w/2-4}" y2="${y-2}" stroke="#0fff0f" stroke-width="0.5" opacity="0.3"/>
+      ${cracks}
+    </g>`;
+  }
+
+  function makeCatcherski() {
+    const id = "catcherski";
+    const f = window.I18N.boss(id);
+    const pn = f.parts || {};
+    const color = "#d56dff"; // arcade-neon purple-pink
+    return {
+      id,
+      name_jp: f.name_jp,
+      name_en: f.name_en,
+      catchphrase: f.catchphrase,
+      attacks: f.attacks,
+      taunts: f.taunts,
+      backstory: f.backstory,
+      weakness: f.weakness,
+      weakness_label: f.weakness_label,
+      color,
+      attacksPerRound: 2,
+      bodySVG: () => `
+        <defs>
+          <linearGradient id="catcherskiFrame" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0"   stop-color="#e84ad8"/>
+            <stop offset="0.5" stop-color="#a02ab5"/>
+            <stop offset="1"   stop-color="#5a1080"/>
+          </linearGradient>
+          <linearGradient id="catcherskiGlass" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0"   stop-color="#a8e4ff" stop-opacity="0.32"/>
+            <stop offset="1"   stop-color="#4a90c4" stop-opacity="0.45"/>
+          </linearGradient>
+          <linearGradient id="catcherskiScan" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0"   stop-color="#0fff0f" stop-opacity="0.45"/>
+            <stop offset="0.5" stop-color="#0fff0f" stop-opacity="0"/>
+            <stop offset="1"   stop-color="#0fff0f" stop-opacity="0.45"/>
+          </linearGradient>
+        </defs>
+        <!-- Floor shadow under the cabinet -->
+        <ellipse cx="400" cy="445" rx="220" ry="14" fill="#000" opacity="0.32"/>
+        <!-- Cabinet outer frame (purple-pink retro plastic) -->
+        <rect x="190" y="40" width="420" height="380" rx="14" fill="#000"/>
+        <rect x="196" y="46" width="408" height="368" rx="12" fill="url(#catcherskiFrame)"/>
+        <!-- Neon trim outline -->
+        <rect x="196" y="46" width="408" height="368" rx="12" fill="none" stroke="#ff66ee" stroke-width="2" opacity="0.7"/>
+        <!-- Top sign panel -->
+        <rect x="220" y="58" width="360" height="50" rx="8" fill="#1a0030" stroke="#ff66ee" stroke-width="2"/>
+        <text x="400" y="86" text-anchor="middle" font-size="20" font-weight="900" fill="#ffe45c" style="letter-spacing:3px;">UFO CATCHER</text>
+        <text x="400" y="100" text-anchor="middle" font-size="10" font-weight="900" fill="#ff44ff" style="letter-spacing:4px; opacity:0.85;">ХАКНУТО</text>
+        <!-- Top section: claw track (rail across the inside top) -->
+        <rect x="240" y="120" width="320" height="6" fill="#888" stroke="#000" stroke-width="1.5"/>
+        <rect x="240" y="120" width="320" height="3" fill="#fff" opacity="0.55"/>
+        <!-- Glass prize chamber background -->
+        <rect x="220" y="140" width="360" height="180" rx="6" fill="#0a1830"/>
+        <rect x="220" y="140" width="360" height="180" rx="6" fill="url(#catcherskiGlass)"/>
+        <!-- Glass frame -->
+        <rect x="220" y="140" width="360" height="180" rx="6" fill="none" stroke="#5a3a8a" stroke-width="3"/>
+        <!-- Glass highlights -->
+        <path d="M 235 150 L 235 310" stroke="#fff" stroke-width="2" opacity="0.4"/>
+        <path d="M 240 150 L 240 250" stroke="#fff" stroke-width="1.5" opacity="0.25"/>
+        <!-- Cyrillic glitch text inside glass, scrolling -->
+        <text x="540" y="160" font-size="10" fill="#0fff0f" font-family="monospace" opacity="0.55">0x4A</text>
+        <text x="240" y="312" font-size="9" fill="#0fff0f" font-family="monospace" opacity="0.45">Привет</text>
+        <text x="510" y="312" font-size="9" fill="#0fff0f" font-family="monospace" opacity="0.45">ХАКЕР</text>
+        <!-- Bottom control panel -->
+        <rect x="220" y="330" width="360" height="80" rx="6" fill="#3a0a55" stroke="#000" stroke-width="2"/>
+        <!-- Coin slot -->
+        <rect x="240" y="340" width="50" height="22" rx="3" fill="#000" stroke="#aaa" stroke-width="1.5"/>
+        <rect x="245" y="346" width="40" height="3" rx="1.5" fill="#aaa"/>
+        <text x="265" y="376" text-anchor="middle" font-size="9" fill="#ffe45c" font-weight="900">100円</text>
+        <!-- Big red joystick on the right side -->
+        <circle cx="535" cy="358" r="22" fill="#3a0010"/>
+        <circle cx="535" cy="358" r="18" fill="#ee2233" stroke="#000" stroke-width="2.5"/>
+        <circle cx="528" cy="352" r="6" fill="#fff" opacity="0.55"/>
+        <line x1="535" y1="358" x2="535" y2="338" stroke="#888" stroke-width="4"/>
+        <!-- Two cabinet legs (stubby kaiju feet) -->
+        <rect x="225" y="420" width="50" height="28" rx="4" fill="#3a0a55" stroke="#000" stroke-width="2"/>
+        <rect x="525" y="420" width="50" height="28" rx="4" fill="#3a0a55" stroke="#000" stroke-width="2"/>
+        <!-- Bolts on legs to suggest mechanical -->
+        <circle cx="240" cy="434" r="2.5" fill="#888"/>
+        <circle cx="260" cy="434" r="2.5" fill="#888"/>
+        <circle cx="540" cy="434" r="2.5" fill="#888"/>
+        <circle cx="560" cy="434" r="2.5" fill="#888"/>
+        <!-- Matryoshka-doll sticker on the side as a hack-crew tag -->
+        <g transform="translate(610, 230)">
+          <path d="M 0 0 Q -8 -10 0 -16 Q 8 -10 0 0 Q 8 8 0 16 Q -8 8 0 0 Z" fill="#ee2233" stroke="#000" stroke-width="1.2"/>
+          <circle cx="0" cy="-10" r="2" fill="#ffe45c"/>
+        </g>
+        <!-- Scattered 100-yen coins on the floor in front of the cabinet -->
+        <ellipse cx="280" cy="455" rx="9" ry="3" fill="#d4a532" stroke="#5a3a0a" stroke-width="1"/>
+        <ellipse cx="510" cy="458" rx="9" ry="3" fill="#d4a532" stroke="#5a3a0a" stroke-width="1"/>
+        <ellipse cx="610" cy="453" rx="9" ry="3" fill="#d4a532" stroke="#5a3a0a" stroke-width="1"/>
+      `,
+      parts: [
+        // 5 emoji-doll plushes in the prize chamber (two rows, staggered)
+        { id:"sushi",  type:"limb", name_jp:pn.sushi,  maxHP:7, hp:7, geom:{x:265, y:200, r:24}, draw:(p)=>drawEmojiDoll(p, "🍣", "#ffd6e8"), effect:"atk-1" },
+        { id:"neko",   type:"limb", name_jp:pn.neko,   maxHP:7, hp:7, geom:{x:335, y:240, r:24}, draw:(p)=>drawEmojiDoll(p, "🐈", "#ffe6a8"), effect:"atk-1" },
+        { id:"dango",  type:"limb", name_jp:pn.dango,  maxHP:7, hp:7, geom:{x:400, y:200, r:24}, draw:(p)=>drawEmojiDoll(p, "🍡", "#d6e6ff"), effect:"atk-1" },
+        { id:"unko",   type:"limb", name_jp:pn.unko,   maxHP:7, hp:7, geom:{x:465, y:240, r:24}, draw:(p)=>drawEmojiDoll(p, "💩", "#e6d0ff"), effect:"atk-1" },
+        { id:"sakura", type:"limb", name_jp:pn.sakura, maxHP:7, hp:7, geom:{x:535, y:200, r:24}, draw:(p)=>drawEmojiDoll(p, "🌸", "#ffd6f0"), effect:"atk-1" },
+        // Two claw pincers hanging from the track
+        { id:"clawL",  type:"limb", name_jp:pn.clawL,  maxHP:11, hp:11, geom:{x:380, y:155}, draw:(p)=>drawClawPincer(p, -1), effect:"no-special" },
+        { id:"clawR",  type:"limb", name_jp:pn.clawR,  maxHP:11, hp:11, geom:{x:420, y:155}, draw:(p)=>drawClawPincer(p, +1), effect:"no-special" },
+        // CPU screen / core
+        { id:"core",   type:"core", name_jp:pn.core,   maxHP:34, hp:34, geom:{x:400, y:368, w:140, h:46}, draw:(p)=>drawCpuCore(p), effect:"win" },
+      ],
+      hits: f.hits || []
+    };
+  }
+
   // ---------- FINAL BOSS: ブレインロット・キング (Space Lion) ----------
   // The cosmic lion final boss. Rides his own black hole — chest is a
   // literal event horizon eating the world. Mane is two galactic clusters
@@ -1159,7 +1367,7 @@ window.Monsters = (() => {
     };
   }
 
-  const factories = [makeTakoTakoSahur, makeBombardiroUnkodilo, makeTralaleroPakupaku, makeBrrPampamu, makeParfaitIwashi, makeAnpanmaguro, makeTemeeSarmagchin];
+  const factories = [makeTakoTakoSahur, makeBombardiroUnkodilo, makeTralaleroPakupaku, makeBrrPampamu, makeParfaitIwashi, makeAnpanmaguro, makeTemeeSarmagchin, makeCatcherski];
   const finalFactories = [makeBrainrotKing];
 
   function randomBoss() { return factories[Math.floor(Math.random()*factories.length)](); }
