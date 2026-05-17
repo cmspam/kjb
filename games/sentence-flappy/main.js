@@ -401,8 +401,15 @@
   }
 
   function handlePickup(tk) {
-    if (tk.correct) {
-      // Advance progress
+    // Compare against the LIVE expected word, not the stale per-token
+    // `correct` flag stamped at spawn time. Previously, if "He is a
+    // crocodile" spawned 4 "He" tokens ahead of the player and the kid
+    // picked them all, each one advanced progress because they were
+    // all marked correct=true at spawn — even though by pickup time
+    // the expected word had become "is" / "a" / "crocodile". Now the
+    // pickup checks the current State.tokens[State.progress].
+    const expected = State.tokens[State.progress];
+    if (expected && tk.word === expected) {
       State.progress++;
       pendingWord = State.tokens[State.progress] || null;
       SND.sfxCorrect();
@@ -411,11 +418,10 @@
       renderHUD();
       flashPickup(tk.x, tk.y, "✨", "#44ff88");
       if (State.progress >= State.tokens.length) {
-        // SENTENCE COMPLETE
         setTimeout(() => { winSequence(); }, 600);
       }
     } else {
-      // Wrong word — costs a life but does not reset progress
+      // Wrong word — costs a life but doesn't reset progress
       State.lives--;
       SND.sfxWrong();
       flashPickup(tk.x, tk.y, "✕", "#ff3b6b");
