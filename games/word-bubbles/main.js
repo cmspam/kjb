@@ -14,6 +14,7 @@
 
 (function () {
   const SND = window.GamesAudio;
+  const ART = window.GamesArt;
 
   // Word pool — same family as other games
   const WORDS = [
@@ -67,12 +68,27 @@
     State.spawnEvery = State.level === 0 ? 950 : 700;
     State.deadline = performance.now() + 60_000;
     $("bubble-field").innerHTML = "";
+    setupCaller();
     nextTarget();
     show("game");
     State.lastT = performance.now();
     State.raf = requestAnimationFrame(tick);
     if (State.timerId) clearInterval(State.timerId);
     State.timerId = setInterval(updateTime, 200);
+  }
+
+  // Pick a random kaiju to be the "caller" — they hang in the top-right
+  // corner of the field announcing target words. Rotates between rounds
+  // so kids see different kaiju cameos.
+  function setupCaller() {
+    if (!ART || !ART.bosses) return;
+    const all = ART.bosses();
+    if (!all.length) return;
+    const boss = all[(Math.random() * all.length) | 0];
+    const svgEl = document.getElementById("kc-svg");
+    const nameEl = document.getElementById("kc-name");
+    if (svgEl) svgEl.innerHTML = ART.renderSVG(boss);
+    if (nameEl) nameEl.textContent = boss.name_jp;
   }
   function stopGame() {
     if (State.raf) cancelAnimationFrame(State.raf);
@@ -86,6 +102,7 @@
   function nextTarget() {
     State.target = pickWord();
     $("target-word").textContent = State.target;
+    setupCaller();           // rotate kaiju caller each new target — feels like they're announcing
     setTimeout(() => SND.speakEn(State.target), 180);
   }
 

@@ -12,46 +12,63 @@
 
 (function () {
   const SND = window.GamesAudio;
+  const ART = window.GamesArt;
 
-  // Each item: { word, emoji, article, jp, sentence }
+  // Each item: { word, emoji, article, jp, kaiju? }
   // article: "a" | "an" | "the" | ""  (empty = zero article)
+  // kaiju (optional): which KJB boss this item is associated with — drives
+  // the kaiju mascot that appears in the corner, in-character.
   const ITEMS = [
     // "a" — countable singular, consonant sound
     { w: "cat",       e: "🐱", a: "a",   jp: "ねこ" },
     { w: "dog",       e: "🐶", a: "a",   jp: "いぬ" },
-    { w: "banana",    e: "🍌", a: "a",   jp: "バナナ" },
-    { w: "hat",       e: "🎩", a: "a",   jp: "ぼうし" },
-    { w: "robot",     e: "🤖", a: "a",   jp: "ロボット" },
-    { w: "fish",      e: "🐟", a: "a",   jp: "さかな" },
-    { w: "camel",     e: "🐫", a: "a",   jp: "ラクダ" },
-    { w: "bun",       e: "🍞", a: "a",   jp: "パン" },
-    { w: "shoe",      e: "👟", a: "a",   jp: "くつ" },
-    { w: "bomb",      e: "💣", a: "a",   jp: "ばくだん" },
+    { w: "banana",    e: "🍌", a: "a",   jp: "バナナ",     k: "pamp" },
+    { w: "hat",       e: "🎩", a: "a",   jp: "ぼうし",     k: "tako" },
+    { w: "robot",     e: "🤖", a: "a",   jp: "ロボット",   k: "catcherski" },
+    { w: "fish",      e: "🐟", a: "a",   jp: "さかな",     k: "tral" },
+    { w: "camel",     e: "🐫", a: "a",   jp: "ラクダ",     k: "temee" },
+    { w: "bun",       e: "🍞", a: "a",   jp: "パン",       k: "anpan" },
+    { w: "shoe",      e: "👟", a: "a",   jp: "くつ",       k: "tral" },
+    { w: "bomb",      e: "💣", a: "a",   jp: "ばくだん",   k: "unko" },
     // "an" — countable singular, vowel sound
     { w: "apple",     e: "🍎", a: "an",  jp: "りんご" },
-    { w: "octopus",   e: "🐙", a: "an",  jp: "たこ" },
+    { w: "octopus",   e: "🐙", a: "an",  jp: "たこ",       k: "tako" },
     { w: "egg",       e: "🥚", a: "an",  jp: "たまご" },
-    { w: "ice cream", e: "🍦", a: "an",  jp: "アイス" },
+    { w: "ice cream", e: "🍦", a: "an",  jp: "アイス",     k: "parfait" },
     { w: "elephant",  e: "🐘", a: "an",  jp: "ゾウ" },
     { w: "umbrella",  e: "☂️", a: "an",  jp: "かさ" },
     { w: "orange",    e: "🍊", a: "an",  jp: "オレンジ" },
     // "the" — unique objects in our shared world
     { w: "sun",       e: "☀️", a: "the", jp: "たいよう" },
-    { w: "moon",      e: "🌙", a: "the", jp: "つき" },
-    { w: "sky",       e: "🌌", a: "the", jp: "そら" },
+    { w: "moon",      e: "🌙", a: "the", jp: "つき",       k: "brainrot" },
+    { w: "sky",       e: "🌌", a: "the", jp: "そら",       k: "brainrot" },
     { w: "earth",     e: "🌍", a: "the", jp: "ちきゅう" },
     { w: "world",     e: "🌐", a: "the", jp: "せかい" },
     // zero article — uncountable + plural-form
     { w: "water",     e: "💧", a: "",    jp: "みず" },
     { w: "milk",      e: "🥛", a: "",    jp: "ぎゅうにゅう" },
-    { w: "homework",  e: "📚", a: "",    jp: "しゅくだい" },
-    { w: "money",     e: "💰", a: "",    jp: "おかね" },
-    { w: "snow",      e: "❄️", a: "",    jp: "ゆき" },
+    { w: "homework",  e: "📚", a: "",    jp: "しゅくだい", k: "unko" },
+    { w: "money",     e: "💰", a: "",    jp: "おかね",     k: "catcherski" },
+    { w: "snow",      e: "❄️", a: "",    jp: "ゆき",       k: "temee" },
     { w: "rain",      e: "🌧️", a: "",    jp: "あめ" },
-    { w: "music",     e: "🎵", a: "",    jp: "おんがく" },
+    { w: "music",     e: "🎵", a: "",    jp: "おんがく",   k: "tral" },
     { w: "cats",      e: "🐱🐱🐱", a: "", jp: "ねこたち" },
     { w: "dogs",      e: "🐶🐶🐶", a: "", jp: "いぬたち" },
   ];
+
+  // In-character quips from each kaiju when their item shows up. Adds
+  // narrative flavor and integrates the cast directly into the drill.
+  const KAIJU_QUIPS = {
+    tako:       ["タコ や〜！", "8本足[ぽんあし]！", "オクトパス！"],
+    unko:       ["ボンバ！", "Fuhgeddaboudit!", "BOMBA BOOM!"],
+    tral:       ["Mamma mia!", "Tralalero〜♪", "Bellissimo!"],
+    pamp:       ["ふわふわ でちゅ", "ハグ でちゅ〜", "あたちのよ"],
+    parfait:    ["ohonhonhon〜", "あめく あるべき", "パフェ ど！"],
+    anpan:      ["パン だ ぜっ", "アンパン マグロ！", "オレ様 や！"],
+    temee:      ["こぶ じゃ！", "ゴビ から や", "わし の もの じゃ"],
+    catcherski: ["100円 イレロ ピッ", "Привет!", "ハック ずみ ピッ"],
+    brainrot:   ["The cosmos.", "宇宙 や〜", "ブラックホール や"],
+  };
 
   const ARTICLES = [
     { id: "a",   label: "a",   jp: "ひとつ (し音)" },
@@ -126,6 +143,17 @@
     $("item-jp").textContent = it.jp;
     $("hud-progress").textContent = `${State.round}/${State.total}`;
     $("hud-score").textContent = "★ " + State.score;
+    // Kaiju mascot — show the associated kaiju + a quip. If no kaiju
+    // tied to the item, pick a random one (full cast cameos).
+    const mascotId = it.k || Object.keys(KAIJU_QUIPS)[(Math.random() * 9) | 0];
+    const boss = ART.get(mascotId, false);
+    const km = document.getElementById("km-svg");
+    const kb = document.getElementById("km-bubble");
+    if (km && boss) km.innerHTML = ART.renderSVG(boss);
+    if (kb) {
+      const quips = KAIJU_QUIPS[mascotId] || ["...", "ん？", "へ〜"];
+      kb.textContent = quips[(Math.random() * quips.length) | 0];
+    }
     // Speak phrase with placeholder ___ to show kid the form
     const phrase = it.a === "" ? it.w : it.a + " " + it.w;
     setTimeout(() => SND.speakEn(phrase), 220);

@@ -44,6 +44,39 @@
 @keyframes pd { 0%,100%{transform:scale(1);} 50%{transform:scale(1.1);} }
 .hud-quit { padding: 6px 12px; font-size: 18px; }
 
+.kaiju-mascot {
+  position: fixed;
+  top: 60px; left: 12px;
+  display: flex; flex-direction: column; align-items: flex-start;
+  z-index: 30;
+  pointer-events: none;
+  max-width: 120px;
+}
+.km-svg {
+  width: 90px; height: 70px;
+  animation: km-bob 1.8s ease-in-out infinite;
+}
+.km-svg svg { width: 100%; height: 100%; }
+@keyframes km-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.km-bubble {
+  background: rgba(255,255,255,0.95);
+  color: #2a0a4a;
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 11px; font-weight: 900;
+  margin-top: 4px;
+  position: relative;
+  max-width: 110px;
+  word-wrap: break-word;
+}
+.km-bubble::before {
+  content: "";
+  position: absolute; top: -8px; left: 14px;
+  border: 8px solid transparent;
+  border-bottom-color: rgba(255,255,255,0.95);
+  border-top: 0;
+}
+
 .item-zone {
   position: absolute;
   top: 70px; left: 0; right: 0; bottom: 200px;
