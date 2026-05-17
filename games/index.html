@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>カイジュウえいご じゅく — Kaiju English Academy</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+.menu-wrap {
+  position: absolute; inset: 0;
+  overflow-y: auto; overflow-x: hidden;
+  padding: 24px 16px 80px;
+  display: flex; flex-direction: column; align-items: center;
+}
+.title-banner {
+  font-size: 28px; font-weight: 900;
+  text-align: center;
+  color: var(--accent);
+  text-shadow: 0 4px 0 rgba(0,0,0,0.45), 0 0 20px rgba(255,228,92,0.4);
+  letter-spacing: 4px;
+  margin: 24px 0 4px;
+}
+.subtitle {
+  font-size: 14px;
+  color: var(--ink-dim);
+  letter-spacing: 3px;
+  margin-bottom: 4px;
+}
+.subtitle-en {
+  font-size: 11px;
+  color: var(--ink-dim);
+  letter-spacing: 4px;
+  opacity: 0.7;
+  margin-bottom: 18px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  width: 100%;
+  max-width: 760px;
+}
+.tile {
+  background: var(--card);
+  border: 3px solid rgba(255,255,255,0.12);
+  border-radius: var(--frame-radius);
+  padding: 16px;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  display: flex; flex-direction: column; gap: 6px;
+  transition: transform 0.12s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  text-decoration: none;
+}
+.tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px rgba(255,228,92,0.25);
+}
+.tile-emoji {
+  font-size: 44px;
+  line-height: 1;
+}
+.tile-jp { font-size: 18px; font-weight: 900; color: var(--accent); letter-spacing: 2px; }
+.tile-en { font-size: 12px; color: var(--ink-dim); letter-spacing: 1px; }
+.tile-blurb { font-size: 13px; color: var(--ink); opacity: 0.92; margin-top: 4px; }
+.tile-levels {
+  display: flex; gap: 4px; margin-top: 6px;
+}
+.lv {
+  font-size: 10px; font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.12);
+  color: var(--ink);
+  letter-spacing: 1px;
+}
+.lv.beginner   { background: linear-gradient(90deg, #88ddff, #44aaff); color: #002a55; }
+.lv.medium     { background: linear-gradient(90deg, #ffe45c, #ff9533); color: #4a2200; }
+.lv.advanced   { background: linear-gradient(90deg, #ff6688, #cc1a44); color: #fff; }
+
+.back-strip {
+  margin-top: 22px;
+  text-align: center;
+  width: 100%;
+}
+.back-strip a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: rgba(0,0,0,0.35);
+  padding: 10px 22px;
+  border-radius: 99px;
+  border: 2px solid rgba(255,228,92,0.6);
+  display: inline-block;
+}
+
+/* Floating kaiju silhouettes in the background for atmosphere */
+.bg-float {
+  position: absolute;
+  font-size: 80px;
+  opacity: 0.08;
+  pointer-events: none;
+  animation: float 8s ease-in-out infinite;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0) rotate(0); }
+  50%     { transform: translateY(-20px) rotate(5deg); }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-float" style="left: 5%;  top: 8%;  animation-delay: 0s;">🐙</div>
+<div class="bg-float" style="left: 85%; top: 12%; animation-delay: 1.4s;">💩</div>
+<div class="bg-float" style="left: 8%;  top: 65%; animation-delay: 2.8s;">🐫</div>
+<div class="bg-float" style="left: 82%; top: 72%; animation-delay: 4.2s;">🍦</div>
+<div class="bg-float" style="left: 50%; top: 88%; animation-delay: 5.6s;">🎮</div>
+
+<div class="menu-wrap">
+  <div class="title-banner">カイジュウ えいご じゅく</div>
+  <div class="subtitle">★ Kaiju English Academy ★</div>
+  <div class="subtitle-en">SIX MINI-GAMES · LEARN ENGLISH WITH KJB</div>
+
+  <div class="grid">
+    <a class="tile" href="sentence-flappy/">
+      <div class="tile-emoji">🐦‍🔥</div>
+      <div class="tile-jp">ぶんぽう フラッピー</div>
+      <div class="tile-en">SENTENCE FLAPPY</div>
+      <div class="tile-blurb">カイジュウを そうじゅうして、ことば を じゅんばん に あつめろ！ぶん が できる ぞ。</div>
+      <div class="tile-levels">
+        <span class="lv beginner">入門</span>
+        <span class="lv medium">ふつう</span>
+        <span class="lv advanced">むずかしい</span>
+      </div>
+    </a>
+
+    <a class="tile" href="vocab-bingo/">
+      <div class="tile-emoji">🎯</div>
+      <div class="tile-jp">カイジュウ ビンゴ</div>
+      <div class="tile-en">VOCAB BINGO</div>
+      <div class="tile-blurb">えいご の ことば が きこえる！ あう カイジュウ を タップ。シール を あつめよう。</div>
+      <div class="tile-levels">
+        <span class="lv beginner">入門</span>
+        <span class="lv medium">ふつう</span>
+      </div>
+    </a>
+
+    <a class="tile" href="spell-sling/">
+      <div class="tile-emoji">🎰</div>
+      <div class="tile-jp">スペル スリング</div>
+      <div class="tile-en">SPELL SLING</div>
+      <div class="tile-blurb">カイジュウに もじ を スリング！ ぶた を 1つ ずつ こわせ！</div>
+      <div class="tile-levels">
+        <span class="lv beginner">入門</span>
+        <span class="lv medium">ふつう</span>
+        <span class="lv advanced">むずかしい</span>
+      </div>
+    </a>
+
+    <a class="tile" href="verb-rhythm/">
+      <div class="tile-emoji">🎵</div>
+      <div class="tile-jp">どうし リズム</div>
+      <div class="tile-en">VERB RHYTHM</div>
+      <div class="tile-blurb">カイジュウ が おどる！ リズム に あわせて タップ。コンボ で バクハツ！</div>
+      <div class="tile-levels">
+        <span class="lv medium">ふつう</span>
+        <span class="lv advanced">むずかしい</span>
+      </div>
+    </a>
+
+    <a class="tile" href="castle-defense/">
+      <div class="tile-emoji">🏰</div>
+      <div class="tile-jp">カイジュウ じょう ぼうえい</div>
+      <div class="tile-en">KAIJU CASTLE DEFENSE</div>
+      <div class="tile-blurb">カイジュウ が せめてくる！ えいご の フレーズ を よんで げきたい！</div>
+      <div class="tile-levels">
+        <span class="lv medium">ふつう</span>
+        <span class="lv advanced">むずかしい</span>
+      </div>
+    </a>
+
+    <a class="tile" href="story-quest/">
+      <div class="tile-emoji">📖</div>
+      <div class="tile-jp">ストーリー クエスト</div>
+      <div class="tile-en">STORY QUEST</div>
+      <div class="tile-blurb">カイジュウ と であえ！ えいご の こたえ を えらんで、ものがたり を すすめよう。</div>
+      <div class="tile-levels">
+        <span class="lv medium">ふつう</span>
+        <span class="lv advanced">むずかしい</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="back-strip">
+    <a href="../index.html">← KJB （カイジュウ ブロウル） に もどる</a>
+  </div>
+</div>
+
+<script>
+// Light denture-easter-egg presence even on the landing page so kids
+// catch a first glimpse before they pick a game. Honor-mode tap to
+// jiggle if they catch it.
+(function () {
+  function spawn() {
+    const teeth = document.createElement("div");
+    teeth.className = "denture-teeth";
+    teeth.innerHTML = "🦷";
+    teeth.style.cssText = `
+      position: fixed; top: ${20 + Math.random()*50}%; left: -120px;
+      font-size: ${56 + Math.random()*40}px;
+      z-index: 999; pointer-events: none;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));
+    `;
+    document.body.appendChild(teeth);
+    const distance = window.innerWidth + 240;
+    const peak = 80 + Math.random()*60;
+    const rotEnd = 720 + Math.random()*360;
+    teeth.animate(
+      [{ transform: "translate(0,0) rotate(0)" },
+       { transform: `translate(${distance/2}px, -${peak}px) rotate(${rotEnd/2}deg)`, offset: 0.5 },
+       { transform: `translate(${distance}px, 0) rotate(${rotEnd}deg)` }],
+      { duration: 3200, easing: "cubic-bezier(.22,.61,.36,1)", fill: "forwards" }
+    );
+    setTimeout(() => { try { teeth.remove(); } catch(_){} }, 3400);
+  }
+  setInterval(() => { if (Math.random() < 1/22) spawn(); }, 1500);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+.level-pick {
+  display: flex; flex-direction: column; gap: 12px;
+  margin-top: 18px; align-items: stretch;
+  width: 100%; max-width: 360px;
+}
+.level-pick button { text-align: left; }
+
+.pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  width: 100%; max-width: 720px;
+  padding: 8px;
+}
+.pick-card {
+  background: var(--card);
+  border: 3px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 10px;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center;
+  transition: transform 0.1s, border-color 0.12s;
+}
+.pick-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+.pick-card .sv { height: 110px; width: 100%; }
+.pick-card .sv svg { width: 100%; height: 100%; }
+.pick-card .name { font-size: 13px; color: var(--accent); margin-top: 6px; text-align: center; font-weight: 900; letter-spacing: 1px;}
+
+.game-hud {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0));
+  z-index: 50;
+  gap: 12px;
+}
+.hud-target { flex: 1; min-width: 0; }
+.hud-target-jp {
+  font-size: 17px; font-weight: 900; letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.6);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hud-target-en {
+  font-size: 14px; letter-spacing: 2px;
+  color: var(--accent);
+  font-weight: 900;
+  margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hud-target-en .slot       { opacity: 0.35; padding: 0 4px; }
+.hud-target-en .slot.done  { opacity: 1; color: var(--good); text-shadow: 0 0 6px #44ff88; }
+.hud-target-en .slot.next  { opacity: 1; color: var(--accent); text-shadow: 0 0 6px #ffe45c; animation: pulse 0.7s ease-in-out infinite alternate; }
+@keyframes pulse { from { opacity:.65; } to { opacity:1; } }
+.hud-right { display:flex; align-items:center; gap: 10px; }
+.hud-lives { font-size: 18px; }
+.hud-quit { padding: 4px 10px; font-size: 18px; }
+
+#cv {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  background: linear-gradient(180deg, #1a0a3a 0%, #5a1a8a 60%, #aa3aaa 100%);
+}
+
+.tap-hint {
+  position: fixed; left: 50%; bottom: 12%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.4);
+  border: 2px solid rgba(255,255,255,0.2);
+  padding: 8px 18px;
+  border-radius: 99px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  pointer-events: none;
+  animation: tap-flash 1.2s ease-in-out infinite;
+}
+@keyframes tap-flash { 0%,100%{ opacity:0.55;} 50%{ opacity:1;} }
+
+/* Win screen */
+.win-banner {
+  font-size: 56px; font-weight: 900;
+  background: linear-gradient(90deg,#ff3b6b,#ffcc44,#44eeff,#aa66ff,#ff3b6b);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: 8px;
+  text-shadow: 0 4px 0 rgba(0,0,0,0.35);
+  animation: shimmer 2.4s linear infinite;
+}
+@keyframes shimmer { 0%{background-position:0 50%;} 100%{background-position:300% 50%;} }
+.win-en {
+  font-size: 24px; font-weight: 900; color: var(--accent);
+  text-align: center;
+  text-shadow: 0 2px 0 #000;
+  letter-spacing: 2px;
+  max-width: 86vw;
+  margin: 8px 0 4px;
+}
+.win-jp {
+  font-size: 16px; color: var(--ink-dim); letter-spacing: 1px; text-align: center;
+  max-width: 86vw;
+}
+.win-art {
+  width: 260px; height: 240px;
+  margin: 14px 0 6px;
+}
+.win-art svg { width:100%; height:100%; }
+.win-diagnosis {
+  background: rgba(0,0,0,0.4);
+  border: 2px solid rgba(255,228,92,0.6);
+  border-radius: 16px;
+  padding: 14px 22px;
+  max-width: 88vw;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink);
+}
+.win-diagnosis em { color: var(--accent); font-style: normal; font-weight: 900; }
+.row { display: flex; flex-wrap: wrap; justify-content: center; }
+
+/* Lose screen */
+.lose-banner {
+  font-size: 48px; font-weight: 900;
+  color: #ff3b6b;
+  letter-spacing: 6px;
+  text-shadow: 0 4px 0 #000;
+}
+.lose-jp { font-size: 18px; color: var(--accent); margin: 8px 0;}
+.lose-line {
+  background: rgba(0,0,0,0.4);
+  border: 2px solid rgba(255,59,107,0.6);
+  border-radius: 16px;
+  padding: 12px 22px;
+  max-width: 88vw;
+  text-align: center;
+  font-size: 15px;
+  color: var(--ink);
+  font-style: italic;
+}
+
+/* Floating word token (drawn on canvas — this is just for fall-back overlay
+ * usage if we ever surface DOM tokens). Currently unused, kept for future. */
+.word-token { display:none; }
