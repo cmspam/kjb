@@ -1,118 +1,73 @@
-// ぶんぽう フラッピー — Sentence Flappy
+// ぶんぽう フラッピー — Sentence Flappy (rebuilt)
 //
-// Flappy-bird-style flying. Sentences are absurd-funny (per Mio's design
-// note) and kaiju-specific. Words appear as floating tokens between pipes.
-// Collect words in the CORRECT order to complete the sentence. Wrong word
-// or pipe-crash costs a life but DOES NOT reset the sentence (per
-// Sakura's rage-quit guard).
+// Flying-shooter / word-collector. Kid steers a kaiju through scrolling
+// space, dodging pipes AND collecting English-word tokens in the correct
+// sentence order. Tokens spawn at ANY screen Y (not just between pipes)
+// so dodging + collecting are simultaneous skills.
 //
-// Pedagogy (per Sato-sensei):
-//   - Each word PLAYS ITS ENGLISH AUDIO when collected.
-//   - The full sentence audio plays at the end.
-//   - Difficulty levels match CEFR pre-A1 → A2.
+// Failure model is the body-parts cascade (user's request):
+//   - Kaiju has 5 body parts visible in the HUD (limbs, eyes, mouth)
+//   - Each wrong word OR pipe crash destroys one part
+//   - When all 5 parts are broken, the CORE (heart) takes the next hit
+//   - Core hit = game over, with explosion cinematic
 //
-// Levels:
-//   0 — 入門: single-word goal, only cute bosses, soft clouds (no spike pipes)
-//   1 — ふつう: 3-5 word sentences
-//   2 — むずかしい: 6-10 word sentences with articles + plurals
+// Spawning model fixes the prior bug where only the first word ever
+// appeared. The spawn queue is rebuilt every time progress advances so
+// the NEXT-expected word is always in the spawn pool AND distractors
+// (words from elsewhere in the sentence + wrong words from the kaiju
+// pool) are mixed in.
 
 (function () {
   const SND = window.GamesAudio;
   const ART = window.GamesArt;
+  const SENTENCES = window.SENTENCES;
 
-  // ---- SENTENCE BANK ----
-  // Each kaiju gets a pool of absurd sentences per level. Keep them
-  // grammatically clean since the goal IS grammar — but make the content
-  // weird so kids re-read them at lunch.
-  //
-  // Words are tokenized on whitespace + light punctuation.
-
-  const SENTENCES = {
-    tako: {
-      0: ["octopus"],
-      1: ["He is an octopus.", "Tako eats sushi.", "He has eight legs.", "He sells takoyaki."],
-      2: ["Tako is an octopus who sells takoyaki at night.",
-          "He has eight legs and a paper hat on his head.",
-          "Tako wants to turn all food into takoyaki forever."],
-    },
-    unko: {
-      0: ["bomb"],
-      1: ["He is a crocodile.", "He drops a bomb.", "He smells bad.", "He says BOMBA."],
-      2: ["Unkodilo is a robot crocodile who drops poop bombs from the sky.",
-          "He filled all the rivers with brown stinky water.",
-          "Unkodilo eats my homework and laughs at the smell."],
-    },
-    tral: {
-      0: ["fish"],
-      1: ["He is a fish.", "He sings opera.", "He wears blue shoes.", "Mamma mia!"],
-      2: ["Tralalero is a fish who sings opera in the deep blue sea.",
-          "He wears two blue Nike sneakers and a third one on his head.",
-          "He wants the whole world to sing in Italian forever."],
-    },
-    pamp: {
-      0: ["fluffy"],
-      1: ["She is fluffy.", "She is pink.", "She wants a hug.", "She is soft."],
-      2: ["Pampamu is a fluffy plushy who collects every child in the world.",
-          "She is pink and soft but also a little bit scary.",
-          "She will hug you and never ever let go."],
-    },
-    parfait: {
-      0: ["sweet"],
-      1: ["She is sweet.", "She is a fish.", "She tastes good.", "She has a cherry."],
-      2: ["Parfait is a sardine inside a tall sweet parfait glass.",
-          "She turns every sushi in Japan into a cold creamy dessert.",
-          "She has a tiny cherry on top of her shiny head."],
-    },
-    anpan: {
-      0: ["bread"],
-      1: ["He is bread.", "He is a fish.", "He wants the throne.", "He has a face."],
-      2: ["Anpan Maguro is bread and also a fish; it is complicated.",
-          "He wants to be the new hero of Japan instead of Anpanman.",
-          "His face is full of sweet red bean paste from yesterday."],
-    },
-    temee: {
-      0: ["camel"],
-      1: ["He is a camel.", "He has two humps.", "He is old.", "He likes buuz."],
-      2: ["Temee is a camel with a monkey head and a long white beard.",
-          "He has two humps on his back and forty thousand stars in his hat.",
-          "He wants everyone in the world to grow a hump like him."],
-    },
-    catcherski: {
-      0: ["robot"],
-      1: ["He is a robot.", "He wants coins.", "He was hacked.", "He has a claw."],
-      2: ["Catcherski is a UFO claw machine that was hacked by Russian hackers.",
-          "He eats one hundred yen coins and never gives a prize.",
-          "He locked all the emoji in the world inside a glass box."],
-    },
+  // ---- LEVEL CONFIG ----
+  const LEVEL_TUNING = {
+    0: { speed: 130, gravity: 700, flap: -310, pipeGap: 0.46, pipeRate: 4200, tokenRate: 1600, pipeStyle: "cloud", parts: 5 },
+    1: { speed: 170, gravity: 850, flap: -360, pipeGap: 0.36, pipeRate: 3600, tokenRate: 1500, pipeStyle: "pipe",  parts: 5 },
+    2: { speed: 210, gravity: 950, flap: -390, pipeGap: 0.30, pipeRate: 3100, tokenRate: 1400, pipeStyle: "pipe",  parts: 5 },
   };
 
-  // Beginner level only uses the cute / non-scary cast.
   const KAIJU_BY_LEVEL = {
     0: ["tako", "pamp", "parfait", "tral"],
     1: ["tako", "unko", "tral", "pamp", "parfait", "anpan", "temee", "catcherski"],
     2: ["tako", "unko", "tral", "pamp", "parfait", "anpan", "temee", "catcherski"],
   };
 
-  // ---- ROUTING / STATE ----
-  const $ = (id) => document.getElementById(id);
-  const screens = ["title", "pick", "game", "win", "lose"];
-  function show(id) {
-    screens.forEach(s => $("screen-" + s).classList.toggle("hidden", s !== id));
-  }
-
-  let State = {
-    level: 0,            // 0 / 1 / 2
-    bossId: null,
-    sentence: "",        // chosen sentence string
-    tokens: [],          // tokenized words ["He","is","a","camel."]
-    progress: 0,         // index into tokens — next slot to fill
-    lives: 3,
-    boss: null,          // factory-cloned boss instance (for SVG render)
-    audio: null,         // current audio handle if any
-    sessionStartMs: 0,
+  // JP gloss table (for the HUD line below the English). Only most-
+  // common sentence-prefix words; longer / rarer words gloss only at
+  // the win screen.
+  const QUICK_JP = {
+    "I":"わたし", "am":"です", "is":"です", "are":"です", "the":"その",
+    "an":"ひとつの(あ)", "a":"ひとつの", "have":"もつ", "has":"もつ",
+    "and":"そして", "but":"でも", "from":"〜から", "in":"〜の中",
+    "on":"〜の上", "at":"〜で", "to":"〜へ", "with":"〜と",
+    "my":"わたしの", "your":"あなたの", "his":"かれの", "her":"かのじょの",
+    "He":"かれ", "She":"かのじょ", "It":"それ", "you":"あなた",
+    "me":"わたし", "us":"わたしたち", "we":"わたしたち", "they":"かれら",
+    "very":"とても", "too":"も", "also":"も",
   };
 
-  // ---- TITLE / LEVEL PICK ----
+  const $ = (id) => document.getElementById(id);
+  const screens = ["title", "pick", "game", "win", "lose"];
+  function show(id) { screens.forEach(s => $("screen-" + s).classList.toggle("hidden", s !== id)); }
+
+  const State = {
+    level: 0,
+    bossId: null,
+    boss: null,
+    sentence: "",
+    tokens: [],          // ["I", "am", "an", "octopus."]
+    progress: 0,
+    parts: [],           // { name, broken }  — 5 destructible body parts
+    coreHits: 0,
+    pickupsCorrect: 0,
+    pickupsWrong: 0,
+    sessionStartT: 0,
+  };
+
+  // ---- TITLE / PICK ----
   document.querySelectorAll(".level-pick button").forEach(btn => {
     btn.addEventListener("click", () => {
       State.level = parseInt(btn.dataset.lv, 10);
@@ -140,17 +95,13 @@
     });
   }
 
-  // ---- GAME ----
-  function tokenize(s) {
-    // Treat trailing punctuation as glued to the previous word. We KEEP
-    // punctuation on the spoken word so the audio lookup still finds
-    // "camel." → "camel" via the cleanForHash trim. But the visual
-    // collection slot shows the word as-written. We split on whitespace
-    // and pass them as-is.
-    return s.split(/\s+/).filter(Boolean);
-  }
-  function pureWord(tok) {
-    return tok.replace(/[.,!?;:]+$/g, "").replace(/^[.,!?;:]+/g, "");
+  function tokenize(s) { return s.split(/\s+/).filter(Boolean); }
+  function pureWord(tok) { return tok.replace(/[.,!?;:]+$/g, "").replace(/^[.,!?;:]+/g, ""); }
+  function jpHint(line) {
+    return line.split(/\s+/).filter(Boolean).map(t => {
+      const p = pureWord(t);
+      return QUICK_JP[p] || QUICK_JP[p.toLowerCase()] || "";
+    }).filter(Boolean).join(" · ");
   }
 
   function startGame(bossId) {
@@ -161,22 +112,52 @@
     State.sentence = pool[(Math.random() * pool.length) | 0];
     State.tokens = tokenize(State.sentence);
     State.progress = 0;
-    State.lives = 3;
-    State.sessionStartMs = performance.now();
+    State.pickupsCorrect = 0;
+    State.pickupsWrong = 0;
+    State.parts = buildBodyParts(State.boss);
+    State.coreHits = 0;
+    State.sessionStartT = performance.now();
     renderHUD();
     show("game");
-    setupCanvas();
-    // Hide tap-hint after first input
+
     let hinted = false;
     function killHint() { if (!hinted) { hinted = true; $("tap-hint").style.display = "none"; } }
     document.addEventListener("pointerdown", killHint, { once: true });
+    setupCanvas();
     runGame();
   }
 
+  function buildBodyParts(boss) {
+    // Pull real non-core parts from the boss factory. Use up to 5 of
+    // them; if fewer, pad with generic body-icon entries.
+    const parts = [];
+    if (boss && boss.parts) {
+      boss.parts.forEach(p => {
+        if (p.effect === "win") return; // skip core (handled separately)
+        parts.push({ id: p.id, name_jp: p.name_jp, icon: pickPartIcon(p), broken: false });
+      });
+    }
+    while (parts.length < 5) {
+      parts.push({ id: "pad" + parts.length, name_jp: "?", icon: "🛡", broken: false });
+    }
+    return parts.slice(0, 5);
+  }
+  function pickPartIcon(p) {
+    if (!p) return "🛡";
+    if (p.type === "eye" || p.id.startsWith("e")) return "👁";
+    if (p.type === "mouth") return "👄";
+    if (p.id && p.id.toLowerCase().includes("tail")) return "🐍";
+    if (p.id && p.id.toLowerCase().includes("hump")) return "🐫";
+    if (p.id && p.id.toLowerCase().includes("mane")) return "🦁";
+    if (p.id && p.id.toLowerCase().includes("claw")) return "🦞";
+    if (p.id && p.id.toLowerCase().includes("ant")) return "📡";
+    if (p.type === "limb") return "🦵";
+    return "💢";
+  }
+
   function renderHUD() {
-    $("hud-jp").textContent = `★ ${State.boss.name_jp} の ぶん を つくれ`;
-    const en = $("hud-en");
-    en.innerHTML = "";
+    $("hud-jp").textContent = `★ ${State.boss.name_jp}：`;
+    const en = $("hud-en"); en.innerHTML = "";
     State.tokens.forEach((tok, i) => {
       const sp = document.createElement("span");
       sp.className = "slot";
@@ -185,16 +166,29 @@
       sp.textContent = tok;
       en.appendChild(sp);
     });
-    $("hud-lives").textContent = "❤️".repeat(State.lives);
+    const partsEl = $("hud-parts"); partsEl.innerHTML = "";
+    State.parts.forEach((p) => {
+      const pip = document.createElement("div");
+      pip.className = "part-pip" + (p.broken ? " broken" : "");
+      pip.textContent = p.icon;
+      partsEl.appendChild(pip);
+    });
+    const allPartsBroken = State.parts.every(p => p.broken);
+    const corePip = document.createElement("div");
+    corePip.className = "part-pip core" + (allPartsBroken ? " warn" : "");
+    corePip.textContent = "❤️";
+    partsEl.appendChild(corePip);
   }
 
-  // ---- CANVAS GAME ----
-  let cv, ctx, W, H, raf, lastT, running, kaijuY, kaijuVy, pipes, tokens, scrollX;
-  let pipeGapPx, pipeSpacing, pipeWidth, gravity, flapV, scrollSpeed;
-  let bossSpriteEl = null;
-  let crashCooldown = 0;
-  let pendingWord = null;     // which word should appear in the NEXT pipe gap
-  let pickedThisGap = false;  // ensures one pickup per gap
+  // ---- CANVAS / RENDER ----
+  let cv, ctx, W, H, raf, lastT, running;
+  let kaijuY, kaijuVy;
+  let pipes, tokens;
+  let nextPipeAt, nextTokenAt;
+  let bossSpriteImg = null;
+  let bossSpriteWrap = null;
+  let scrollX = 0;
+  let crashCool = 0;
 
   function setupCanvas() {
     cv = $("cv");
@@ -204,15 +198,6 @@
       const h = cv.clientHeight || window.innerHeight;
       cv.width = w * dpr; cv.height = h * dpr;
       W = w; H = h;
-      // tune physics with viewport. Units are PIXELS PER SECOND now
-      // (previous build had per-frame numbers used as per-ms, so the
-      // game ran at ~60x intended speed).
-      pipeGapPx   = Math.max(180, H * 0.36);
-      pipeSpacing = Math.max(260, W * 0.65);
-      pipeWidth   = Math.max(50, W * 0.08);
-      gravity     = H * 1.4;     // px/sec² downward accel
-      flapV       = -H * 0.55;   // px/sec impulse upward on tap
-      scrollSpeed = W * 0.18;    // px/sec horizontal scroll
     }
     resize();
     window.addEventListener("resize", resize);
@@ -224,16 +209,13 @@
     running = true;
     kaijuY = H * 0.5;
     kaijuVy = 0;
-    scrollX = 0;
-    crashCooldown = 0;
-    pickedThisGap = false;
     pipes = [];
     tokens = [];
-    pendingWord = State.tokens[State.progress];
-    // Seed pipes ahead
-    for (let i = 0; i < 5; i++) spawnPipeAt(W + i * pipeSpacing);
+    crashCool = 0;
+    nextPipeAt = performance.now() + 1100;
+    nextTokenAt = performance.now() + 600;
     lastT = performance.now();
-    // Pre-render kaiju SVG to an HTML element we drawImage from
+    scrollX = 0;
     prepareKaijuSprite().then(() => {
       raf = requestAnimationFrame(loop);
     });
@@ -245,39 +227,30 @@
     if (raf) cancelAnimationFrame(raf);
     document.removeEventListener("pointerdown", onTap);
     document.removeEventListener("keydown", onKey);
-    if (bossSpriteEl) {
-      try { document.body.removeChild(bossSpriteEl); } catch (_) {}
-      bossSpriteEl = null;
-    }
+    if (bossSpriteWrap) { try { bossSpriteWrap.remove(); } catch (_) {} bossSpriteWrap = null; }
   }
   $("hud-quit").addEventListener("click", () => { stopGame(); show("title"); });
 
   function onTap(e) {
     if (!running) return;
-    // Ignore taps on the top HUD strip (so quit button still works)
-    if (e.clientY < 56) return;
-    kaijuVy = flapV;
+    if (e.clientY < 64) return;
+    kaijuVy = LEVEL_TUNING[State.level].flap;
     SND.sfxPop();
   }
   function onKey(e) {
     if (!running) return;
-    if (e.code === "Space" || e.code === "ArrowUp") { kaijuVy = flapV; SND.sfxPop(); }
+    if (e.code === "Space" || e.code === "ArrowUp") { kaijuVy = LEVEL_TUNING[State.level].flap; SND.sfxPop(); }
   }
 
   function prepareKaijuSprite() {
-    // Off-DOM image we can drawImage from. We render the boss SVG to a
-    // data URL then load it via Image. Re-renders on shiny-toggle would
-    // need a refresh, but flappy doesn't shiny-toggle.
     return new Promise(resolve => {
       const wrap = document.createElement("div");
-      wrap.style.cssText = "position:fixed;left:-9999px;width:160px;height:140px;";
+      wrap.style.cssText = "position:fixed;left:-9999px;width:160px;height:120px;";
       wrap.innerHTML = ART.renderSVG(State.boss);
       document.body.appendChild(wrap);
-      bossSpriteEl = wrap;
-      // The wrap.firstChild is the SVG (or the .shiny-boss-svg wrapper).
+      bossSpriteWrap = wrap;
       const svg = wrap.querySelector("svg");
       if (!svg) { resolve(); return; }
-      // serialize SVG → data URL → Image
       const xml = new XMLSerializer().serializeToString(svg);
       const url = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
       const img = new Image();
@@ -286,247 +259,213 @@
       img.src = url;
     });
   }
-  let bossSpriteImg = null;
 
-  function spawnPipeAt(x) {
-    // Soft/cloud mode for beginner = wider gap + cloud styling
-    const isSoft = State.level === 0;
-    const gap = isSoft ? pipeGapPx * 1.35 : pipeGapPx;
-    const topMin = H * 0.12;
-    const topMax = H - gap - H * 0.12;
+  function spawnPipe(t) {
+    const tun = LEVEL_TUNING[State.level];
+    const gap = H * tun.pipeGap;
+    const topMin = H * 0.10;
+    const topMax = H - gap - H * 0.10;
     const topH = topMin + Math.random() * (topMax - topMin);
-    const pipe = {
-      x: x,
-      topH: topH,
-      gap: gap,
-      width: pipeWidth,
-      passed: false,
-      style: isSoft ? "cloud" : "pipe",
-    };
-    pipes.push(pipe);
-    // Spawn a word token in this gap. We also occasionally drop a
-    // distractor right alongside the correct one — the kid has to steer.
-    const correctWord = pendingWord;
-    if (!correctWord) return pipe;  // sentence already complete
-    // Decide: is this gap the next correct slot? At level 0 the answer
-    // is "almost always yes" — we want forward momentum. At level 2 the
-    // distractors are denser to force reading.
-    const distractDensity = State.level === 0 ? 0.0 : State.level === 1 ? 0.35 : 0.7;
-    const wantCorrect = (pipes.length % 2 === 1) || Math.random() < 0.65;
-    const isCorrect = wantCorrect || Math.random() < 0.5;
-    if (isCorrect) {
-      tokens.push({
-        x: x + pipeWidth / 2,
-        y: topH + gap / 2,
-        word: correctWord,
-        correct: true,
-        pickedUp: false,
-        gapId: pipes.length,
-      });
+    pipes.push({ x: W + 30, topH, gap, w: Math.max(48, W * 0.085), style: tun.pipeStyle });
+  }
+
+  function spawnToken(t) {
+    // Always include the NEXT expected word + occasional distractor.
+    // Decide which word this token represents:
+    //   - 50% chance it's the next-expected target
+    //   - 50% chance it's a distractor (a real word from this kaiju's pool,
+    //     not the expected one, so kids still read real English)
+    const wantTarget = Math.random() < 0.55;
+    let word;
+    if (wantTarget) {
+      word = State.tokens[State.progress];
     } else {
-      // pick a distractor — a real word from the same sentence but
-      // NOT the next one. Easier for kids to learn "is X next?" if the
-      // wrong word is plausibly part of the sentence.
-      let other = null;
-      const others = State.tokens.filter((t, i) => i !== State.progress);
-      if (others.length > 0) other = others[(Math.random() * others.length) | 0];
-      if (!other) other = "the";
-      tokens.push({
-        x: x + pipeWidth / 2,
-        y: topH + gap / 2 + (Math.random() - 0.5) * 40,
-        word: other,
-        correct: false,
-        pickedUp: false,
-        gapId: pipes.length,
-      });
+      // Distractor pool: all OTHER sentence words + a few random words
+      // from this kaiju's word pool
+      const all = SENTENCES[State.bossId][State.level] || [];
+      const allWords = new Set();
+      State.tokens.forEach(t => allWords.add(t));
+      all.forEach(s => tokenize(s).forEach(t => allWords.add(t)));
+      const sentencePool = [...allWords].filter(w => w !== State.tokens[State.progress]);
+      if (sentencePool.length === 0) word = State.tokens[State.progress];
+      else word = sentencePool[(Math.random() * sentencePool.length) | 0];
     }
-    return pipe;
+    if (!word) return;
+    // Position the token anywhere — NOT just between pipes (per user note)
+    const y = 60 + Math.random() * (H - 160);
+    tokens.push({ x: W + 30, y, word: word, picked: false });
   }
 
   function loop(t) {
     if (!running) return;
     const dt = Math.min(40, t - lastT);
     lastT = t;
-    update(dt);
-    draw();
+    update(dt, t);
+    draw(t);
     raf = requestAnimationFrame(loop);
   }
 
-  function update(dt) {
-    // Physics — units are PER-SECOND, dt is in MS, so divide by 1000.
+  function update(dt, t) {
+    const tun = LEVEL_TUNING[State.level];
     const dts = dt / 1000;
-    kaijuVy += gravity * dts;
+    kaijuVy += tun.gravity * dts;
     kaijuY  += kaijuVy * dts;
-    // Bounds
-    if (kaijuY < 0) { kaijuY = 0; kaijuVy = 0; }
-    if (kaijuY > H - 20) { hitCrash(); kaijuY = H * 0.5; kaijuVy = 0; }
+    if (kaijuY < 0)        { kaijuY = 0; kaijuVy = 0; }
+    if (kaijuY > H - 30)   { kaijuY = H - 30; hitObstacle("floor"); }
 
-    // Scroll — also per-second.
-    const step = scrollSpeed * dts;
+    const step = tun.speed * dts;
     pipes.forEach(p => p.x -= step);
     tokens.forEach(tk => tk.x -= step);
 
-    // Spawn new pipes
-    if (pipes.length === 0 || pipes[pipes.length - 1].x < W - pipeSpacing) {
-      spawnPipeAt((pipes.length ? pipes[pipes.length-1].x : W) + pipeSpacing);
-    }
+    if (t >= nextPipeAt)  { spawnPipe(t); nextPipeAt  = t + tun.pipeRate; }
+    if (t >= nextTokenAt) { spawnToken(t); nextTokenAt = t + tun.tokenRate; }
 
-    // Despawn off-screen
-    pipes = pipes.filter(p => p.x + p.width > -20);
-    tokens = tokens.filter(tk => tk.x > -40);
+    pipes = pipes.filter(p => p.x + p.w > -30);
+    tokens = tokens.filter(tk => tk.x > -50 && !tk.picked);
 
-    // Pickup detection
+    if (crashCool > 0) crashCool -= dt;
+
+    // Token pickups
     const kx = W * 0.25, ky = kaijuY;
-    const PICK_RADIUS = 44;
+    const PICK_R = 50;
     tokens.forEach(tk => {
-      if (tk.pickedUp) return;
+      if (tk.picked) return;
       const dx = tk.x - kx, dy = tk.y - ky;
-      if (dx * dx + dy * dy < PICK_RADIUS * PICK_RADIUS) {
-        tk.pickedUp = true;
+      if (dx*dx + dy*dy < PICK_R*PICK_R) {
+        tk.picked = true;
         handlePickup(tk);
       }
     });
 
-    // Collision with pipes
-    if (crashCooldown > 0) crashCooldown -= dt;
-    else {
+    // Pipe collisions (only if cooldown OK)
+    if (crashCool <= 0) {
       pipes.forEach(p => {
-        if (kx + 20 < p.x || kx - 20 > p.x + p.width) return;
-        // Check top + bottom
-        if (ky - 20 < p.topH || ky + 20 > p.topH + p.gap) {
-          hitCrash();
-        }
+        if (kx + 22 < p.x || kx - 22 > p.x + p.w) return;
+        if (ky - 22 < p.topH || ky + 22 > p.topH + p.gap) hitObstacle("pipe");
       });
     }
   }
 
   function handlePickup(tk) {
-    // Compare against the LIVE expected word, not the stale per-token
-    // `correct` flag stamped at spawn time. Previously, if "He is a
-    // crocodile" spawned 4 "He" tokens ahead of the player and the kid
-    // picked them all, each one advanced progress because they were
-    // all marked correct=true at spawn — even though by pickup time
-    // the expected word had become "is" / "a" / "crocodile". Now the
-    // pickup checks the current State.tokens[State.progress].
     const expected = State.tokens[State.progress];
     if (expected && tk.word === expected) {
       State.progress++;
-      pendingWord = State.tokens[State.progress] || null;
+      State.pickupsCorrect++;
       SND.sfxCorrect();
-      const word = pureWord(tk.word);
-      SND.speakEn(word);
+      SND.speakEn(pureWord(tk.word));
+      flash(tk.x, tk.y, "+1", "#44ff88");
       renderHUD();
-      flashPickup(tk.x, tk.y, "✨", "#44ff88");
       if (State.progress >= State.tokens.length) {
-        setTimeout(() => { winSequence(); }, 600);
+        setTimeout(winSequence, 700);
       }
     } else {
-      // Wrong word — costs a life but doesn't reset progress
-      State.lives--;
+      State.pickupsWrong++;
       SND.sfxWrong();
-      flashPickup(tk.x, tk.y, "✕", "#ff3b6b");
-      renderHUD();
-      if (State.lives <= 0) loseSequence(tk.word);
+      flash(tk.x, tk.y, "✕", "#ff3b6b");
+      breakNextPart();
     }
   }
 
-  function hitCrash() {
-    if (crashCooldown > 0) return;
-    crashCooldown = 1500;
-    State.lives--;
+  function hitObstacle(kind) {
+    if (crashCool > 0) return;
+    crashCool = 900;
     SND.sfxSplat();
-    renderHUD();
-    if (State.lives <= 0) loseSequence(null);
+    flash(W * 0.25, kaijuY, "💥", "#ff8844");
+    kaijuVy = -200;
+    breakNextPart();
   }
 
-  // Floating flash animation for pickups
+  function breakNextPart() {
+    // Break the next intact part. If all are broken, take a core hit.
+    const intactIdx = State.parts.findIndex(p => !p.broken);
+    if (intactIdx >= 0) {
+      State.parts[intactIdx].broken = true;
+      renderHUD();
+    } else {
+      State.coreHits++;
+      renderHUD();
+      if (State.coreHits >= 1) {
+        loseSequence();
+      }
+    }
+  }
+
+  // ---- DRAW ----
   const flashes = [];
-  function flashPickup(x, y, text, color) {
-    flashes.push({ x, y, text, color, t: 0, life: 700 });
-  }
+  function flash(x, y, text, color) { flashes.push({ x, y, text, color, t: 0, life: 800 }); }
 
-  function draw() {
+  function draw(t) {
     ctx.clearRect(0, 0, W, H);
-    // ---- BACKGROUND ----
-    // Soft gradient with parallax stars
+    // Background
     const grad = ctx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, "#1a0a3a");
     grad.addColorStop(0.6, "#5a1a8a");
     grad.addColorStop(1, "#aa3aaa");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
-    // Star field (parallax — uses scrollX, slow, frame-rate-independent)
-    scrollX += scrollSpeed * 0.005;
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    // Stars
+    scrollX += 0.5;
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
     for (let i = 0; i < 30; i++) {
-      const sx = (i * 79 + (scrollX * 0.3)) % (W + 60) - 30;
+      const sx = (W - ((i * 79 + scrollX) % (W + 60)));
       const sy = (i * 53) % H;
-      ctx.fillRect((W - sx), sy, 1.5, 1.5);
+      ctx.fillRect(sx, sy, 1.5, 1.5);
     }
 
-    // ---- PIPES ----
+    // Pipes
     pipes.forEach(p => {
       if (p.style === "cloud") {
-        // Soft cloud obstacle for beginner mode
-        drawCloud(p.x, 0, p.width, p.topH);
-        drawCloud(p.x, p.topH + p.gap, p.width, H - (p.topH + p.gap));
+        drawCloud(p.x, 0, p.w, p.topH);
+        drawCloud(p.x, p.topH + p.gap, p.w, H - (p.topH + p.gap));
       } else {
-        drawPipe(p.x, 0, p.width, p.topH);
-        drawPipe(p.x, p.topH + p.gap, p.width, H - (p.topH + p.gap));
+        drawPipe(p.x, 0, p.w, p.topH);
+        drawPipe(p.x, p.topH + p.gap, p.w, H - (p.topH + p.gap));
       }
     });
 
-    // ---- WORD TOKENS ----
+    // Tokens
     tokens.forEach(tk => {
-      if (tk.pickedUp) return;
-      const cx = tk.x, cy = tk.y;
-      // Bubble
-      ctx.fillStyle = tk.correct ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.92)";
-      const tw = ctx.measureText(tk.word).width;
-      ctx.font = "bold 18px system-ui, sans-serif";
+      if (tk.picked) return;
+      ctx.font = "bold 17px system-ui, sans-serif";
       const w = ctx.measureText(tk.word).width + 24;
       const h = 30;
-      ctx.fillStyle = "rgba(0,0,0,0.7)";
-      roundRect(ctx, cx - w/2 - 2, cy - h/2 + 2, w, h, 14);
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      roundRect(ctx, tk.x - w/2 - 2, tk.y - h/2 + 2, w, h, 14);
       ctx.fill();
       ctx.fillStyle = "rgba(255,255,255,0.96)";
-      roundRect(ctx, cx - w/2, cy - h/2, w, h, 14);
+      roundRect(ctx, tk.x - w/2, tk.y - h/2, w, h, 14);
       ctx.fill();
       ctx.fillStyle = "#2a0a4a";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(tk.word, cx, cy + 1);
+      ctx.fillText(tk.word, tk.x, tk.y + 1);
     });
 
-    // ---- FLASH POPUPS ----
+    // Flashes
     for (let i = flashes.length - 1; i >= 0; i--) {
-      const f = flashes[i];
-      f.t += 16;
+      const f = flashes[i]; f.t += 16;
       const k = f.t / f.life;
       if (k >= 1) { flashes.splice(i, 1); continue; }
       ctx.globalAlpha = 1 - k;
-      ctx.font = "bold 36px system-ui, sans-serif";
+      ctx.font = "bold 34px system-ui, sans-serif";
       ctx.fillStyle = f.color;
       ctx.textAlign = "center";
-      ctx.fillText(f.text, f.x, f.y - k * 40);
+      ctx.fillText(f.text, f.x, f.y - k * 50);
       ctx.globalAlpha = 1;
     }
 
-    // ---- KAIJU SPRITE ----
+    // Kaiju sprite
     const kx = W * 0.25, ky = kaijuY;
-    const tilt = Math.max(-0.5, Math.min(0.9, kaijuVy * 0.0008));
+    const tilt = Math.max(-0.4, Math.min(0.8, kaijuVy * 0.001));
     ctx.save();
     ctx.translate(kx, ky);
     ctx.rotate(tilt);
-    // Crash cooldown blink
-    const blink = crashCooldown > 0 && (Math.floor(crashCooldown / 80) % 2 === 0);
-    if (blink) ctx.globalAlpha = 0.35;
+    const blink = crashCool > 0 && (Math.floor(crashCool / 80) % 2 === 0);
+    if (blink) ctx.globalAlpha = 0.4;
     if (bossSpriteImg) {
-      // boss SVG is 800x480 — we want ~120x100 on screen
       const sw = 140, sh = 105;
       ctx.drawImage(bossSpriteImg, -sw/2, -sh/2, sw, sh);
     } else {
-      // fallback emoji
       ctx.font = "60px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -537,43 +476,30 @@
 
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
     ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-    ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-    ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.lineTo(x+r, y+h);   ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+    ctx.lineTo(x, y+r);     ctx.quadraticCurveTo(x, y, x+r, y);
     ctx.closePath();
   }
 
   function drawPipe(x, y, w, h) {
-    // Body
-    const grad = ctx.createLinearGradient(x, 0, x + w, 0);
-    grad.addColorStop(0, "#2a8a44");
-    grad.addColorStop(0.4, "#5acc66");
-    grad.addColorStop(1, "#1a6a2a");
-    ctx.fillStyle = grad;
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, "#2a8a44");
+    g.addColorStop(0.5, "#5acc66");
+    g.addColorStop(1, "#1a6a2a");
+    ctx.fillStyle = g;
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = "#0a3a0a";
     ctx.lineWidth = 3;
     ctx.strokeRect(x, y, w, h);
-    // Cap
     const capH = 22;
-    const capY = (h === H ? 0 : y + h - capH);  // top cap for top pipe, bottom cap for bottom
-    // Simpler: cap goes at the side facing the kaiju gap
-    ctx.fillStyle = grad;
-    if (y === 0) {
-      // top pipe — cap at the bottom edge
-      ctx.fillRect(x - 4, y + h - capH, w + 8, capH);
-      ctx.strokeRect(x - 4, y + h - capH, w + 8, capH);
-    } else {
-      // bottom pipe — cap at the top edge
-      ctx.fillRect(x - 4, y, w + 8, capH);
-      ctx.strokeRect(x - 4, y, w + 8, capH);
-    }
+    if (y === 0) ctx.fillRect(x - 4, y + h - capH, w + 8, capH);
+    else         ctx.fillRect(x - 4, y, w + 8, capH);
+    if (y === 0) ctx.strokeRect(x - 4, y + h - capH, w + 8, capH);
+    else         ctx.strokeRect(x - 4, y, w + 8, capH);
   }
-
   function drawCloud(x, y, w, h) {
-    // Soft white cloud obstacle for beginner mode
     ctx.fillStyle = "rgba(255,255,255,0.88)";
     ctx.strokeStyle = "rgba(180,200,255,0.6)";
     ctx.lineWidth = 2;
@@ -582,46 +508,45 @@
       const cy = y + (i + 0.5) * (h / bumps);
       ctx.beginPath();
       ctx.ellipse(x + w/2, cy, w/2 + 6, 22, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.stroke();
+      ctx.fill(); ctx.stroke();
     }
   }
 
-  // ---- WIN ----
+  // ---- WIN / LOSE ----
   function winSequence() {
     stopGame();
-    // Play full sentence audio
     SND.sfxLevel();
     SND.speakEn(State.sentence);
-    // Build win screen
     $("win-en").textContent = State.sentence;
     $("win-jp").textContent = State.boss.name_jp;
     $("win-art").innerHTML = ART.renderSVG(State.boss);
-    $("win-diagnosis").innerHTML = funnyDiagnosis();
+    const sec = Math.floor((performance.now() - State.sessionStartT) / 1000);
+    const accuracy = State.pickupsCorrect + State.pickupsWrong === 0 ? 100 :
+      Math.round(100 * State.pickupsCorrect / (State.pickupsCorrect + State.pickupsWrong));
+    $("win-stats").innerHTML = `じかん: <span style="color:#ffe45c">${sec}s</span> · せいかい りつ: <span style="color:#ffe45c">${accuracy}%</span><br>こわした パーツ: ${State.parts.filter(p=>p.broken).length}/5`;
     show("win");
-    SND.sfxSparkle();
     spawnConfetti(40);
   }
-
-  function funnyDiagnosis() {
-    // Per Mio: shareable diagnosis. Per Shigeki: deadpan absurd lines.
-    const lines = [
-      `${State.boss.name_jp} のしんゆう。`,
-      `きょう の あなた は <em>${State.boss.name_en || State.boss.name_jp}</em>。`,
-      "せいかい！ あくむ は きょう も ふせがれた。",
-      "The cosmos has observed your spelling. The cosmos is mildly impressed.",
-      "I detonated. WITH LOVE.",
-      "In my village... we celebrate this. It is tradition.",
-      `Ohonhonhon, you are now SLIGHTLY less of a ${State.boss.name_en || "sardine"}.`,
-    ];
-    return lines[(Math.random() * lines.length) | 0];
+  function loseSequence() {
+    stopGame();
+    SND.sfxFail();
+    $("lose-banner").textContent = "CORE BROKEN!";
+    $("lose-jp").textContent = State.boss.name_jp;
+    $("lose-progress").innerHTML = `「${State.tokens.slice(0, State.progress).join(" ") || "..."}」 ... まで かんせい!<br>あと: <span style="color:#ffe45c">${State.tokens.slice(State.progress).join(" ")}</span>`;
+    show("lose");
   }
+
+  $("win-again").addEventListener("click", () => { SND.sfxConfirm(); startGame(State.bossId); });
+  $("win-menu").addEventListener("click",  () => { SND.sfxConfirm(); buildPickGrid(); show("pick"); });
+  $("win-home").addEventListener("click",  () => { SND.sfxConfirm(); show("title"); });
+  $("lose-retry").addEventListener("click", () => { SND.sfxConfirm(); startGame(State.bossId); });
+  $("lose-home").addEventListener("click",  () => { SND.sfxConfirm(); show("title"); });
 
   function spawnConfetti(n) {
     const layer = document.createElement("div");
     layer.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:900;overflow:hidden;";
     document.body.appendChild(layer);
-    const emojis = ["🎉","🎊","⭐","🌟","✨","💫","🎈","🌈","💩","🐙","🍦","🎮"];
+    const emojis = ["🎉","🎊","⭐","🌟","✨","💫","🎈","🌈"];
     for (let i = 0; i < n; i++) {
       const p = document.createElement("div");
       p.textContent = emojis[(Math.random()*emojis.length)|0];
@@ -636,128 +561,5 @@
     setTimeout(() => { try { layer.remove(); } catch(_){} }, 3500);
   }
 
-  $("win-again").addEventListener("click", () => { SND.sfxConfirm(); startGame(State.bossId); });
-  $("win-menu").addEventListener("click",  () => { SND.sfxConfirm(); buildPickGrid(); show("pick"); });
-  $("win-home").addEventListener("click",  () => { SND.sfxConfirm(); show("title"); });
-
-  // ---- LOSE ----
-  function loseSequence(wrongWord) {
-    stopGame();
-    $("lose-jp").textContent = State.boss.name_jp;
-    const lines = [
-      "I have failed my ancestors.",
-      "In my village… we also failed. It is tradition.",
-      "The cosmos is disappointed but not surprised.",
-      "I detonated. Without love this time.",
-      "Mamma mia, try again amico.",
-      "I am bread. Also fish. It is complicated.",
-    ];
-    $("lose-line").textContent = lines[(Math.random()*lines.length)|0];
-    show("lose");
-    SND.sfxFail();
-  }
-  $("lose-retry").addEventListener("click", () => { SND.sfxConfirm(); startGame(State.bossId); });
-  $("lose-home").addEventListener("click",  () => { SND.sfxConfirm(); show("title"); });
-
-  // ---- SECRET EVENTS ----
-  // Random rare moments that surprise the kid mid-game. Per the design
-  // doc: every game has at least one secret feature. Per Shigeki:
-  // deadpan absurd > cheerleader. Per Kenta: chaos > polish.
-
-  // 1) BOMBA RUSH — a 6-second window where Bombardiro Unkodilo flies
-  //    in from the right, hovers above the player, and the next word
-  //    token is golden + worth a free life if collected. ~1-in-90 per
-  //    game tick (so ~3% chance per pipe-spacing).
-  let bombaRushUntil = 0;
-  let bombaSpriteEl = null;
-  function maybeFireBombaRush(now) {
-    if (now < bombaRushUntil) return;
-    if (Math.random() > 1 / 90) return;
-    bombaRushUntil = now + 6000;
-    // Pulse the next token gold by stamping a flag on the latest unpicked token
-    const lastUnpicked = tokens.find(tk => !tk.pickedUp);
-    if (lastUnpicked) lastUnpicked.golden = true;
-    // Floating banner so the kid registers it (deadpan: no exclamation)
-    const banner = document.createElement("div");
-    banner.textContent = "💩 BOMBA RUSH 💩";
-    banner.style.cssText = `
-      position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-      font-size: 22px; font-weight: 900; letter-spacing: 4px;
-      color: #ffe45c; text-shadow: 0 2px 0 #000, 0 0 14px #44ff88;
-      background: rgba(0,0,0,0.55); padding: 8px 18px; border-radius: 99px;
-      border: 2px solid #44ff88;
-      pointer-events: none; z-index: 80;
-    `;
-    document.body.appendChild(banner);
-    setTimeout(() => { try { banner.remove(); } catch (_){} }, 2200);
-  }
-
-  // 2) TRALALERO CAMEO — a 1-in-200 chance per game tick: an off-screen
-  //    voice sings the target word in opera. Kid hears it before they
-  //    collect it. Pure freebie / surprise listening exposure.
-  let tralCameoUntil = 0;
-  function maybeFireTralCameo(now) {
-    if (now < tralCameoUntil) return;
-    if (Math.random() > 1 / 200) return;
-    tralCameoUntil = now + 8000;
-    const word = State.tokens[State.progress];
-    if (!word) return;
-    // Visual: a fish silhouette swims in from the right
-    const fish = document.createElement("div");
-    fish.textContent = "🐟 ♪ " + pureWord(word) + " ♪";
-    fish.style.cssText = `
-      position: fixed; top: ${20 + Math.random()*40}%; right: -340px;
-      font-size: 26px; font-weight: 900; letter-spacing: 2px;
-      color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,0.6);
-      background: linear-gradient(90deg, #ee2266, #ffcc44);
-      padding: 10px 18px; border-radius: 99px;
-      pointer-events: none; z-index: 80;
-    `;
-    document.body.appendChild(fish);
-    fish.animate(
-      [{ transform: "translateX(0)" },
-       { transform: `translateX(-${window.innerWidth + 400}px)` }],
-      { duration: 5500, easing: "ease-in-out", fill: "forwards" }
-    );
-    setTimeout(() => { try { fish.remove(); } catch(_){} }, 5800);
-    // Drama: opera-flavored TTS sting at slow rate
-    SND.speakEn(pureWord(word), { rate: 0.7, pitch: 1.4 });
-  }
-
-  // Hook the secret-event rolls into update(). We can't edit update()
-  // cleanly here — instead extend it via a frame counter.
-  const _origLoop = loop;
-  // Already running. Monkey-patch by overriding loop reference. Cleaner:
-  // re-define the loop body to call our hooks too.
-  // Re-wrap loop:
-  function loopExt(t) {
-    if (!running) return;
-    const dt = Math.min(40, t - lastT);
-    lastT = t;
-    update(dt);
-    maybeFireBombaRush(t);
-    maybeFireTralCameo(t);
-    draw();
-    raf = requestAnimationFrame(loopExt);
-  }
-  // Patch runGame's loop start to use loopExt
-  const _origRunGame = runGame;
-  runGame = function () {
-    running = true;
-    kaijuY = H * 0.5; kaijuVy = 0; scrollX = 0;
-    crashCooldown = 0; pickedThisGap = false;
-    pipes = []; tokens = [];
-    pendingWord = State.tokens[State.progress];
-    for (let i = 0; i < 5; i++) spawnPipeAt(W + i * pipeSpacing);
-    lastT = performance.now();
-    prepareKaijuSprite().then(() => {
-      raf = requestAnimationFrame(loopExt);
-    });
-    document.addEventListener("pointerdown", onTap);
-    document.addEventListener("keydown", onKey);
-  };
-
-  // ---- BOOT ----
   show("title");
-  if (window.startDenturesGag) window.startDenturesGag();
 })();

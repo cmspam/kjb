@@ -7,7 +7,7 @@
 
 .pick-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
   width: 100%; max-width: 720px;
   padding: 8px;
@@ -29,31 +29,69 @@
 .game-hud {
   position: fixed; top: 0; left: 0; right: 0;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 12px;
-  background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0));
+  padding: 8px 12px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0));
   z-index: 50;
   gap: 12px;
+  min-height: 60px;
 }
 .hud-target { flex: 1; min-width: 0; }
-.hud-target-jp {
-  font-size: 17px; font-weight: 900; letter-spacing: 1px;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0,0,0,0.6);
+.hud-jp {
+  font-size: 14px; font-weight: 900; color: #ccaadd;
+  letter-spacing: 1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.hud-target-en {
-  font-size: 14px; letter-spacing: 2px;
+.hud-en {
+  font-size: 16px; letter-spacing: 1px;
   color: var(--accent);
   font-weight: 900;
   margin-top: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.hud-target-en .slot       { opacity: 0.35; padding: 0 4px; }
-.hud-target-en .slot.done  { opacity: 1; color: var(--good); text-shadow: 0 0 6px #44ff88; }
-.hud-target-en .slot.next  { opacity: 1; color: var(--accent); text-shadow: 0 0 6px #ffe45c; animation: pulse 0.7s ease-in-out infinite alternate; }
-@keyframes pulse { from { opacity:.65; } to { opacity:1; } }
-.hud-right { display:flex; align-items:center; gap: 10px; }
-.hud-lives { font-size: 18px; }
+.hud-en .slot       { opacity: 0.32; padding: 0 3px; }
+.hud-en .slot.done  { opacity: 1; color: var(--good); text-shadow: 0 0 6px #44ff88; }
+.hud-en .slot.next  {
+  opacity: 1; color: #ffe45c;
+  text-shadow: 0 0 8px #ffe45c, 0 1px 0 #000;
+  animation: pulse 0.85s ease-in-out infinite alternate;
+  border-bottom: 2px solid #ffe45c;
+}
+@keyframes pulse { from { opacity:.7; } to { opacity:1; } }
+
+.hud-side { display: flex; align-items: center; gap: 8px; }
+.hud-parts {
+  display: flex; gap: 2px;
+}
+.hud-parts .part-pip {
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.4);
+  border: 1.5px solid rgba(255,228,92,0.55);
+  transition: transform 0.2s;
+}
+.hud-parts .part-pip.broken {
+  background: rgba(255,59,107,0.25);
+  border-color: var(--bad);
+  filter: grayscale(1) brightness(0.6);
+  animation: part-shatter 0.5s ease-out;
+}
+@keyframes part-shatter {
+  0%   { transform: scale(1.3) rotate(-15deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.hud-parts .part-pip.core {
+  background: rgba(255,59,107,0.2);
+  border-color: #ff3b6b;
+}
+.hud-parts .part-pip.core.warn {
+  animation: core-pulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes core-pulse {
+  from { box-shadow: 0 0 8px #ff3b6b; }
+  to   { box-shadow: 0 0 16px #ff3b6b, 0 0 24px #ff3b6b; }
+}
 .hud-quit { padding: 4px 10px; font-size: 18px; }
 
 #cv {
@@ -74,20 +112,21 @@
   letter-spacing: 2px;
   pointer-events: none;
   animation: tap-flash 1.2s ease-in-out infinite;
+  z-index: 30;
 }
 @keyframes tap-flash { 0%,100%{ opacity:0.55;} 50%{ opacity:1;} }
 
-/* Win screen */
 .win-banner {
-  font-size: 56px; font-weight: 900;
+  font-size: 50px; font-weight: 900;
   background: linear-gradient(90deg,#ff3b6b,#ffcc44,#44eeff,#aa66ff,#ff3b6b);
   background-size: 300% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  letter-spacing: 8px;
+  letter-spacing: 6px;
   text-shadow: 0 4px 0 rgba(0,0,0,0.35);
   animation: shimmer 2.4s linear infinite;
+  text-align: center;
 }
 @keyframes shimmer { 0%{background-position:0 50%;} 100%{background-position:300% 50%;} }
 .win-en {
@@ -98,48 +137,28 @@
   max-width: 86vw;
   margin: 8px 0 4px;
 }
-.win-jp {
-  font-size: 16px; color: var(--ink-dim); letter-spacing: 1px; text-align: center;
-  max-width: 86vw;
-}
-.win-art {
-  width: 260px; height: 240px;
-  margin: 14px 0 6px;
-}
+.win-jp { font-size: 14px; color: var(--ink-dim); text-align: center; max-width: 86vw; }
+.win-art { width: 240px; height: 200px; margin: 14px 0 6px; }
 .win-art svg { width:100%; height:100%; }
-.win-diagnosis {
+.win-stats {
   background: rgba(0,0,0,0.4);
   border: 2px solid rgba(255,228,92,0.6);
   border-radius: 16px;
-  padding: 14px 22px;
+  padding: 12px 18px;
   max-width: 88vw;
   text-align: center;
   font-size: 14px;
-  color: var(--ink);
 }
-.win-diagnosis em { color: var(--accent); font-style: normal; font-weight: 900; }
 .row { display: flex; flex-wrap: wrap; justify-content: center; }
 
-/* Lose screen */
-.lose-banner {
-  font-size: 48px; font-weight: 900;
-  color: #ff3b6b;
-  letter-spacing: 6px;
-  text-shadow: 0 4px 0 #000;
-}
-.lose-jp { font-size: 18px; color: var(--accent); margin: 8px 0;}
-.lose-line {
+.lose-banner { font-size: 44px; font-weight: 900; color: #ff3b6b; letter-spacing: 5px; text-shadow: 0 3px 0 #000; }
+.lose-jp { font-size: 16px; color: var(--accent); margin: 8px 0; }
+.lose-progress {
   background: rgba(0,0,0,0.4);
   border: 2px solid rgba(255,59,107,0.6);
   border-radius: 16px;
-  padding: 12px 22px;
+  padding: 12px 18px;
   max-width: 88vw;
   text-align: center;
-  font-size: 15px;
-  color: var(--ink);
-  font-style: italic;
+  font-size: 14px;
 }
-
-/* Floating word token (drawn on canvas — this is just for fall-back overlay
- * usage if we ever surface DOM tokens). Currently unused, kept for future. */
-.word-token { display:none; }

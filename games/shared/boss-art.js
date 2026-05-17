@@ -62,45 +62,5 @@ window.GamesArt = (() => {
   return { bosses, get, renderSVG, renderById, emoji, name };
 })();
 
-// ---- Cross-game running gag (Shigeki's denture gambit) ----
-//
-// Every ~30s, a 1-in-30 roll fires: Temee Sarmagchin's dentures fly across
-// the screen, hang briefly mid-flight (the silence sells the joke), then
-// continue off the other side. Never explained, never announced — build
-// the legend across all 6 games. The dentures themselves are an SVG;
-// no audio (visual joke only). Easter-egg, not a feature.
-window.startDenturesGag = (function () {
-  let started = false;
-  function spawn() {
-    const teeth = document.createElement("div");
-    teeth.className = "denture-teeth";
-    teeth.innerHTML = `🦷`;
-    teeth.style.cssText = `
-      position: fixed; top: ${20 + Math.random() * 50}%; left: -120px;
-      font-size: ${56 + Math.random() * 40}px;
-      z-index: 999; pointer-events: none;
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));
-      will-change: transform;
-    `;
-    document.body.appendChild(teeth);
-    const distance = window.innerWidth + 240;
-    const peak = 80 + Math.random() * 60;
-    const rotEnd = 720 + Math.random() * 360;
-    teeth.animate(
-      [
-        { transform: `translate(0, 0) rotate(0deg)` },
-        { transform: `translate(${distance/2}px, -${peak}px) rotate(${rotEnd/2}deg)`, offset: 0.5 },
-        { transform: `translate(${distance}px, 0) rotate(${rotEnd}deg)` },
-      ],
-      { duration: 3200, easing: "cubic-bezier(.22,.61,.36,1)", fill: "forwards" }
-    );
-    setTimeout(() => { try { teeth.remove(); } catch (_) {} }, 3400);
-  }
-  return function startDenturesGag() {
-    if (started) return;
-    started = true;
-    setInterval(() => {
-      if (Math.random() < 1 / 30) spawn();
-    }, 1000);
-  };
-})();
+// (Cross-game running gag removed — feedback was it wasn't funny.)
+window.startDenturesGag = function () { /* no-op */ };
