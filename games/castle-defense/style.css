@@ -77,9 +77,13 @@
 .phrase-zone {
   position: fixed;
   left: 8px; right: 8px;
-  bottom: 250px;
+  bottom: 252px;
   display: flex; gap: 8px;
   z-index: 30;
+}
+@media (max-height: 700px) {
+  .phrase-zone { bottom: 220px; }
+  .sentence-build { bottom: 168px; }
 }
 .kaiju-demand {
   flex: 1;
@@ -116,11 +120,11 @@
 }
 .sentence-build.hidden { display: none; }
 .sb-slots {
-  background: rgba(255,255,255,0.18);
-  border: 3px dashed var(--accent);
+  background: rgba(0,0,0,0.4);
+  border: 2px solid rgba(255,228,92,0.3);
   border-radius: 12px;
   padding: 8px;
-  min-height: 60px;
+  min-height: 56px;
   display: flex; align-items: center; justify-content: center;
   gap: 6px;
 }

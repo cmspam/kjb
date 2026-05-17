@@ -209,7 +209,10 @@
     if (State.hp <= 0) return;
     State.bossWave = (State.wave % 3 === 0);
     State.invadersLeft = State.bossWave ? 1 : (3 + Math.min(State.wave, 4));
-    State.speedFactor = 1 + State.wave * 0.12;
+    // Slower speed-up curve — kids need time to READ the demand and
+    // FIND the emoji. Previously playtested as unplayable even by
+    // fluent adults.
+    State.speedFactor = 1 + State.wave * 0.05;
     if (State.bossWave) bossWarning();
     setTimeout(spawnInvader, State.bossWave ? 1700 : 300);
   }
@@ -282,7 +285,12 @@
     iv.innerHTML = `<div class="iv-sv">${boss ? ART.renderSVG(boss) : ""}</div><div class="iv-tag">${boss ? boss.name_jp : ""}</div>`;
     State.currentInvader = iv;
     $("invader-area").appendChild(iv);
-    const dur = (5500 - State.level * 500) / State.speedFactor;
+    // Much slower base duration — even fluent adults couldn't keep up
+    // with the prior 4-5 second walk. Level 0 (simple word match) gets
+    // 10 seconds; Level 1 (sentence builder) gets 14 seconds to read,
+    // parse, and find two correct emojis in order.
+    const baseDur = State.level === 0 ? 10000 : 14000;
+    const dur = baseDur / State.speedFactor;
     iv.animate(
       [{ left: "100%" }, { left: "calc(50% - 50px)" }],
       { duration: dur, easing: "linear", fill: "forwards" }
@@ -432,9 +440,22 @@
     advanceInvader();
   }
   function advanceInvader() {
-    // Snap-anim the invader closer
+    // Wrong-answer penalty: shorten the remaining time by ~30%. The
+    // invader is mid-animation already, so we replace the animation
+    // with one that finishes its remaining distance in less time.
     if (!State.currentInvader) return;
-    State.currentInvader.style.transition = "left 0.4s ease-in";
+    const iv = State.currentInvader;
+    if (iv._timer) { clearTimeout(iv._timer); iv._timer = null; }
+    const computed = window.getComputedStyle(iv).left;
+    iv.style.left = computed;       // freeze position
+    setTimeout(() => {
+      const remaining = 2400 / State.speedFactor;  // ~2.4s left after a miss
+      iv.animate(
+        [{ left: computed }, { left: "calc(50% - 50px)" }],
+        { duration: remaining, easing: "linear", fill: "forwards" }
+      );
+      iv._timer = setTimeout(() => invaderReached(iv), remaining);
+    }, 20);
   }
 
   function invaderReached(iv) {
