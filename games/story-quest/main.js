@@ -105,6 +105,20 @@
     // Cross-game mastery
     recordConversationCompleted(kaijuId, convId);
   }
+  // Phrase journal — every kaiju line the kid actually heard gets
+  // saved (per kaiju) so they can replay any past line from a
+  // browsable journal. Yumiko's review: turns a finite VN into
+  // an infinitely-revisitable audio dictionary.
+  const JOURNAL_KEY = "esl_story_journal";
+  function loadJournal() { try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || "{}"); } catch (_) { return {}; } }
+  function saveJournal(j) { try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(j)); } catch (_) {} }
+  function recordPhrase(kaijuId, en, jp) {
+    if (!en) return;
+    const j = loadJournal();
+    if (!j[kaijuId]) j[kaijuId] = [];
+    if (!j[kaijuId].find(p => p.en === en)) j[kaijuId].push({ en, jp: jp || "" });
+    saveJournal(j);
+  }
   const MASTERY_KEY = "esl_kaiju_mastery";
   function loadMastery() { try { return JSON.parse(localStorage.getItem(MASTERY_KEY) || "{}"); } catch (_) { return {}; } }
   function saveMastery(m)  { try { localStorage.setItem(MASTERY_KEY, JSON.stringify(m)); } catch (_) {} }
@@ -131,6 +145,42 @@
   // ----- TITLE -----
   $("btn-start").addEventListener("click", () => { SND.sfxConfirm(); buildKaijuGrid(); show("kaiju"); });
   $("kaiju-back").addEventListener("click", () => { show("title"); renderMetShelf(); });
+  $("btn-journal").addEventListener("click", () => { SND.sfxConfirm(); openJournal(); });
+  $("journal-back").addEventListener("click", () => { show("title"); renderMetShelf(); });
+
+  function openJournal() {
+    const j = loadJournal();
+    // Build kaiju picker (only show kaiju with at least one phrase)
+    const pick = $("journal-pick"); pick.innerHTML = "";
+    const ids = Object.keys(j).filter(id => j[id] && j[id].length > 0);
+    if (ids.length === 0) {
+      $("journal-list").innerHTML = '<div class="journal-empty">まだ なに も きいて いない…<br>カイジュウ と はなして、 フレーズ を あつめよう！</div>';
+      show("journal");
+      return;
+    }
+    let active = ids[0];
+    function rebuild() {
+      pick.innerHTML = "";
+      ids.forEach(id => {
+        const b = document.createElement("button");
+        b.className = "btn-cool" + (id === active ? " active" : "");
+        const kd = STORY[id]; const name = kd ? kd.name : id;
+        b.textContent = ART.emoji(id) + " " + name + " (" + j[id].length + ")";
+        b.addEventListener("click", () => { SND.sfxPop(); active = id; rebuild(); });
+        pick.appendChild(b);
+      });
+      const list = $("journal-list"); list.innerHTML = "";
+      j[active].forEach(p => {
+        const row = document.createElement("div");
+        row.className = "journal-row";
+        row.innerHTML = `<div class="jr-en">${p.en}</div>${p.jp ? '<div class="jr-jp">'+p.jp+'</div>' : ''}`;
+        row.addEventListener("pointerdown", () => { playKaijuAudio(active, p.en); });
+        list.appendChild(row);
+      });
+    }
+    rebuild();
+    show("journal");
+  }
 
   function buildKaijuGrid() {
     const grid = $("kaiju-grid"); grid.innerHTML = "";
@@ -202,6 +252,9 @@
     const node = State.conv.nodes[State.nodeId];
     if (!node) { endConversation(); return; }
     const kd = STORY[State.kaijuId];
+    // Record this line in the phrase journal so the kid can replay
+    // it any time from the journal panel.
+    if (node.en) recordPhrase(State.kaijuId, node.en, node.jp);
     // Mood emoji
     const moodMap = kd.moodEmoji || {};
     $("vn-mood").textContent = moodMap[node.mood] || "😄";

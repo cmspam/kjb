@@ -13,11 +13,21 @@
 <div class="screen" id="screen-title">
   <h1 class="h1-card">ストーリー クエスト</h1>
   <div class="hint-jp">STORY QUEST · カイジュウ と えいご で はなそう。 ことば を タップ すれば、 にほんご の いみ が わかる。</div>
-  <button class="btn-hot huge" id="btn-start">はじめる →</button>
+  <div class="title-buttons">
+    <button class="btn-hot huge" id="btn-start">はじめる →</button>
+    <button class="btn-cool" id="btn-journal">📔 フレーズ ノート</button>
+  </div>
   <div class="met-shelf" id="met-shelf"></div>
   <div style="margin-top: 16px;">
     <a class="btn-ghost" href="../index.html" style="text-decoration:none;display:inline-block;">← もどる</a>
   </div>
+</div>
+
+<div class="screen hidden" id="screen-journal">
+  <h2 style="color:var(--accent); letter-spacing:3px;">📔 フレーズ ノート</h2>
+  <div class="journal-pick" id="journal-pick"></div>
+  <div class="journal-list" id="journal-list"></div>
+  <button class="btn-ghost" id="journal-back" style="margin-top:14px;">← ホーム</button>
 </div>
 
 <div class="screen hidden" id="screen-kaiju">
