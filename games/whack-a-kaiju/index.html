@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ワッカー カイジュウ — Whack-a-Kaiju</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%94%A8%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../shared/style.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="screen" id="screen-title">
+  <h1 class="h1-card">ワッカー カイジュウ</h1>
+  <div class="hint-jp">WHACK-A-KAIJU · きこえた えいご の カイジュウ を タップ！</div>
+  <div class="level-pick">
+    <button class="btn-cool huge" data-lv="0">⭐ ふつう (ゆっくり)</button>
+    <button class="btn-hot huge" data-lv="1">🔥 むずかしい (はやい)</button>
+  </div>
+  <div class="best" id="best"></div>
+  <div style="margin-top: 16px;">
+    <a class="btn-ghost" href="../index.html" style="text-decoration:none;display:inline-block;">← もどる</a>
+  </div>
+</div>
+
+<div class="screen hidden" id="screen-game">
+  <div class="game-hud">
+    <div class="hud-target" id="hud-target">★ WHACK: <em id="target-word">...</em></div>
+    <div class="hud-time" id="hud-time">⏱ 60</div>
+    <div class="hud-score" id="hud-score">0</div>
+    <button class="btn-ghost hud-quit" id="hud-quit">×</button>
+  </div>
+  <div class="holes" id="holes"></div>
+  <button class="btn-cool replay" id="btn-repeat">🔊 もう 1かい</button>
+</div>
+
+<div class="screen hidden" id="screen-result">
+  <div class="result-banner" id="result-banner"></div>
+  <div class="result-stats" id="result-stats"></div>
+  <div class="result-msg" id="result-msg"></div>
+  <div class="row" style="gap:10px;margin-top:14px;">
+    <button class="btn-hot huge" id="btn-again">もう 1かい</button>
+    <button class="btn-ghost" id="btn-home">ホーム</button>
+  </div>
+</div>
+
+<script src="../../js/i18n.js"></script>
+<script src="../../js/locale/ja.js"></script>
+<script src="../../js/locale/ja_shiny.js"></script>
+<script src="../../js/monsters.js"></script>
+<script src="../shared/audio.js"></script>
+<script src="../shared/boss-art.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
