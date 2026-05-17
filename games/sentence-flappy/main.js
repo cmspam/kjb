@@ -81,14 +81,21 @@
   function buildPickGrid() {
     const grid = $("pick-grid"); grid.innerHTML = "";
     const ids = KAIJU_BY_LEVEL[State.level];
+    const m = loadMastery();
     ids.forEach(id => {
       const boss = ART.get(id, true);
       if (!boss) return;
       const div = document.createElement("button");
       div.className = "pick-card";
+      const pool = SENTENCES[id][State.level] || [];
+      const cleared = (m[id] && m[id].flappy && m[id].flappy[String(State.level)]) || [];
+      const total = pool.length;
+      const done = cleared.length;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
       div.innerHTML = `
         <div class="sv">${ART.renderSVG(boss)}</div>
         <div class="name">${boss.name_jp || id}</div>
+        <div style="font-size:11px;color:var(--ink-dim);margin-top:2px;">${done}/${total} (${pct}%)</div>
       `;
       div.addEventListener("click", () => startGame(id));
       grid.appendChild(div);
@@ -168,8 +175,14 @@
   }
 
   function renderHUD() {
-    const jpLine = State.sentenceJp ? ` · ${State.sentenceJp}` : "";
-    $("hud-jp").textContent = `★ ${State.boss.name_jp}${jpLine}`;
+    // The Japanese gloss for the WHOLE sentence is now hidden behind
+    // the のぞく (peek) button per reviewer feedback. Always-visible JP
+    // makes kids read JP and translate to English mechanically instead
+    // of parsing the English directly. Peeking is free but the kid has
+    // to actively choose to look — keeps English in the foreground.
+    $("hud-jp-text").textContent = `★ ${State.boss.name_jp}`;
+    const jpLine = $("hud-jp-line");
+    jpLine.textContent = State.sentenceJp || "";
     const en = $("hud-en"); en.innerHTML = "";
     State.tokens.forEach((tok, i) => {
       const sp = document.createElement("span");
@@ -243,6 +256,11 @@
     if (bossSpriteWrap) { try { bossSpriteWrap.remove(); } catch (_) {} bossSpriteWrap = null; }
   }
   $("hud-quit").addEventListener("click", () => { stopGame(); show("title"); });
+  $("hud-peek").addEventListener("click", () => {
+    const line = $("hud-jp-line"); const btn = $("hud-peek");
+    line.classList.toggle("peek");
+    btn.classList.toggle("active");
+  });
 
   function onTap(e) {
     if (!running) return;
@@ -553,8 +571,12 @@
     stopGame();
     SND.sfxLevel();
     SND.speakEn(State.sentence);
+    // Persist mastery: which sentences this kaiju has cleared, used by
+    // the kaiju picker to show progress AND by the cross-game mastery
+    // % calculation.
+    recordSentenceCleared(State.bossId, State.level, State.sentence);
     $("win-en").textContent = State.sentence;
-    $("win-jp").textContent = State.boss.name_jp;
+    $("win-jp").textContent = State.sentenceJp || State.boss.name_jp;
     $("win-art").innerHTML = ART.renderSVG(State.boss);
     const sec = Math.floor((performance.now() - State.sessionStartT) / 1000);
     const accuracy = State.pickupsCorrect + State.pickupsWrong === 0 ? 100 :
@@ -562,6 +584,26 @@
     $("win-stats").innerHTML = `じかん: <span style="color:#ffe45c">${sec}s</span> · せいかい りつ: <span style="color:#ffe45c">${accuracy}%</span><br>こわした パーツ: ${State.parts.filter(p=>p.broken).length}/5`;
     show("win");
     spawnConfetti(40);
+  }
+
+  // ----- MASTERY PERSISTENCE -----
+  // Cross-game shared key: per-kaiju { sentencesCleared: [...] }.
+  // Same key is read by the landing page to show a mastery grid.
+  const MASTERY_KEY = "esl_kaiju_mastery";
+  function loadMastery() {
+    try { return JSON.parse(localStorage.getItem(MASTERY_KEY) || "{}"); } catch (_) { return {}; }
+  }
+  function saveMastery(m) { try { localStorage.setItem(MASTERY_KEY, JSON.stringify(m)); } catch (_) {} }
+  function recordSentenceCleared(bossId, level, sentence) {
+    const m = loadMastery();
+    if (!m[bossId]) m[bossId] = { flappy: { 0:[], 1:[], 2:[] } };
+    if (!m[bossId].flappy) m[bossId].flappy = { 0:[], 1:[], 2:[] };
+    const lvKey = String(level);
+    if (!m[bossId].flappy[lvKey]) m[bossId].flappy[lvKey] = [];
+    if (!m[bossId].flappy[lvKey].includes(sentence)) {
+      m[bossId].flappy[lvKey].push(sentence);
+    }
+    saveMastery(m);
   }
   function loseSequence() {
     stopGame();

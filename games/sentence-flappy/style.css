@@ -40,7 +40,28 @@
   font-size: 14px; font-weight: 900; color: #ccaadd;
   letter-spacing: 1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 6px;
 }
+.hud-peek {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,228,92,0.4);
+  border-radius: 99px;
+  color: var(--accent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hud-peek.active { background: rgba(255,228,92,0.85); color: #4a2200; }
+.hud-jp-line {
+  font-size: 12px; color: #aaccdd;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.hud-jp-line.peek { opacity: 1; }
 .hud-en {
   font-size: 16px; letter-spacing: 1px;
   color: var(--accent);
