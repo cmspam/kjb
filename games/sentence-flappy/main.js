@@ -109,7 +109,15 @@
     State.bossId = bossId;
     State.boss = ART.get(bossId, true);
     const pool = SENTENCES[bossId][State.level];
-    State.sentence = pool[(Math.random() * pool.length) | 0];
+    const picked = pool[(Math.random() * pool.length) | 0];
+    // Pool is now { en, jp } objects (with backward compat for plain strings)
+    if (typeof picked === "string") {
+      State.sentence = picked;
+      State.sentenceJp = "";
+    } else {
+      State.sentence = picked.en;
+      State.sentenceJp = picked.jp || "";
+    }
     State.tokens = tokenize(State.sentence);
     State.progress = 0;
     State.pickupsCorrect = 0;
@@ -156,7 +164,8 @@
   }
 
   function renderHUD() {
-    $("hud-jp").textContent = `★ ${State.boss.name_jp}：`;
+    const jpLine = State.sentenceJp ? ` · ${State.sentenceJp}` : "";
+    $("hud-jp").textContent = `★ ${State.boss.name_jp}${jpLine}`;
     const en = $("hud-en"); en.innerHTML = "";
     State.tokens.forEach((tok, i) => {
       const sp = document.createElement("span");
@@ -270,28 +279,23 @@
   }
 
   function spawnToken(t) {
-    // Always include the NEXT expected word + occasional distractor.
-    // Decide which word this token represents:
-    //   - 50% chance it's the next-expected target
-    //   - 50% chance it's a distractor (a real word from this kaiju's pool,
-    //     not the expected one, so kids still read real English)
     const wantTarget = Math.random() < 0.55;
     let word;
     if (wantTarget) {
       word = State.tokens[State.progress];
     } else {
-      // Distractor pool: all OTHER sentence words + a few random words
-      // from this kaiju's word pool
       const all = SENTENCES[State.bossId][State.level] || [];
       const allWords = new Set();
       State.tokens.forEach(t => allWords.add(t));
-      all.forEach(s => tokenize(s).forEach(t => allWords.add(t)));
+      all.forEach(s => {
+        const en = typeof s === "string" ? s : s.en;
+        tokenize(en).forEach(t => allWords.add(t));
+      });
       const sentencePool = [...allWords].filter(w => w !== State.tokens[State.progress]);
       if (sentencePool.length === 0) word = State.tokens[State.progress];
       else word = sentencePool[(Math.random() * sentencePool.length) | 0];
     }
     if (!word) return;
-    // Position the token anywhere — NOT just between pipes (per user note)
     const y = 60 + Math.random() * (H - 160);
     tokens.push({ x: W + 30, y, word: word, picked: false });
   }
