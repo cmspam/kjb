@@ -136,17 +136,21 @@
   }
 
   function buildBodyParts(boss) {
-    // Pull real non-core parts from the boss factory. Use up to 5 of
-    // them; if fewer, pad with generic body-icon entries.
+    // Build a local DESTRUCTIBLE list mirroring the boss's real parts.
+    // We mutate boss.parts directly so KJB's renderBossSVG draws the
+    // damaged silhouette (parts with hp=0 render as 💥 in the existing
+    // monsters.js draw functions). When the kid picks a wrong word we
+    // pick the next intact non-core part and set hp=0 + re-render the
+    // sprite, so the kaiju visibly loses a hump / leg / eye / etc.
     const parts = [];
     if (boss && boss.parts) {
       boss.parts.forEach(p => {
-        if (p.effect === "win") return; // skip core (handled separately)
-        parts.push({ id: p.id, name_jp: p.name_jp, icon: pickPartIcon(p), broken: false });
+        if (p.effect === "win") return;
+        parts.push({ id: p.id, name_jp: p.name_jp, icon: pickPartIcon(p), broken: false, ref: p });
       });
     }
     while (parts.length < 5) {
-      parts.push({ id: "pad" + parts.length, name_jp: "?", icon: "🛡", broken: false });
+      parts.push({ id: "pad" + parts.length, name_jp: "?", icon: "🛡", broken: false, ref: null });
     }
     return parts.slice(0, 5);
   }
@@ -252,7 +256,10 @@
   }
 
   function prepareKaijuSprite() {
+    // Re-render the off-DOM SVG → data URL → Image. Called at game
+    // start and after every body-part mutation so canvas shows damage.
     return new Promise(resolve => {
+      if (bossSpriteWrap) { try { bossSpriteWrap.remove(); } catch (_) {} }
       const wrap = document.createElement("div");
       wrap.style.cssText = "position:fixed;left:-9999px;width:160px;height:120px;";
       wrap.innerHTML = ART.renderSVG(State.boss);
@@ -315,7 +322,9 @@
     kaijuVy += tun.gravity * dts;
     kaijuY  += kaijuVy * dts;
     if (kaijuY < 0)        { kaijuY = 0; kaijuVy = 0; }
-    if (kaijuY > H - 30)   { kaijuY = H - 30; hitObstacle("floor"); }
+    if (kaijuY > H - 30)   {
+      if (crashCool < 99000) { kaijuY = H - 30; hitObstacle("floor"); }
+    }
 
     const step = tun.speed * dts;
     pipes.forEach(p => p.x -= step);
@@ -341,8 +350,8 @@
       }
     });
 
-    // Pipe collisions (only if cooldown OK)
-    if (crashCool <= 0) {
+    // Pipe collisions — instant death (no cooldown forgiveness).
+    if (crashCool < 99000) {
       pipes.forEach(p => {
         if (kx + 22 < p.x || kx - 22 > p.x + p.w) return;
         if (ky - 22 < p.topH || ky + 22 > p.topH + p.gap) hitObstacle("pipe");
@@ -371,26 +380,49 @@
   }
 
   function hitObstacle(kind) {
+    // Pipes are INSTANT-DEATH per design — no second chances, no body-
+    // part discount. The kid has to navigate cleanly. Reduces collision
+    // ambiguity ("did that count?") and forces a clean dodging skill.
     if (crashCool > 0) return;
-    crashCool = 900;
+    crashCool = 99999;
     SND.sfxSplat();
-    flash(W * 0.25, kaijuY, "💥", "#ff8844");
-    kaijuVy = -200;
-    breakNextPart();
+    flash(W * 0.25, kaijuY, "💥", "#ff3b6b");
+    // Cinematic crash: kaiju spirals down, explosion, lose screen.
+    setTimeout(() => crashSequence(kind), 350);
+  }
+
+  function crashSequence(kind) {
+    stopGame();
+    SND.sfxFail();
+    $("lose-banner").textContent = kind === "floor" ? "GROUND HIT!" : "PIPE CRASH!";
+    $("lose-jp").textContent = State.boss.name_jp;
+    $("lose-progress").innerHTML = `「${State.tokens.slice(0, State.progress).join(" ") || "..."}」 ... まで かんせい!<br>あと: <span style="color:#ffe45c">${State.tokens.slice(State.progress).join(" ") || "(なし)"}</span>`;
+    show("lose");
   }
 
   function breakNextPart() {
-    // Break the next intact part. If all are broken, take a core hit.
+    // Wrong-word damage. Find the next intact non-core part and
+    // physically destroy it on the kaiju SVG by zeroing its HP. The
+    // KJB renderBossSVG already draws hp=0 parts as 💥, so the kid
+    // SEES Temee lose a hump, Tako lose a tentacle, etc. After the
+    // mutation we re-render the kaiju sprite so the canvas shows the
+    // damage on the next frame.
     const intactIdx = State.parts.findIndex(p => !p.broken);
     if (intactIdx >= 0) {
-      State.parts[intactIdx].broken = true;
+      const broken = State.parts[intactIdx];
+      broken.broken = true;
+      if (broken.ref) broken.ref.hp = 0;
       renderHUD();
+      prepareKaijuSprite();  // refresh data-URL with the damaged SVG
     } else {
+      // All non-core parts down — next wrong = CORE BREAK = game over
       State.coreHits++;
+      // Damage the actual core in the boss so the win-art also shows it
+      const core = State.boss.parts.find(p => p.effect === "win");
+      if (core) core.hp = 0;
       renderHUD();
-      if (State.coreHits >= 1) {
-        loseSequence();
-      }
+      prepareKaijuSprite();
+      setTimeout(loseSequence, 600);
     }
   }
 
