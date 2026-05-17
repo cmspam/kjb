@@ -1,132 +1,228 @@
-// ストーリー クエスト — Story Quest
+// ストーリー クエスト — Story Quest (rebuilt around branching graphs)
 //
-// Visual novel. Encounter a kaiju, hear their JP voice and English
-// subtitle, pick an English response. Each kaiju has 3-turn dialogue
-// tree branching on 2-3 choices per turn. Outcomes (good/neutral/bad)
-// accumulate into one of three ending tags. Reading comprehension +
-// pragmatic register practice (Sato-sensei's domain). The kid hears
-// the kaiju line in English via TTS (level 0) or JP voice file if
-// available (level 1 — turns off English subtitle for harder mode).
+// Flow: title → kaiju picker → conversation picker → branching story →
+//        warm/neutral/cool ending.
 //
-// Touch-first: all choices are 56px-tall tap buttons.
+// Per-word JP gloss: every word in EVERY dialogue line (bubble + choice)
+// is tappable. Tap = popup with JP meaning + plays the single-word
+// audio in en-US-AnaNeural (kid voice). Words present in WORD_GLOSS get
+// a dotted underline so kids know they're translatable. Words not in
+// the gloss still play single-word audio.
+//
+// Audio: pre-rendered via Edge TTS into assets/voices/story/
+//   - story/<kaiju>/<hash>.opus — kaiju lines in the kaiju's distinct
+//     English voice (Christopher / Andrew / Brandon / Roger / Ana / etc.)
+//   - story/kid/<hash>.opus      — kid responses in en-US-AnaNeural
+//   - story/word/<hash>.opus     — single-word taps in en-US-AnaNeural
 
 (function () {
   const SND = window.GamesAudio;
   const ART = window.GamesArt;
   const STORY = window.STORY;
+  const WORD_GLOSS = window.WORD_GLOSS || {};
 
   const $ = (id) => document.getElementById(id);
-  const screens = ["title", "game", "outcome"];
-  function show(id) {
-    screens.forEach(s => $("screen-" + s).classList.toggle("hidden", s !== id));
+  const screens = ["title", "kaiju", "conv-pick", "story", "end"];
+  function show(id) { screens.forEach(s => $("screen-" + s).classList.toggle("hidden", s !== id)); }
+
+  // ----- AUDIO HELPERS -----
+  function playKaijuAudio(kaijuId, text) {
+    if (!text) return;
+    const hash = SND.djb2(SND.cleanForHash(text));
+    const url = `../../assets/voices/story/${encodeURIComponent(kaijuId)}/${hash}.opus`;
+    const a = new Audio(url);
+    a.volume = 0.95;
+    const p = a.play();
+    if (p && p.catch) p.catch(() => SND.browserTTS(text));
+  }
+  function playKidAudio(text) {
+    if (!text) return;
+    const hash = SND.djb2(SND.cleanForHash(text));
+    const url = `../../assets/voices/story/kid/${hash}.opus`;
+    const a = new Audio(url);
+    a.volume = 0.95;
+    const p = a.play();
+    if (p && p.catch) p.catch(() => SND.browserTTS(text));
+  }
+  function playWordAudio(word) {
+    const hash = SND.djb2(SND.cleanForHash(word));
+    const url = `../../assets/voices/story/word/${hash}.opus`;
+    const a = new Audio(url);
+    a.volume = 0.95;
+    const p = a.play();
+    if (p && p.catch) p.catch(() => SND.browserTTS(word));
   }
 
-  // Met-kaiju shelf in localStorage
-  const MET_KEY = "esl_story_quest_met";
-  function getMet() {
-    try { return JSON.parse(localStorage.getItem(MET_KEY) || "[]"); }
-    catch (_) { return []; }
+  // ----- WORD WRAPPING for per-word tap -----
+  // Split text on whitespace + keep trailing punctuation. Each word
+  // becomes a tappable span. The popup shows JP gloss + audio. Words
+  // present in WORD_GLOSS get a dotted underline indicator.
+  function wrapWords(text) {
+    const out = [];
+    const tokens = text.split(/(\s+)/);
+    for (const tok of tokens) {
+      if (/^\s+$/.test(tok)) { out.push(document.createTextNode(tok)); continue; }
+      const pure = tok.replace(/[.,!?;:'"()]+$/g, "").replace(/^[.,!?;:'"()]+/g, "");
+      const trail = tok.slice(pure.length);
+      const lead = tok.length > pure.length ? tok.slice(0, tok.length - pure.length - trail.length) : "";
+      const sp = document.createElement("span");
+      sp.className = "word";
+      const k = pure.toLowerCase();
+      if (WORD_GLOSS[k]) sp.classList.add("glossed");
+      sp.textContent = pure;
+      sp.addEventListener("pointerdown", (e) => { e.stopPropagation(); onTapWord(pure); });
+      out.push(document.createTextNode(lead));
+      out.push(sp);
+      if (trail) out.push(document.createTextNode(trail));
+    }
+    return out;
   }
-  function saveMet(arr) {
-    try { localStorage.setItem(MET_KEY, JSON.stringify(arr)); } catch (_) {}
+
+  function onTapWord(word) {
+    const k = word.toLowerCase();
+    const jp = WORD_GLOSS[k];
+    if (jp) {
+      $("wp-en").textContent = word;
+      $("wp-jp").textContent = jp;
+      $("word-popup").classList.remove("hidden");
+    }
+    playWordAudio(word);
   }
-  function renderShelf() {
-    const met = new Set(getMet());
-    const shelf = $("meet-shelf"); shelf.innerHTML = "";
+  $("wp-close").addEventListener("click", () => { $("word-popup").classList.add("hidden"); });
+  $("word-popup").addEventListener("click", (e) => {
+    if (e.target.id === "word-popup") $("word-popup").classList.add("hidden");
+  });
+
+  // ----- PROGRESS PERSISTENCE -----
+  const PROGRESS_KEY = "esl_story_progress";
+  function getProgress() { try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}"); } catch (_) { return {}; } }
+  function saveProgress(p) { try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch (_) {} }
+  function markCompleted(kaijuId, convId, ending) {
+    const p = getProgress();
+    if (!p[kaijuId]) p[kaijuId] = {};
+    p[kaijuId][convId] = ending;
+    saveProgress(p);
+  }
+
+  function renderMetShelf() {
+    const p = getProgress();
+    const shelf = $("met-shelf"); shelf.innerHTML = "";
     Object.keys(STORY).forEach(id => {
       const cell = document.createElement("div");
-      cell.className = "meet-cell" + (met.has(id) ? " met" : "");
-      cell.textContent = met.has(id) ? ART.emoji(id) : "?";
+      cell.className = "met-cell" + (p[id] ? " met" : "");
+      cell.textContent = p[id] ? ART.emoji(id) : "?";
       cell.title = STORY[id].name;
       shelf.appendChild(cell);
     });
   }
 
-  // ---- TITLE ----
-  document.querySelectorAll(".level-pick button").forEach(b => {
-    b.addEventListener("click", () => {
-      State.level = parseInt(b.dataset.lv, 10);
-      SND.sfxConfirm();
-      pickAndStart();
-    });
-  });
+  // ----- TITLE -----
+  $("btn-start").addEventListener("click", () => { SND.sfxConfirm(); buildKaijuGrid(); show("kaiju"); });
+  $("kaiju-back").addEventListener("click", () => { show("title"); renderMetShelf(); });
 
+  function buildKaijuGrid() {
+    const grid = $("kaiju-grid"); grid.innerHTML = "";
+    const p = getProgress();
+    Object.keys(STORY).forEach(id => {
+      const kd = STORY[id];
+      const boss = ART.get(id);
+      const completedCount = p[id] ? Object.keys(p[id]).length : 0;
+      const total = kd.conversations.length;
+      const div = document.createElement("button");
+      div.className = "kaiju-card";
+      div.innerHTML = `
+        <div class="kc-sv">${boss ? ART.renderSVG(boss) : ART.emoji(id)}</div>
+        <div class="kc-name">${kd.name}</div>
+        <div class="kc-count">${completedCount}/${total} かいわ</div>
+      `;
+      div.addEventListener("click", () => { SND.sfxPop(); openConvPicker(id); });
+      grid.appendChild(div);
+    });
+  }
+
+  function openConvPicker(kaijuId) {
+    State.kaijuId = kaijuId;
+    const kd = STORY[kaijuId];
+    $("conv-pick-title").textContent = kd.name + " — かいわ を えらぶ";
+    const list = $("conv-list"); list.innerHTML = "";
+    const p = getProgress();
+    kd.conversations.forEach(conv => {
+      const b = document.createElement("button");
+      b.className = "btn-cool" + (p[kaijuId] && p[kaijuId][conv.id] ? " done" : "");
+      b.innerHTML = `<div class="cl-title">${conv.title}</div><div class="cl-intro">${conv.intro}</div>`;
+      b.addEventListener("click", () => { SND.sfxConfirm(); startConversation(conv); });
+      list.appendChild(b);
+    });
+    show("conv-pick");
+  }
+  $("conv-back").addEventListener("click", () => { buildKaijuGrid(); show("kaiju"); });
+
+  // ----- STORY -----
   const State = {
-    level: 0,
     kaijuId: null,
-    boss: null,
-    turnIdx: 0,
-    outcomes: [],   // "good" | "bad" | "neutral"
+    conv: null,
+    nodeId: null,
+    outcomes: [],
     locked: false,
   };
 
-  function pickAndStart() {
-    // Pick a random kaiju the kid hasn't met yet, or random if all met
-    const met = new Set(getMet());
-    const all = Object.keys(STORY);
-    const unmet = all.filter(id => !met.has(id));
-    const id = (unmet.length > 0 ? unmet : all)[(Math.random() * (unmet.length > 0 ? unmet.length : all.length)) | 0];
-    startEncounter(id);
-  }
-
-  function startEncounter(kaijuId) {
-    State.kaijuId = kaijuId;
-    State.boss = ART.get(kaijuId, true);
-    State.turnIdx = 0;
+  function startConversation(conv) {
+    State.conv = conv;
+    State.nodeId = conv.start;
     State.outcomes = [];
-    State.locked = false;
-    renderScene();
-    show("game");
-    renderTurn();
-  }
-  $("vn-quit").addEventListener("click", () => { SND.sfxPop(); show("title"); renderShelf(); });
-
-  function renderScene() {
+    const kd = STORY[State.kaijuId];
+    // Backdrop
     const scene = $("vn-scene");
     if (window.Stages && Stages.exists && Stages.exists(State.kaijuId)) {
       scene.innerHTML = Stages.render(State.kaijuId);
     } else {
       scene.innerHTML = "";
     }
-    $("vn-name").textContent = STORY[State.kaijuId].name;
-    $("vn-kaiju").innerHTML = ART.renderSVG(State.boss);
+    $("vn-name").textContent = kd.name;
+    $("vn-kaiju").innerHTML = ART.renderSVG(ART.get(State.kaijuId, true));
+    show("story");
+    renderNode();
   }
+  $("vn-quit").addEventListener("click", () => { SND.sfxPop(); show("title"); renderMetShelf(); });
 
-  function renderTurn() {
-    const tree = STORY[State.kaijuId];
-    const turn = tree.turns[State.turnIdx];
-    if (!turn) { finish(); return; }
-    const bubble = $("vn-bubble");
-    if (State.level === 0) {
-      bubble.innerHTML = `
-        <div class="bubble-en">${turn.kaiju.en}</div>
-        <div class="bubble-jp">${turn.kaiju.jp}</div>
-      `;
-    } else {
-      // Hard mode: English only (no JP scaffolding)
-      bubble.innerHTML = `<div class="bubble-en">${turn.kaiju.en}</div>`;
+  function renderNode() {
+    State.locked = false;
+    const node = State.conv.nodes[State.nodeId];
+    if (!node) { endConversation(); return; }
+    const kd = STORY[State.kaijuId];
+    // Mood emoji
+    const moodMap = kd.moodEmoji || {};
+    $("vn-mood").textContent = moodMap[node.mood] || "😄";
+    $("vn-mood").style.animation = "none"; void $("vn-mood").offsetWidth; $("vn-mood").style.animation = "";
+    // Bubble — word-tap spans
+    const bubble = $("vn-bubble"); bubble.innerHTML = "";
+    wrapWords(node.en).forEach(n => bubble.appendChild(n));
+    if (node.jp) {
+      const jpLine = document.createElement("div");
+      jpLine.style.cssText = "font-size:12px; color:#6a4a7a; margin-top:6px; font-weight:500;";
+      jpLine.textContent = node.jp;
+      bubble.appendChild(jpLine);
     }
-    // Kaiju mood animation
+    // Kaiju animation
     const kj = $("vn-kaiju");
-    kj.className = "vn-kaiju";
-    void kj.offsetWidth;
-    kj.classList.add(turn.mood || "speak");
-    // Speak the line
-    setTimeout(() => SND.speakEn(turn.kaiju.en), 260);
+    kj.classList.remove("speak"); void kj.offsetWidth; kj.classList.add("speak");
+    // Play kaiju voice
+    setTimeout(() => playKaijuAudio(State.kaijuId, node.en), 280);
     // Choices
     const wrap = $("vn-choices"); wrap.innerHTML = "";
-    if (!turn.choices || turn.choices.length === 0) {
-      // Final wrap-up turn — show a "continue" button
+    if (!node.choices || node.choices.length === 0) {
       const b = document.createElement("button");
       b.className = "choice-btn";
-      b.innerHTML = `<div class="ch-en">Continue →</div><div class="ch-jp">つぎ へ</div>`;
-      b.addEventListener("pointerdown", () => { SND.sfxPop(); finish(); });
+      const enWrap = document.createElement("div"); enWrap.className = "ch-en";
+      wrapWords("Continue →").forEach(n => enWrap.appendChild(n));
+      const jpWrap = document.createElement("div"); jpWrap.className = "ch-jp"; jpWrap.textContent = "つぎ へ";
+      b.appendChild(enWrap); b.appendChild(jpWrap);
+      b.addEventListener("pointerdown", (e) => { if (e.target.classList && e.target.classList.contains("word")) return; SND.sfxPop(); endConversation(); });
       wrap.appendChild(b);
       return;
     }
-    // Level 1 picks 3 choices when available, level 0 picks the first 2 plus 1 extra
-    const choices = State.level === 0 ? turn.choices.slice(0, Math.min(2, turn.choices.length)) : turn.choices.slice();
-    // shuffle so good choice isn't always in same spot
+    // Shuffle choices so good answer isn't always first
+    const choices = node.choices.slice();
     for (let i = choices.length - 1; i > 0; i--) {
       const j = (Math.random() * (i + 1)) | 0;
       [choices[i], choices[j]] = [choices[j], choices[i]];
@@ -134,76 +230,73 @@
     choices.forEach(c => {
       const b = document.createElement("button");
       b.className = "choice-btn";
-      // Level 0 shows JP gloss; level 1 hides it (just English)
-      const jp = (State.level === 0) ? `<div class="ch-jp">${c.jp}</div>` : "";
-      b.innerHTML = `<div class="ch-en">${c.en}</div>${jp}`;
-      b.addEventListener("pointerdown", () => onChoice(b, c));
+      const enWrap = document.createElement("div"); enWrap.className = "ch-en";
+      wrapWords(c.en).forEach(n => enWrap.appendChild(n));
+      const jpWrap = document.createElement("div"); jpWrap.className = "ch-jp"; jpWrap.textContent = c.jp;
+      b.appendChild(enWrap); b.appendChild(jpWrap);
+      b.addEventListener("pointerdown", (e) => {
+        // Ignore word taps so they don't double-fire
+        if (e.target.classList && e.target.classList.contains("word")) return;
+        if (State.locked) return;
+        State.locked = true;
+        onChoice(b, c);
+      });
       wrap.appendChild(b);
     });
   }
+  $("btn-replay-kaiju").addEventListener("click", () => {
+    const node = State.conv.nodes[State.nodeId];
+    if (node) { SND.sfxPop(); playKaijuAudio(State.kaijuId, node.en); }
+  });
 
   function onChoice(btn, choice) {
-    if (State.locked) return;
-    State.locked = true;
-    if (choice.outcome === "good") {
-      btn.classList.add("picked-good");
-      SND.sfxCorrect();
-    } else if (choice.outcome === "bad") {
-      btn.classList.add("picked-bad");
-      SND.sfxWrong();
-    } else {
-      SND.sfxPop();
-    }
-    SND.speakEn(choice.en);
+    if (choice.outcome === "good") { btn.classList.add("picked-good"); SND.sfxCorrect(); }
+    else if (choice.outcome === "bad") { btn.classList.add("picked-bad"); SND.sfxWrong(); }
+    else { SND.sfxPop(); }
+    playKidAudio(choice.en);
     State.outcomes.push(choice.outcome);
     setTimeout(() => {
-      State.turnIdx++;
-      State.locked = false;
-      renderTurn();
+      State.nodeId = choice.next;
+      renderNode();
     }, 1200);
   }
 
-  function finish() {
-    // Save met flag
-    const met = new Set(getMet());
-    met.add(State.kaijuId);
-    saveMet([...met]);
-    // Compute ending
+  function endConversation() {
+    const node = State.conv.nodes[State.nodeId];
+    // Score the outcomes for the ending picker (this conv's terminal node)
     const goods = State.outcomes.filter(o => o === "good").length;
     const bads  = State.outcomes.filter(o => o === "bad").length;
-    let banner = "NEUTRAL!";
-    let tag = "おだやか な であい でした。";
-    let msg = "The encounter was OK. The cosmos is mildly indifferent.";
-    if (goods >= 2 && bads === 0) {
-      banner = "FRIENDSHIP!";
-      tag = "★ ベスト ともだち ★";
-      msg = "You befriended the kaiju! In this timeline, the world is mostly safe.";
-    } else if (goods > bads) {
-      banner = "RESPECT!";
-      tag = "そんけい される";
-      msg = "The kaiju respects you. They will think of you fondly... probably.";
-    } else if (bads > goods) {
-      banner = "DRAMA!";
-      tag = "ちょっと きまずい";
-      msg = "Things got tense. The kaiju is mad, but you survived. Tradition.";
-    }
-    $("outcome-banner").textContent = banner;
-    $("outcome-tag").textContent = tag;
-    $("outcome-art").innerHTML = ART.renderSVG(State.boss);
-    $("outcome-msg").textContent = msg;
-    show("outcome");
+    let tag = "neutral";
+    if (goods >= 2 && bads === 0) tag = "warm";
+    else if (bads > goods) tag = "cool";
+
+    // The terminal node text doubles as the ending line
+    const moodEmoji = (STORY[State.kaijuId].moodEmoji || {})[node ? node.mood : "happy"] || "😄";
+
+    $("end-banner").textContent =
+      tag === "warm" ? "FRIENDSHIP!" :
+      tag === "cool" ? "TENSION!" : "OK ENDING";
+    $("end-emoji").textContent = moodEmoji;
+    $("end-en").textContent = node ? (node.en || "") : "";
+    $("end-jp").textContent = node ? (node.jp || "") : "";
+    $("end-stats").innerHTML = `カイジュウ: <span style="color:#ffe45c">${STORY[State.kaijuId].name}</span><br>かいわ: <span style="color:#ffe45c">${State.conv.title}</span>`;
+    show("end");
     SND.sfxLevel();
-    spawnConfetti(28);
+    // Save
+    markCompleted(State.kaijuId, State.conv.id, tag);
+    spawnConfetti(24);
+    if (node && node.en) setTimeout(() => playKaijuAudio(State.kaijuId, node.en), 400);
   }
 
-  $("btn-next-encounter").addEventListener("click", () => { SND.sfxConfirm(); pickAndStart(); });
-  $("btn-home").addEventListener("click", () => { SND.sfxConfirm(); show("title"); renderShelf(); });
+  $("btn-conv-again").addEventListener("click", () => { SND.sfxConfirm(); openConvPicker(State.kaijuId); });
+  $("btn-end-kaiju").addEventListener("click", () => { SND.sfxConfirm(); buildKaijuGrid(); show("kaiju"); });
+  $("btn-end-home").addEventListener("click", () => { SND.sfxConfirm(); show("title"); renderMetShelf(); });
 
   function spawnConfetti(n) {
     const layer = document.createElement("div");
     layer.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:900;overflow:hidden;";
     document.body.appendChild(layer);
-    const emojis = ["📖","✨","💫","🎉","💖","🌟"];
+    const emojis = ["📖","✨","💫","🎉","💖","🌟","🐙","🐫","🍦"];
     for (let i = 0; i < n; i++) {
       const p = document.createElement("div");
       p.textContent = emojis[(Math.random()*emojis.length)|0];
@@ -218,8 +311,7 @@
     setTimeout(() => { try { layer.remove(); } catch(_){} }, 3500);
   }
 
-  // ---- BOOT ----
-  renderShelf();
+  // ----- BOOT -----
+  renderMetShelf();
   show("title");
-  if (window.startDenturesGag) window.startDenturesGag();
 })();

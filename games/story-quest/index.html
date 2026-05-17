@@ -12,39 +12,66 @@
 
 <div class="screen" id="screen-title">
   <h1 class="h1-card">ストーリー クエスト</h1>
-  <div class="hint-jp">STORY QUEST · カイジュウ と であえ、 えいご で こたえよう</div>
-  <div class="level-pick">
-    <button class="btn-cool huge" data-lv="0">⭐ ふつう (2 たくいつ)</button>
-    <button class="btn-hot huge" data-lv="1">🔥 むずかしい (3 たくいつ)</button>
-  </div>
-  <div class="meet-shelf" id="meet-shelf"></div>
+  <div class="hint-jp">STORY QUEST · カイジュウ と えいご で はなそう。 ことば を タップ すれば、 にほんご の いみ が わかる。</div>
+  <button class="btn-hot huge" id="btn-start">はじめる →</button>
+  <div class="met-shelf" id="met-shelf"></div>
   <div style="margin-top: 16px;">
     <a class="btn-ghost" href="../index.html" style="text-decoration:none;display:inline-block;">← もどる</a>
   </div>
 </div>
 
-<div class="screen hidden" id="screen-game">
-  <div class="vn-scene" id="vn-scene"></div>
-  <div class="vn-kaiju-wrap">
-    <div class="vn-kaiju" id="vn-kaiju"></div>
-    <div class="vn-name" id="vn-name"></div>
-  </div>
-  <div class="vn-box">
-    <div class="vn-bubble" id="vn-bubble"></div>
-    <div class="vn-choices" id="vn-choices"></div>
-  </div>
-  <button class="btn-ghost vn-quit" id="vn-quit">×</button>
+<div class="screen hidden" id="screen-kaiju">
+  <h2 style="color:var(--accent); letter-spacing:3px;">カイジュウ を えらぶ</h2>
+  <div class="kaiju-grid" id="kaiju-grid"></div>
+  <button class="btn-ghost" id="kaiju-back">← ホーム</button>
 </div>
 
-<div class="screen hidden" id="screen-outcome">
-  <div class="outcome-banner" id="outcome-banner"></div>
-  <div class="outcome-tag" id="outcome-tag"></div>
-  <div class="outcome-art" id="outcome-art"></div>
-  <div class="outcome-msg" id="outcome-msg"></div>
-  <div class="row" style="gap:10px;margin-top:14px;">
-    <button class="btn-hot huge" id="btn-next-encounter">べつの カイジュウ</button>
-    <button class="btn-ghost" id="btn-home">ホーム</button>
+<div class="screen hidden" id="screen-conv-pick">
+  <h2 class="conv-pick-title" id="conv-pick-title"></h2>
+  <div class="conv-list" id="conv-list"></div>
+  <button class="btn-ghost" id="conv-back">← カイジュウ せんたく</button>
+</div>
+
+<div class="screen hidden" id="screen-story">
+  <div class="vn-scene" id="vn-scene"></div>
+
+  <div class="vn-quit-row">
+    <button class="btn-ghost vn-quit" id="vn-quit">×</button>
   </div>
+
+  <div class="vn-kaiju-wrap">
+    <div class="vn-kaiju" id="vn-kaiju"></div>
+    <div class="vn-mood" id="vn-mood">😄</div>
+    <div class="vn-name" id="vn-name"></div>
+  </div>
+
+  <div class="vn-box">
+    <div class="vn-bubble" id="vn-bubble"></div>
+    <div class="vn-bubble-replay">
+      <button class="btn-cool" id="btn-replay-kaiju">🔊</button>
+    </div>
+    <div class="vn-choices" id="vn-choices"></div>
+  </div>
+</div>
+
+<div class="screen hidden" id="screen-end">
+  <div class="end-banner" id="end-banner"></div>
+  <div class="end-emoji" id="end-emoji">🎉</div>
+  <div class="end-en" id="end-en"></div>
+  <div class="end-jp" id="end-jp"></div>
+  <div class="end-stats" id="end-stats"></div>
+  <div class="row" style="gap:10px;margin-top:14px;">
+    <button class="btn-hot huge" id="btn-conv-again">べつの かいわ</button>
+    <button class="btn-cool" id="btn-end-kaiju">べつの カイジュウ</button>
+    <button class="btn-ghost" id="btn-end-home">ホーム</button>
+  </div>
+</div>
+
+<!-- Word popup overlay (per-word tap → JP gloss + audio) -->
+<div class="word-popup hidden" id="word-popup">
+  <div class="wp-en" id="wp-en">word</div>
+  <div class="wp-jp" id="wp-jp">いみ</div>
+  <button class="wp-close" id="wp-close">OK</button>
 </div>
 
 <script src="../../js/i18n.js"></script>
