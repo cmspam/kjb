@@ -23,52 +23,127 @@
   const SND = window.GamesAudio;
   const ART = window.GamesArt;
 
-  // ----- ITEM POOL -----
-  // Each item: { word, emoji, jp, kaiju (optional — for thematic linking) }
+  // ----- ITEM POOL (60+ items with category tags) -----
+  // cat: food / weapon / animal / tool / cosmic / clothing / nature / body
+  // Each kaiju draws preferentially from 2-3 categories (their "demand
+  // profile") so each fight has a distinct vocabulary slice. Reviewers
+  // flagged the prior 28-item pool as too thin for 20+ waves.
   const ITEMS = [
-    { w:"cherry",   e:"🍒",  jp:"さくらんぼ", k:"parfait" },
-    { w:"banana",   e:"🍌",  jp:"バナナ",   k:null },
-    { w:"sushi",    e:"🍣",  jp:"すし",     k:"anpan" },
-    { w:"ice cream",e:"🍦",  jp:"アイス",   k:"parfait" },
-    { w:"apple",    e:"🍎",  jp:"りんご",   k:null },
-    { w:"hat",      e:"🎩",  jp:"ぼうし",   k:"tako" },
-    { w:"shoe",     e:"👟",  jp:"くつ",     k:"tral" },
-    { w:"ribbon",   e:"🎀",  jp:"リボン",   k:"pamp" },
-    { w:"coin",     e:"🪙",  jp:"コイン",   k:"catcherski" },
-    { w:"bomb",     e:"💣",  jp:"ばくだん", k:"unko" },
-    { w:"hump",     e:"🐫",  jp:"こぶ",     k:"temee" },
-    { w:"fish",     e:"🐟",  jp:"さかな",   k:"tral" },
-    { w:"bread",    e:"🍞",  jp:"パン",     k:"anpan" },
-    { w:"camel",    e:"🐫",  jp:"ラクダ",   k:"temee" },
-    { w:"hug",      e:"🤗",  jp:"ハグ",     k:"pamp" },
-    { w:"egg",      e:"🥚",  jp:"たまご",   k:null },
-    { w:"music",    e:"🎵",  jp:"おんがく", k:"tral" },
-    { w:"emoji",    e:"😀",  jp:"えもじ",   k:"catcherski" },
-    { w:"river",    e:"🌊",  jp:"かわ",     k:"unko" },
-    { w:"moon",     e:"🌙",  jp:"つき",     k:"brainrot" },
-    { w:"star",     e:"⭐",  jp:"ほし",     k:"brainrot" },
-    { w:"book",     e:"📚",  jp:"ほん",     k:null },
-    { w:"bell",     e:"🔔",  jp:"かね",     k:null },
-    { w:"cake",     e:"🍰",  jp:"ケーキ",   k:null },
-    { w:"flower",   e:"🌸",  jp:"はな",     k:null },
-    { w:"sun",      e:"☀️",  jp:"たいよう", k:null },
-    { w:"snowman",  e:"⛄",  jp:"ゆきだるま", k:"temee" },
-    { w:"crown",    e:"👑",  jp:"おうかん", k:"anpan" },
+    // food
+    { w:"cherry",     e:"🍒",  jp:"さくらんぼ", k:"parfait",    cat:"food" },
+    { w:"banana",     e:"🍌",  jp:"バナナ",     k:null,         cat:"food" },
+    { w:"sushi",      e:"🍣",  jp:"すし",       k:"anpan",      cat:"food" },
+    { w:"ice cream",  e:"🍦",  jp:"アイス",     k:"parfait",    cat:"food" },
+    { w:"apple",      e:"🍎",  jp:"りんご",     k:null,         cat:"food" },
+    { w:"bread",      e:"🍞",  jp:"パン",       k:"anpan",      cat:"food" },
+    { w:"egg",        e:"🥚",  jp:"たまご",     k:null,         cat:"food" },
+    { w:"cake",       e:"🍰",  jp:"ケーキ",     k:null,         cat:"food" },
+    { w:"donut",      e:"🍩",  jp:"ドーナツ",   k:null,         cat:"food" },
+    { w:"pizza",      e:"🍕",  jp:"ピザ",       k:null,         cat:"food" },
+    { w:"strawberry", e:"🍓",  jp:"いちご",     k:"parfait",    cat:"food" },
+    { w:"hamburger",  e:"🍔",  jp:"ハンバーガー",k:null,        cat:"food" },
+    { w:"dumpling",   e:"🥟",  jp:"ぎょうざ",   k:"temee",      cat:"food" },
+    { w:"takoyaki",   e:"🐙",  jp:"たこやき",   k:"tako",       cat:"food" },
+    // weapon
+    { w:"bomb",       e:"💣",  jp:"ばくだん",   k:"unko",       cat:"weapon" },
+    { w:"sword",      e:"⚔️",  jp:"けん",       k:null,         cat:"weapon" },
+    { w:"shield",     e:"🛡",  jp:"たて",       k:null,         cat:"weapon" },
+    { w:"fire",       e:"🔥",  jp:"ひ",         k:"unko",       cat:"weapon" },
+    { w:"rocket",     e:"🚀",  jp:"ロケット",   k:null,         cat:"weapon" },
+    // animal
+    { w:"fish",       e:"🐟",  jp:"さかな",     k:"tral",       cat:"animal" },
+    { w:"camel",      e:"🐫",  jp:"ラクダ",     k:"temee",      cat:"animal" },
+    { w:"monkey",     e:"🐒",  jp:"サル",       k:"temee",      cat:"animal" },
+    { w:"cat",        e:"🐱",  jp:"ねこ",       k:null,         cat:"animal" },
+    { w:"dog",        e:"🐶",  jp:"いぬ",       k:null,         cat:"animal" },
+    { w:"bee",        e:"🐝",  jp:"ハチ",       k:null,         cat:"animal" },
+    { w:"bird",       e:"🐦",  jp:"とり",       k:null,         cat:"animal" },
+    { w:"lion",       e:"🦁",  jp:"ライオン",   k:"brainrot",   cat:"animal" },
+    { w:"frog",       e:"🐸",  jp:"カエル",     k:"tral",       cat:"animal" },
+    { w:"crocodile",  e:"🐊",  jp:"ワニ",       k:"unko",       cat:"animal" },
+    // tool / mechanical
+    { w:"coin",       e:"🪙",  jp:"コイン",     k:"catcherski", cat:"tool" },
+    { w:"emoji",      e:"😀",  jp:"えもじ",     k:"catcherski", cat:"tool" },
+    { w:"claw",       e:"🦞",  jp:"クロー",     k:"catcherski", cat:"tool" },
+    { w:"key",        e:"🔑",  jp:"かぎ",       k:null,         cat:"tool" },
+    { w:"book",       e:"📚",  jp:"ほん",       k:null,         cat:"tool" },
+    { w:"bell",       e:"🔔",  jp:"かね",       k:null,         cat:"tool" },
+    { w:"phone",      e:"📱",  jp:"でんわ",     k:"catcherski", cat:"tool" },
+    // cosmic
+    { w:"moon",       e:"🌙",  jp:"つき",       k:"brainrot",   cat:"cosmic" },
+    { w:"star",       e:"⭐",  jp:"ほし",       k:"brainrot",   cat:"cosmic" },
+    { w:"sun",        e:"☀️",  jp:"たいよう",   k:null,         cat:"cosmic" },
+    { w:"galaxy",     e:"🌌",  jp:"ぎんが",     k:"brainrot",   cat:"cosmic" },
+    { w:"comet",      e:"☄️",  jp:"すいせい",   k:"brainrot",   cat:"cosmic" },
+    // clothing
+    { w:"hat",        e:"🎩",  jp:"ぼうし",     k:"tako",       cat:"clothing" },
+    { w:"shoe",       e:"👟",  jp:"くつ",       k:"tral",       cat:"clothing" },
+    { w:"ribbon",     e:"🎀",  jp:"リボン",     k:"pamp",       cat:"clothing" },
+    { w:"crown",      e:"👑",  jp:"おうかん",   k:"anpan",      cat:"clothing" },
+    { w:"glasses",    e:"👓",  jp:"めがね",     k:null,         cat:"clothing" },
+    { w:"sock",       e:"🧦",  jp:"くつした",   k:null,         cat:"clothing" },
+    // nature
+    { w:"river",      e:"🌊",  jp:"かわ",       k:"unko",       cat:"nature" },
+    { w:"flower",     e:"🌸",  jp:"はな",       k:null,         cat:"nature" },
+    { w:"tree",       e:"🌳",  jp:"き",         k:null,         cat:"nature" },
+    { w:"mountain",   e:"⛰️",  jp:"やま",       k:"temee",      cat:"nature" },
+    { w:"snowman",    e:"⛄",  jp:"ゆきだるま", k:"temee",      cat:"nature" },
+    { w:"rainbow",    e:"🌈",  jp:"にじ",       k:"pamp",       cat:"nature" },
+    { w:"lightning",  e:"⚡",  jp:"いなずま",   k:"brainrot",   cat:"nature" },
+    // body / abstract
+    { w:"hug",        e:"🤗",  jp:"ハグ",       k:"pamp",       cat:"body" },
+    { w:"hump",       e:"🐪",  jp:"こぶ",       k:"temee",      cat:"body" },
+    { w:"face",       e:"😀",  jp:"かお",       k:"anpan",      cat:"body" },
+    { w:"eye",        e:"👁",  jp:"め",         k:null,         cat:"body" },
+    { w:"music",      e:"🎵",  jp:"おんがく",   k:"tral",       cat:"body" },
+    { w:"smile",      e:"😄",  jp:"えがお",     k:"pamp",       cat:"body" },
+    { w:"heart",      e:"❤️",  jp:"こころ",     k:"pamp",       cat:"body" },
+    { w:"sparkle",    e:"✨",  jp:"きらきら",   k:"parfait",    cat:"cosmic" },
   ];
-
-  // Per-kaiju verb pool — the kaiju picks ONE verb at random per demand
-  // (give / show / find / sing / hide / catch / eat / want).
-  const VERBS = {
-    tako:       [{en:"Give me", jp:"〜ちょうだい"}, {en:"Show me", jp:"〜みせて"}, {en:"I want", jp:"〜ほしい"}],
-    unko:       [{en:"Drop", jp:"〜おとせ"}, {en:"I need", jp:"〜いる"}, {en:"Bring me", jp:"〜もってこい"}],
-    tral:       [{en:"Sing about", jp:"〜の うた"}, {en:"Bring me", jp:"〜もってきて"}, {en:"I love", jp:"〜だいすき"}],
-    pamp:       [{en:"Give me", jp:"〜ちょうだい"}, {en:"I want", jp:"〜ほしい"}, {en:"Hug a", jp:"〜を ハグ"}],
-    parfait:    [{en:"Sweet, sweet", jp:"あまい あまい〜"}, {en:"Top with", jp:"〜のせて"}, {en:"I taste", jp:"〜の あじ"}],
-    anpan:      [{en:"Hero needs", jp:"ヒーロー は 〜が ひつよう"}, {en:"Give me", jp:"〜ちょうだい"}, {en:"Eat my", jp:"わたし の 〜を たべて"}],
-    temee:      [{en:"Bring me", jp:"〜もってこい"}, {en:"Find a", jp:"〜を さがせ"}, {en:"I have a", jp:"〜が ある"}],
-    catcherski: [{en:"Insert", jp:"〜いれろ"}, {en:"Trade for", jp:"〜と こうかん"}, {en:"Steal a", jp:"〜を ぬすめ"}],
-    brainrot:   [{en:"The cosmos wants", jp:"うちゅう は 〜を ほしい"}, {en:"Show me", jp:"〜みせて"}, {en:"Give me", jp:"〜ちょうだい"}],
+  // Per-kaiju category preferences. Each kaiju draws ~60% of distractor
+  // items from their preferred categories so their fights feel distinct.
+  const KAIJU_CATS = {
+    tako:       ["food","clothing"],
+    unko:       ["weapon","nature","animal"],
+    tral:       ["animal","clothing","body"],
+    pamp:       ["body","clothing","nature"],
+    parfait:    ["food","cosmic"],
+    anpan:      ["food","clothing","body"],
+    temee:      ["food","nature","animal"],
+    catcherski: ["tool","cosmic"],
+    brainrot:   ["cosmic","nature","animal"],
   };
+
+  // Per-kaiju verb pool. Each kaiju has their characteristic verbs +
+  // a few shared ones. Verb selection drives the demand structure.
+  const VERBS = {
+    tako:       [{en:"Give me", jp:"〜ちょうだい"}, {en:"Show me", jp:"〜みせて"}, {en:"I want", jp:"〜ほしい"}, {en:"Buy me", jp:"〜かって"}],
+    unko:       [{en:"Drop", jp:"〜おとせ"}, {en:"I need", jp:"〜いる"}, {en:"Bring me", jp:"〜もってこい"}, {en:"Throw", jp:"〜なげろ"}],
+    tral:       [{en:"Sing about", jp:"〜の うた"}, {en:"Bring me", jp:"〜もってきて"}, {en:"I love", jp:"〜だいすき"}, {en:"Find me", jp:"〜さがして"}],
+    pamp:       [{en:"Give me", jp:"〜ちょうだい"}, {en:"I want", jp:"〜ほしい"}, {en:"Hug a", jp:"〜を ハグ"}, {en:"Pet a", jp:"〜なでて"}],
+    parfait:    [{en:"Sweet, sweet", jp:"あまい あまい〜"}, {en:"Top with", jp:"〜のせて"}, {en:"I taste", jp:"〜の あじ"}, {en:"Eat", jp:"〜たべて"}],
+    anpan:      [{en:"Hero needs", jp:"ヒーロー は 〜が ひつよう"}, {en:"Give me", jp:"〜ちょうだい"}, {en:"Eat my", jp:"わたし の 〜を たべて"}],
+    temee:      [{en:"Bring me", jp:"〜もってこい"}, {en:"Find a", jp:"〜を さがせ"}, {en:"I have a", jp:"〜が ある"}, {en:"Carry a", jp:"〜はこべ"}],
+    catcherski: [{en:"Insert", jp:"〜いれろ"}, {en:"Trade for", jp:"〜と こうかん"}, {en:"Steal a", jp:"〜を ぬすめ"}, {en:"Hack a", jp:"〜を ハック"}],
+    brainrot:   [{en:"The cosmos wants", jp:"うちゅう は 〜を ほしい"}, {en:"Show me", jp:"〜みせて"}, {en:"Devour", jp:"〜を のみこめ"}],
+  };
+
+  // ----- LEVEL 1 TEMPLATES -----
+  // Reviewers called out that "I want a ___ and a ___" is the only
+  // template at hard mode — gameplay ceiling hits immediately. Adding
+  // a ladder of templates so kids learn function-word ordering
+  // through real grammar variation. Each template is { en (with
+  // {0}/{1} slots), jp (matched), slots:2 }.
+  const TEMPLATES = [
+    { en:"I want a {0} and a {1}.",        jp:"〜と〜が ほしい。",         slots:2 },
+    { en:"Give me a {0}, then a {1}.",     jp:"まず〜、つぎに〜。",         slots:2 },
+    { en:"A {0} before a {1}.",             jp:"〜の まえ に〜。",            slots:2 },
+    { en:"I have a {0} but no {1}.",        jp:"〜は ある、〜は ない。",     slots:2 },
+    { en:"Find a {0} for the {1}.",         jp:"〜の ために〜を さがせ。",    slots:2 },
+    { en:"Drop the {0}, keep the {1}.",     jp:"〜を おとして、〜を のこせ。", slots:2 },
+    { en:"Trade a {0} for a {1}.",          jp:"〜を 〜と こうかん。",        slots:2 },
+    { en:"Bring me a {0} on a {1}.",        jp:"〜の うえ に〜を のせて。",  slots:2 },
+  ];
 
   const $ = (id) => document.getElementById(id);
   const screens = ["title", "game", "result"];
@@ -145,19 +220,36 @@
   }
 
   function pickDemand(bossId) {
-    const verbs = VERBS[bossId] || VERBS.tako;
-    const verb = verbs[(Math.random() * verbs.length) | 0];
-    const itemCount = State.level === 0 ? 1 : 2;
-    // Pick items — prefer kaiju-linked items, then fill with random
-    const linked = ITEMS.filter(it => it.k === bossId);
-    const others = ITEMS.filter(it => it.k !== bossId);
-    const pool = [];
-    while (pool.length < itemCount) {
-      const src = (linked.length > 0 && pool.length === 0 && Math.random() < 0.6) ? linked : others;
-      const p = src[(Math.random() * src.length) | 0];
-      if (!pool.find(x => x.w === p.w)) pool.push(p);
+    if (State.level === 0) {
+      const verbs = VERBS[bossId] || VERBS.tako;
+      const verb = verbs[(Math.random() * verbs.length) | 0];
+      const items = pickKaijuItems(bossId, 1);
+      return { verb, items, template: null };
+    } else {
+      // Sentence template — pick a random one for variety.
+      const template = TEMPLATES[(Math.random() * TEMPLATES.length) | 0];
+      const items = pickKaijuItems(bossId, template.slots);
+      return { verb: null, template, items };
     }
-    return { verb, items: pool };
+  }
+  function pickKaijuItems(bossId, n) {
+    // Bias item selection toward this kaiju's preferred categories so
+    // fights feel different per kaiju.
+    const linked = ITEMS.filter(it => it.k === bossId);
+    const cats = KAIJU_CATS[bossId] || [];
+    const inCat = ITEMS.filter(it => it.k !== bossId && cats.includes(it.cat));
+    const others = ITEMS.filter(it => it.k !== bossId && !cats.includes(it.cat));
+    const out = [];
+    while (out.length < n) {
+      let pool;
+      const r = Math.random();
+      if (linked.length > 0 && r < 0.45) pool = linked;
+      else if (inCat.length > 0 && r < 0.85) pool = inCat;
+      else pool = others;
+      const p = pool[(Math.random() * pool.length) | 0];
+      if (!out.find(x => x.w === p.w)) out.push(p);
+    }
+    return out;
   }
 
   function speakDemand() {
@@ -165,8 +257,9 @@
       const t = State.targets[0];
       SND.speakEn(State.currentVerb.en + " a " + t.w + "!");
     } else {
-      const a = State.targets[0], b = State.targets[1];
-      SND.speakEn(State.currentVerb.en + " a " + a.w + " and a " + b.w + "!");
+      const t = State.currentTemplate;
+      const sentence = t.en.replace("{0}", State.targets[0].w).replace("{1}", State.targets[1].w);
+      SND.speakEn(sentence);
     }
   }
 
@@ -180,6 +273,7 @@
     }
     const demand = pickDemand(State.currentBossId);
     State.currentVerb = demand.verb;
+    State.currentTemplate = demand.template;
     State.targets = demand.items;
 
     const iv = document.createElement("div");
@@ -209,14 +303,20 @@
   }
 
   function renderDemand() {
-    const v = State.currentVerb;
     if (State.level === 0) {
+      const v = State.currentVerb;
       const t = State.targets[0];
       $("kd-en").innerHTML = `${v.en} a <span class="blank">?</span>!`;
       $("kd-jp").textContent = `${v.jp.replace("〜", t.jp)}！`;
     } else {
-      $("kd-en").innerHTML = `${v.en} a <span class="blank" id="bl0">?</span> and a <span class="blank" id="bl1">?</span>!`;
-      $("kd-jp").textContent = `${v.jp.replace("〜", State.targets[0].jp + " と " + State.targets[1].jp)}！`;
+      const t = State.currentTemplate;
+      let html = t.en.replace("{0}", '<span class="blank" id="bl0">?</span>').replace("{1}", '<span class="blank" id="bl1">?</span>');
+      $("kd-en").innerHTML = html;
+      // JP gloss interpolation
+      let jp = t.jp;
+      const replacements = [State.targets[0].jp, State.targets[1].jp];
+      jp = jp.replace("〜", replacements[0]).replace("〜", replacements[1]);
+      $("kd-jp").textContent = jp;
     }
   }
 
