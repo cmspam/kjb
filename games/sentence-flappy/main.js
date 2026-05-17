@@ -204,13 +204,15 @@
       const h = cv.clientHeight || window.innerHeight;
       cv.width = w * dpr; cv.height = h * dpr;
       W = w; H = h;
-      // tune physics with viewport
-      pipeGapPx   = Math.max(150, H * 0.30);
-      pipeSpacing = Math.max(220, W * 0.55);
+      // tune physics with viewport. Units are PIXELS PER SECOND now
+      // (previous build had per-frame numbers used as per-ms, so the
+      // game ran at ~60x intended speed).
+      pipeGapPx   = Math.max(180, H * 0.36);
+      pipeSpacing = Math.max(260, W * 0.65);
       pipeWidth   = Math.max(50, W * 0.08);
-      gravity     = H * 0.0024;
-      flapV       = -H * 0.012;
-      scrollSpeed = W * 0.0024;
+      gravity     = H * 1.4;     // px/sec² downward accel
+      flapV       = -H * 0.55;   // px/sec impulse upward on tap
+      scrollSpeed = W * 0.18;    // px/sec horizontal scroll
     }
     resize();
     window.addEventListener("resize", resize);
@@ -351,15 +353,16 @@
   }
 
   function update(dt) {
-    // Physics
-    kaijuVy += gravity * (dt / 16.7);
-    kaijuY += kaijuVy * (dt / 16.7);
+    // Physics — units are PER-SECOND, dt is in MS, so divide by 1000.
+    const dts = dt / 1000;
+    kaijuVy += gravity * dts;
+    kaijuY  += kaijuVy * dts;
     // Bounds
     if (kaijuY < 0) { kaijuY = 0; kaijuVy = 0; }
     if (kaijuY > H - 20) { hitCrash(); kaijuY = H * 0.5; kaijuVy = 0; }
 
-    // Scroll
-    const step = scrollSpeed * dt;
+    // Scroll — also per-second.
+    const step = scrollSpeed * dts;
     pipes.forEach(p => p.x -= step);
     tokens.forEach(tk => tk.x -= step);
 
@@ -446,8 +449,8 @@
     grad.addColorStop(1, "#aa3aaa");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
-    // Star field (parallax — uses scrollX)
-    scrollX += scrollSpeed * 0.3;
+    // Star field (parallax — uses scrollX, slow, frame-rate-independent)
+    scrollX += scrollSpeed * 0.005;
     ctx.fillStyle = "rgba(255,255,255,0.5)";
     for (let i = 0; i < 30; i++) {
       const sx = (i * 79 + (scrollX * 0.3)) % (W + 60) - 30;
@@ -505,7 +508,7 @@
 
     // ---- KAIJU SPRITE ----
     const kx = W * 0.25, ky = kaijuY;
-    const tilt = Math.max(-0.5, Math.min(0.9, kaijuVy * 0.04));
+    const tilt = Math.max(-0.5, Math.min(0.9, kaijuVy * 0.0008));
     ctx.save();
     ctx.translate(kx, ky);
     ctx.rotate(tilt);

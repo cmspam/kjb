@@ -207,8 +207,11 @@
     // spelling — kids reading left to right.
     const need = State.target.w[State.pendingIndex].toLowerCase();
     if (ch === need) {
-      // CORRECT
-      btn.classList.add("hit", "used");
+      // CORRECT. We flash "hit" briefly but do NOT disable the button —
+      // words like "egg" or "banana" need the same letter tapped more
+      // than once, so each letter button stays alive for the whole word.
+      btn.classList.add("hit");
+      setTimeout(() => btn.classList.remove("hit"), 280);
       shootSling(btn, true);
       State.revealed[State.pendingIndex] = true;
       State.pendingIndex++;

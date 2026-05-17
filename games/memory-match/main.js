@@ -132,12 +132,18 @@
             <div class="word-jp">${c.item.e}</div>
           </div>`;
       } else {
-        // Picture card: kaiju SVG if available, else emoji
-        if (c.item.k && ART.get(c.item.k)) {
-          frontContent = `<div class="pic-svg">${ART.renderSVG(ART.get(c.item.k))}</div>`;
-        } else {
-          frontContent = `<div class="pic-emoji">${c.item.e}</div>`;
-        }
+        // Picture card: BIG kaiju emoji, with the kaiju name underneath.
+        // Earlier build embedded the boss SVG (viewBox 800x480) which
+        // rendered too small inside a phone-sized card — the boss
+        // silhouette was barely visible. Big emoji is unmistakable.
+        const k = c.item.k;
+        const boss = k ? ART.get(k) : null;
+        const label = boss ? boss.name_jp : c.item.w;
+        frontContent = `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;">
+            <div class="pic-emoji" style="font-size:48px;line-height:1;">${c.item.e}</div>
+            <div class="word-jp" style="font-size:10px;margin-top:4px;text-align:center;">${label}</div>
+          </div>`;
       }
       cardEl.innerHTML = `
         <div class="mm-face mm-back">?</div>
