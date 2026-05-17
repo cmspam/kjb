@@ -169,27 +169,16 @@
     const seconds = State.level === 0 ? 60 : 45;
     State.deadline = performance.now() + seconds * 1000;
     $("scene-img").src = State.scene.src;
-    layoutHotspots();
     show("game");
     pickNextTarget();
     if (State.timer) clearInterval(State.timer);
     State.timer = setInterval(updateTime, 200);
   }
 
-  function layoutHotspots() {
-    const layer = $("hotspot-layer"); layer.innerHTML = "";
-    State.scene.items.forEach((it, idx) => {
-      const h = document.createElement("div");
-      h.className = "hotspot";
-      h.style.left = it.cx + "%";
-      h.style.top  = it.cy + "%";
-      h.dataset.idx = idx;
-      h.addEventListener("pointerdown", (e) => onHotspot(idx, e));
-      layer.appendChild(h);
-    });
-    // Catch taps outside the hotspots
-    $("scene-img").addEventListener("pointerdown", onSceneTap);
-  }
+  // Per-question, place 3 VISIBLE labeled circles on the scene — one
+  // over the target, two over decoy items from the same scene. Kid
+  // picks one of the three. Removes the "which of 50 children?"
+  // problem from the original blind-hotspot design.
 
   function pickNextTarget() {
     const remaining = State.scene.items
@@ -198,59 +187,64 @@
     if (remaining.length === 0) { roundWin(); return; }
     State.targetIdx = remaining[(Math.random() * remaining.length) | 0];
     const item = State.scene.items[State.targetIdx];
+    // Pick 2 distractors from the same scene (any other item)
+    const others = State.scene.items
+      .map((_, i) => i)
+      .filter(i => i !== State.targetIdx);
+    for (let i = others.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [others[i], others[j]] = [others[j], others[i]];
+    }
+    const candidates = [State.targetIdx, ...others.slice(0, 2)];
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    State.candidates = candidates;
     $("hud-find").innerHTML = `★ Find: <em>${item.w}</em>`;
     $("hud-jp-hint").textContent = State.level === 0 ? item.jp : "";
     $("found-count").textContent = `${State.foundIds.length} / ${State.scene.items.length}`;
+    layoutCandidateCircles();
     setTimeout(() => SND.speakEn(item.w), 240);
+  }
+
+  function layoutCandidateCircles() {
+    const layer = $("hotspot-layer"); layer.innerHTML = "";
+    State.candidates.forEach((idx, i) => {
+      const it = State.scene.items[idx];
+      const h = document.createElement("div");
+      h.className = "hotspot visible-choice";
+      h.style.left = it.cx + "%";
+      h.style.top  = it.cy + "%";
+      h.dataset.idx = idx;
+      h.innerHTML = `<div class="choice-letter">${String.fromCharCode(65 + i)}</div>`;
+      h.addEventListener("pointerdown", (e) => onHotspot(idx, e));
+      layer.appendChild(h);
+    });
   }
 
   function onHotspot(idx, e) {
     if (State.locked || State.targetIdx < 0) return;
     const item = State.scene.items[idx];
-    const target = State.scene.items[State.targetIdx];
-    const rect = e.target.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
     if (idx === State.targetIdx) {
-      e.target.classList.add("found");
+      e.currentTarget.classList.add("found");
       SND.sfxCorrect();
       State.foundIds.push(idx);
       State.hotStreak++;
       const bonus = State.hotStreak >= 3 ? 20 : 10;
       State.score += bonus;
-      // Show ✨ ripple at the spot
       ripple(rect.left + rect.width/2, rect.top + rect.height/2, true);
-      // Speak it again as confirmation
       setTimeout(() => SND.speakEn(item.w), 200);
-      setTimeout(pickNextTarget, 1000);
+      State.locked = true;
+      setTimeout(() => { State.locked = false; pickNextTarget(); }, 900);
     } else {
-      onWrongTap(rect.left + rect.width/2, rect.top + rect.height/2);
+      e.currentTarget.classList.add("miss-circle");
+      SND.sfxWrong();
+      State.hotStreak = 0;
+      setTimeout(() => e.currentTarget.classList.remove("miss-circle"), 500);
+      State.score = Math.max(0, State.score - 3);
     }
-  }
-
-  function onSceneTap(e) {
-    if (State.locked || State.targetIdx < 0) return;
-    if (e.target.classList && e.target.classList.contains("hotspot")) return; // hotspot handler runs
-    onWrongTap(e.clientX, e.clientY);
-  }
-
-  function onWrongTap(x, y) {
-    SND.sfxWrong();
-    State.hotStreak = 0;
-    ripple(x, y, false);
-    // Show hot/cold indicator
-    const target = State.scene.items[State.targetIdx];
-    // Convert target % to viewport px
-    const sceneRect = $("scene-img").getBoundingClientRect();
-    const tx = sceneRect.left + sceneRect.width * (target.cx / 100);
-    const ty = sceneRect.top  + sceneRect.height * (target.cy / 100);
-    const dx = x - tx, dy = y - ty;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    const ind = $("hot-cold");
-    ind.classList.remove("hot", "warm", "cold");
-    if (dist < 80)  { ind.textContent = "🔥 ATSU-ATSU!"; ind.classList.add("hot"); }
-    else if (dist < 180) { ind.textContent = "♨ あつい!"; ind.classList.add("warm"); }
-    else { ind.textContent = "❄ つめたい"; ind.classList.add("cold"); }
-    ind.classList.add("visible");
-    setTimeout(() => ind.classList.remove("visible"), 1500);
   }
 
   function ripple(x, y, hit) {
