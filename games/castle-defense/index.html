@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>カイジュウ じょう ぼうえい — Kaiju Castle Defense</title>
+<title>カイジュウ じょう ぼうえい — Castle Defense</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%8F%B0%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="../shared/style.css">
@@ -12,10 +12,10 @@
 
 <div class="screen" id="screen-title">
   <h1 class="h1-card">カイジュウ じょう ぼうえい</h1>
-  <div class="hint-jp">KAIJU CASTLE DEFENSE · ただしい アクション を タップ！</div>
+  <div class="hint-jp">CASTLE DEFENSE · カイジュウ の おねがい を きいて、 ただしい えもじ を タップ！</div>
   <div class="level-pick">
-    <button class="btn-cool huge" data-lv="0">⭐ ふつう (アクション)</button>
-    <button class="btn-hot huge" data-lv="1">🔥 むずかしい (フレーズ)</button>
+    <button class="btn-cool huge" data-lv="0">⭐ ふつう (たんご)</button>
+    <button class="btn-hot huge" data-lv="1">🔥 むずかしい (ぶん を つくる)</button>
   </div>
   <div class="best" id="best"></div>
   <div style="margin-top: 16px;">
@@ -26,10 +26,11 @@
 <div class="screen hidden" id="screen-game">
   <div class="game-hud">
     <div class="hud-castle">
-      <span class="hp-label">じょう HP</span>
+      <span class="hp-label">じょう</span>
       <span class="hp-icons" id="hp-icons">❤️❤️❤️</span>
     </div>
     <div class="hud-wave" id="hud-wave">WAVE 1</div>
+    <div class="hud-score" id="hud-score">★ 0</div>
     <button class="btn-ghost hud-quit" id="hud-quit">×</button>
   </div>
 
@@ -37,16 +38,23 @@
     <div class="invader-area" id="invader-area"></div>
     <div class="castle" id="castle">
       <div class="castle-body">🏰</div>
-      <div class="castle-shield" id="castle-shield"></div>
     </div>
   </div>
 
   <div class="phrase-zone">
-    <div class="kaiju-demand" id="kaiju-demand"></div>
+    <div class="kaiju-demand">
+      <div class="kd-en" id="kd-en"></div>
+      <div class="kd-jp" id="kd-jp"></div>
+    </div>
     <button class="btn-cool repeat-btn" id="btn-repeat">🔊</button>
   </div>
 
-  <div class="action-pad" id="action-pad"></div>
+  <div class="sentence-build hidden" id="sentence-build">
+    <div class="sb-slots" id="sb-slots"></div>
+    <button class="btn-hot sb-submit" id="sb-submit">こたえる →</button>
+  </div>
+
+  <div class="emoji-pad" id="emoji-pad"></div>
 </div>
 
 <div class="screen hidden" id="screen-result">
