@@ -256,14 +256,18 @@
   }
 
   function speakDemand() {
+    // Use per-kaiju voice profile so Catcherski sounds robot-deep,
+    // Pampamu sounds high-and-cute, Temee sounds old-and-slow, etc.
+    // Same kaiju identity across all 3 games (producer note).
+    let sentence;
     if (State.level === 0) {
       const t = State.targets[0];
-      SND.speakEn(State.currentVerb.en + " a " + t.w + "!");
+      sentence = State.currentVerb.en + " a " + t.w + "!";
     } else {
       const t = State.currentTemplate;
-      const sentence = t.en.replace("{0}", State.targets[0].w).replace("{1}", State.targets[1].w);
-      SND.speakEn(sentence);
+      sentence = t.en.replace("{0}", State.targets[0].w).replace("{1}", State.targets[1].w);
     }
+    SND.speakAsKaiju(State.currentBossId, sentence);
   }
 
   function spawnInvader() {

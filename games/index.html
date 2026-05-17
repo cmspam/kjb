@@ -154,10 +154,18 @@
     }
     const story = (km.story || []).length;
     const castle = km.castle || 0;
-    const total = Math.min(1, flappy / FLAPPY_CEILING) +
-                  Math.min(1, story  / STORY_CEILING)  +
-                  Math.min(1, castle / CASTLE_CEILING);
-    return Math.round(total / 3 * 100);
+    // Gate per producer's note: a ring cannot exceed 66% unless the
+    // kid has non-zero progress in ALL THREE games on that kaiju. So
+    // grinding one game to 100% only earns ~66% — the last third
+    // requires touching the other two. Converts the spine from a
+    // vanity meter into a routing mechanism.
+    const fp = Math.min(1, flappy / FLAPPY_CEILING);
+    const sp = Math.min(1, story  / STORY_CEILING);
+    const cp = Math.min(1, castle / CASTLE_CEILING);
+    const raw = (fp + sp + cp) / 3;
+    const touched = (fp > 0 ? 1 : 0) + (sp > 0 ? 1 : 0) + (cp > 0 ? 1 : 0);
+    const ceiling = touched === 3 ? 1.0 : 0.66;
+    return Math.round(Math.min(raw, ceiling) * 100);
   }
   function render() {
     const grid = document.getElementById("mastery-grid");

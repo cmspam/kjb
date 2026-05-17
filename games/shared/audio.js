@@ -34,6 +34,24 @@ window.GamesAudio = (() => {
     return ctx;
   }
 
+  // Per-kaiju voice profiles for browser TTS fallback. Producer note:
+  // "every kaiju has the same voice in all 3 games" is the right
+  // identity move. We can't render all castle-defense demand
+  // combinations as pre-baked audio, so the next-best is to tune
+  // SpeechSynthesisUtterance rate+pitch per kaiju so the same
+  // character sounds recognizably like itself everywhere.
+  const KAIJU_TTS = {
+    tako:       { rate: 1.10, pitch: 1.20 },
+    unko:       { rate: 0.92, pitch: 0.75 },
+    tral:       { rate: 1.00, pitch: 1.40 },
+    pamp:       { rate: 1.05, pitch: 1.55 },
+    parfait:    { rate: 0.95, pitch: 1.15 },
+    anpan:      { rate: 1.00, pitch: 0.90 },
+    temee:      { rate: 0.85, pitch: 0.78 },
+    catcherski: { rate: 1.05, pitch: 0.72 },
+    brainrot:   { rate: 0.88, pitch: 0.60 },
+  };
+
   // Play a pre-rendered English word from the KJB question pack.
   // Returns the Audio element so callers can chain. Silent on miss.
   function speakEn(text, opts) {
@@ -49,10 +67,17 @@ window.GamesAudio = (() => {
     a.volume = (opts && opts.volume != null) ? opts.volume : 0.95;
     const p = a.play();
     if (p && p.catch) {
-      // 404 / iOS gesture block — fall back to browser TTS.
       p.catch(() => browserTTS(cleaned, opts));
     }
     return a;
+  }
+  // Speak text in the voice of a specific kaiju via browser TTS,
+  // applying that kaiju's rate/pitch profile. Used by castle-defense
+  // for demand lines.
+  function speakAsKaiju(kaijuId, text) {
+    if (muted) return;
+    const prof = KAIJU_TTS[kaijuId] || { rate: 1.0, pitch: 1.0 };
+    browserTTS(text, { rate: prof.rate, pitch: prof.pitch });
   }
 
   // Browser SpeechSynthesis fallback. Auto-picks an en-US voice if one
@@ -119,7 +144,7 @@ window.GamesAudio = (() => {
   function isMuted()   { return muted; }
 
   return {
-    speakEn, browserTTS, playBossLine,
+    speakEn, speakAsKaiju, browserTTS, playBossLine,
     sfxCorrect, sfxWrong, sfxPop, sfxConfirm, sfxLevel, sfxFail, sfxSplat, sfxSparkle,
     setMuted, isMuted,
     djb2, cleanForHash,
