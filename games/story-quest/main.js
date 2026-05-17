@@ -102,6 +102,18 @@
     if (!p[kaijuId]) p[kaijuId] = {};
     p[kaijuId][convId] = ending;
     saveProgress(p);
+    // Cross-game mastery
+    recordConversationCompleted(kaijuId, convId);
+  }
+  const MASTERY_KEY = "esl_kaiju_mastery";
+  function loadMastery() { try { return JSON.parse(localStorage.getItem(MASTERY_KEY) || "{}"); } catch (_) { return {}; } }
+  function saveMastery(m)  { try { localStorage.setItem(MASTERY_KEY, JSON.stringify(m)); } catch (_) {} }
+  function recordConversationCompleted(kaijuId, convId) {
+    const m = loadMastery();
+    if (!m[kaijuId]) m[kaijuId] = {};
+    if (!m[kaijuId].story) m[kaijuId].story = [];
+    if (!m[kaijuId].story.includes(convId)) m[kaijuId].story.push(convId);
+    saveMastery(m);
   }
 
   function renderMetShelf() {

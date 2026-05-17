@@ -113,10 +113,106 @@
     </a>
   </div>
 
+  <div class="mastery-section">
+    <h3 class="mastery-title">★ カイジュウ マスタリー ★</h3>
+    <div class="mastery-grid" id="mastery-grid"></div>
+  </div>
+
   <div class="back-strip">
     <a href="../index.html">← KJB （カイジュウ ブロウル） に もどる</a>
   </div>
 </div>
+
+<script>
+// Mastery grid: shows per-kaiju progress across all 3 games.
+// flappy = sentences cleared, story = conversations done,
+// castle = invaders defeated. Display as a colored ring per kaiju.
+(function () {
+  const KAIJU = [
+    {id:"tako",        e:"🐙", name:"タコタコ"},
+    {id:"unko",        e:"💩", name:"ウンコディロ"},
+    {id:"tral",        e:"🐟", name:"トラララ"},
+    {id:"pamp",        e:"🧸", name:"パムパム"},
+    {id:"parfait",     e:"🍦", name:"パフェ イワシ"},
+    {id:"anpan",       e:"🍞", name:"アンパン マグロ"},
+    {id:"temee",       e:"🐫", name:"ティメー"},
+    {id:"catcherski",  e:"🎮", name:"キャッチャースキー"},
+  ];
+  // Approximate ceiling per game so % is meaningful
+  const FLAPPY_CEILING = 30;       // sentences across all levels
+  const STORY_CEILING  = 3;        // conversations per kaiju
+  const CASTLE_CEILING = 8;        // invader defeats
+  function loadMastery() {
+    try { return JSON.parse(localStorage.getItem("esl_kaiju_mastery") || "{}"); }
+    catch (_) { return {}; }
+  }
+  function kaijuPct(km) {
+    if (!km) return 0;
+    let flappy = 0;
+    if (km.flappy) {
+      Object.values(km.flappy).forEach(arr => flappy += (arr || []).length);
+    }
+    const story = (km.story || []).length;
+    const castle = km.castle || 0;
+    const total = Math.min(1, flappy / FLAPPY_CEILING) +
+                  Math.min(1, story  / STORY_CEILING)  +
+                  Math.min(1, castle / CASTLE_CEILING);
+    return Math.round(total / 3 * 100);
+  }
+  function render() {
+    const grid = document.getElementById("mastery-grid");
+    if (!grid) return;
+    grid.innerHTML = "";
+    const m = loadMastery();
+    KAIJU.forEach(k => {
+      const pct = kaijuPct(m[k.id]);
+      const cell = document.createElement("div");
+      cell.className = "mc";
+      cell.innerHTML = `
+        <div class="mc-emoji">${k.e}</div>
+        <div class="mc-name">${k.name}</div>
+        <div class="mc-ring" style="--pct:${pct}">
+          <div class="mc-ring-inner">${pct}%</div>
+        </div>`;
+      grid.appendChild(cell);
+    });
+  }
+  render();
+  window.addEventListener("focus", render);
+})();
+</script>
+
+<style>
+.mastery-section { margin-top: 26px; width: 100%; max-width: 760px; }
+.mastery-title { text-align: center; color: var(--accent); letter-spacing: 4px; font-size: 18px; margin: 16px 0 12px; }
+.mastery-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px; padding: 0 8px;
+}
+.mc {
+  background: rgba(0,0,0,0.35);
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 10px 6px;
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.mc-emoji { font-size: 32px; line-height: 1; }
+.mc-name { font-size: 11px; color: var(--ink-dim); font-weight: 900; letter-spacing: 0.5px; }
+.mc-ring {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--pct, 0) * 1%), rgba(255,255,255,0.15) 0);
+  display: flex; align-items: center; justify-content: center;
+}
+.mc-ring-inner {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 900; color: var(--accent);
+}
+</style>
 
 <script>
 (function () {

@@ -405,6 +405,8 @@
     if (btn) btn.classList.add("correct");
     SND.sfxCorrect();
     State.score += State.bossWave ? 30 : 10;
+    // Contribute to cross-game mastery store
+    recordKaijuDefeated(State.currentBossId);
     // Speak full success
     if (State.level === 0) SND.speakEn(State.targets[0].w + "!");
     else SND.speakEn(State.targets.map(t => t.w).join(" and ") + "!");
@@ -532,6 +534,23 @@
 
   $("btn-again").addEventListener("click", () => { SND.sfxConfirm(); startGame(); });
   $("btn-home").addEventListener("click", () => { SND.sfxConfirm(); show("title"); renderBest(); });
+
+  // ----- CROSS-GAME MASTERY -----
+  // Same localStorage key as sentence-flappy and story-quest. Each
+  // wave-win adds to the kaiju's castle-defense count. Landing page
+  // sums across the three games for a unified per-kaiju mastery %.
+  const MASTERY_KEY = "esl_kaiju_mastery";
+  function loadMastery() {
+    try { return JSON.parse(localStorage.getItem(MASTERY_KEY) || "{}"); } catch (_) { return {}; }
+  }
+  function saveMastery(m) { try { localStorage.setItem(MASTERY_KEY, JSON.stringify(m)); } catch (_) {} }
+  function recordKaijuDefeated(bossId) {
+    if (!bossId) return;
+    const m = loadMastery();
+    if (!m[bossId]) m[bossId] = {};
+    m[bossId].castle = (m[bossId].castle || 0) + 1;
+    saveMastery(m);
+  }
 
   function spawnConfetti(n) {
     const layer = document.createElement("div");
