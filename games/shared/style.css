@@ -1,0 +1,184 @@
+/* Shared base styles for the ESL games suite.
+ * Each game extends with its own game-specific .css next to index.html. */
+
+:root {
+  --bg1: #2a1450;
+  --bg2: #4a1a8a;
+  --bg3: #ee2266;
+  --ink: #fff;
+  --ink-dim: #ccaadd;
+  --accent: #ffe45c;
+  --accent2: #44eeff;
+  --good: #44ff88;
+  --bad:  #ff3b6b;
+  --card: rgba(255,255,255,0.08);
+  --card-strong: rgba(0,0,0,0.4);
+  --shadow: 0 6px 24px rgba(0,0,0,.35);
+  --frame-radius: 18px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: linear-gradient(180deg, var(--bg1), var(--bg2));
+  color: var(--ink);
+  /* Match KJB font stack so kana + Latin + Cyrillic render harmoniously */
+  font-family: "Hiragino Maru Gothic Pro","Hiragino Sans","Yu Gothic UI","Meiryo",
+               "Segoe UI","Helvetica Neue","Arial","Noto Sans","DejaVu Sans",
+               "MS Gothic", system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 3px solid transparent;
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+  font-weight: 900;
+}
+button:hover { background: rgba(255,255,255,0.15); }
+button:active { transform: translateY(2px) scale(0.98); }
+
+.btn-hot {
+  background: linear-gradient(135deg, #ee2266, #cc1a44);
+  border-color: #ffe45c;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(238, 34, 102, 0.42);
+}
+.btn-hot:hover { background: linear-gradient(135deg, #ff3878, #ee2266); }
+
+.btn-cool {
+  background: linear-gradient(135deg, #4a90c4, #2a4a8a);
+  border-color: #44eeff;
+}
+.btn-cool:hover { background: linear-gradient(135deg, #5aa0d4, #3a5a9a); }
+
+.btn-ghost { background: transparent; border-color: rgba(255,255,255,0.2); }
+.btn-ghost:hover { background: rgba(255,255,255,0.08); }
+
+.huge { font-size: 22px; padding: 14px 28px; }
+
+/* Common screen container — full-viewport flex centered. */
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 12px;
+  gap: 14px;
+}
+.screen.hidden { display: none; }
+
+/* Top-bar HUD common pattern: back button + title + mute toggle. */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0));
+  z-index: 50;
+  pointer-events: none;
+}
+.topbar > * { pointer-events: auto; }
+.topbar .title {
+  font-size: 18px; font-weight: 900; letter-spacing: 2px;
+  color: var(--accent);
+  text-shadow: 0 2px 0 rgba(0,0,0,0.45);
+}
+.topbar .back, .topbar .mute {
+  background: rgba(0,0,0,0.4);
+  border-color: rgba(255,255,255,0.12);
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.hint-jp {
+  color: var(--ink-dim);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.h1-card {
+  font-size: 36px; font-weight: 900;
+  letter-spacing: 3px;
+  color: var(--accent);
+  text-shadow: 0 4px 0 rgba(0,0,0,0.4), 0 0 18px rgba(255,228,92,0.45);
+  text-align: center;
+}
+
+/* Star/sticker reward chips */
+.sticker-row {
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  margin-top: 8px;
+}
+.sticker {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+.sticker.earned {
+  background: linear-gradient(135deg, #ffe45c, #ff9533);
+  border-color: #fff;
+  box-shadow: 0 0 12px rgba(255,228,92,0.6);
+  animation: sticker-pop 0.45s cubic-bezier(.18,.89,.32,1.28);
+}
+@keyframes sticker-pop {
+  0%   { transform: scale(0) rotate(-12deg); }
+  60%  { transform: scale(1.18) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* "Sugoi!" praise burst (Hana's request). */
+.praise-burst {
+  position: fixed; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 80px; font-weight: 900;
+  color: #ffe45c;
+  text-shadow: 0 4px 0 #000, 0 0 22px rgba(255,228,92,0.9);
+  pointer-events: none;
+  z-index: 999;
+  animation: praise-pop 1.2s cubic-bezier(.18,.89,.32,1.28) forwards;
+  letter-spacing: 6px;
+}
+@keyframes praise-pop {
+  0%   { transform: translate(-50%, -50%) scale(0) rotate(-12deg); opacity: 0; }
+  30%  { transform: translate(-50%, -50%) scale(1.3) rotate(6deg);  opacity: 1; }
+  60%  { transform: translate(-50%, -50%) scale(1) rotate(0);       opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0);       opacity: 0; }
+}
+
+/* Tap-anywhere "lethargic-fail" recovery overlay — kid's never stranded. */
+.toast {
+  position: fixed; left: 50%; bottom: 12%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 99px;
+  font-weight: 900;
+  pointer-events: none;
+  z-index: 800;
+  animation: toast-in 0.3s ease-out, toast-out 0.4s ease-in 1.6s forwards;
+}
+@keyframes toast-in  { from { opacity:0; transform: translate(-50%, 20px); } }
+@keyframes toast-out { to   { opacity:0; transform: translate(-50%, -10px); } }
+
+/* The KJB renderBossSVG already wraps shiny bosses in .shiny-boss-svg
+ * but the per-boss CSS filters live in eslgame/css/style.css which we
+ * don't load here. Provide a soft replacement so shiny bosses still
+ * stand out in the games suite. */
+.shiny-boss-svg svg { filter: drop-shadow(0 0 12px #ffe45c) saturate(1.4); }
+
+/* Denture-gag styling — sized at runtime in JS, but a faint trail helps */
+.denture-teeth {
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,0.35)) drop-shadow(0 0 8px rgba(255,255,255,0.15));
+}
