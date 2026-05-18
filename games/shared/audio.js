@@ -25,11 +25,19 @@ window.GamesAudio = (() => {
     return stripFurigana(s).replace(/\s+/g, " ").trim();
   }
 
-  // Lazily-init AudioContext for SFX tones.
+  // Lazily-init AudioContext for SFX tones. iOS Safari (and recent
+  // desktop Chrome too, for that matter) creates new AudioContexts
+  // in "suspended" state — every tone call comes back silent until
+  // ctx.resume() is called from inside a user-gesture handler.
+  // We call resume() defensively on every audio() lookup; it's a
+  // no-op when the context is already running.
   function audio() {
     if (!ctx) {
       try { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
       catch (_) { ctx = null; }
+    }
+    if (ctx && ctx.state === "suspended") {
+      try { ctx.resume(); } catch (_) {}
     }
     return ctx;
   }

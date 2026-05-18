@@ -586,6 +586,7 @@
     running = true;
     kaijuY = H * 0.5;
     kaijuVy = 0;
+    State.exploded = false;
     pipes = [];
     tokens = [];
     crashCool = 0;
@@ -802,11 +803,15 @@
   function update(dt, t) {
     const tun = LEVEL_TUNING[State.level];
     const dts = dt / 1000;
-    kaijuVy += tun.gravity * dts;
-    kaijuY  += kaijuVy * dts;
-    if (kaijuY < 0)        { kaijuY = 0; kaijuVy = 0; }
-    if (kaijuY > H - 30)   {
-      if (crashCool < 99000) { kaijuY = H - 30; hitObstacle("floor"); }
+    // Once exploded the kaiju is frozen mid-air (no gravity, no input);
+    // only particles continue ticking until crashSequence fires.
+    if (!State.exploded) {
+      kaijuVy += tun.gravity * dts;
+      kaijuY  += kaijuVy * dts;
+      if (kaijuY < 0)        { kaijuY = 0; kaijuVy = 0; }
+      if (kaijuY > H - 30)   {
+        if (crashCool < 99000) { kaijuY = H - 30; hitObstacle("floor"); }
+      }
     }
 
     // Trail update
@@ -955,6 +960,10 @@
   function hitObstacle(kind) {
     if (crashCool > 0) return;
     crashCool = 99999;
+    // Freeze the kaiju in place and mark it exploded so the draw
+    // pass skips rendering the sprite — no more drifting after death.
+    State.exploded = true;
+    kaijuVy = 0;
     SND.sfxSplat();
     // Beefier death cinematic: bigger blast, three rings of debris,
     // longer shake, longer red flash. The kid SEES the kaiju explode
@@ -1217,26 +1226,30 @@
       ctx.globalAlpha = 1;
     }
 
-    // Kaiju sprite
-    const kx = W * 0.25, ky = kaijuY;
-    const tilt = Math.max(-0.4, Math.min(0.8, kaijuVy * 0.001));
-    ctx.save();
-    ctx.translate(kx, ky);
-    ctx.rotate(tilt);
-    const flapScale = 1 + Math.max(0, -kaijuVy * 0.0003);
-    ctx.scale(flapScale, 1);
-    const blink = crashCool > 0 && (Math.floor(crashCool / 80) % 2 === 0);
-    if (blink) ctx.globalAlpha = 0.4;
-    if (bossSpriteImg) {
-      const sw = 140, sh = 105;
-      ctx.drawImage(bossSpriteImg, -sw/2, -sh/2, sw, sh);
-    } else {
-      ctx.font = "60px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(ART.emoji(State.bossId), 0, 0);
+    // Kaiju sprite — entirely SKIPPED when State.exploded is true so
+    // the moment the kid hits a pipe the character is gone and only
+    // the explosion remains. Previous blink-on-crash effect kept the
+    // character visible for almost a second; per user feedback the
+    // hit should look like instant annihilation.
+    if (!State.exploded) {
+      const kx = W * 0.25, ky = kaijuY;
+      const tilt = Math.max(-0.4, Math.min(0.8, kaijuVy * 0.001));
+      ctx.save();
+      ctx.translate(kx, ky);
+      ctx.rotate(tilt);
+      const flapScale = 1 + Math.max(0, -kaijuVy * 0.0003);
+      ctx.scale(flapScale, 1);
+      if (bossSpriteImg) {
+        const sw = 140, sh = 105;
+        ctx.drawImage(bossSpriteImg, -sw/2, -sh/2, sw, sh);
+      } else {
+        ctx.font = "60px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(ART.emoji(State.bossId), 0, 0);
+      }
+      ctx.restore();
     }
-    ctx.restore();
 
     // Combo flash text (big, center top)
     if (comboTextT > 0) {
@@ -1646,8 +1659,11 @@
     const winEn = $("win-en"); winEn.innerHTML = "";
     State.tokens.forEach((tok, i) => {
       const sp = document.createElement("span");
-      sp.textContent = tok + (i < State.tokens.length - 1 ? " " : "");
-      sp.style.cssText = "display:inline-block;opacity:0;transform:translateY(8px) scale(0.7);transition:opacity 0.3s ease, transform 0.3s ease;";
+      sp.textContent = tok;
+      // margin-right rather than a trailing-space-in-textContent so
+      // the gap survives display:inline-block (where trailing
+      // whitespace inside the element is collapsed by the layout).
+      sp.style.cssText = "display:inline-block;margin-right:0.35em;opacity:0;transform:translateY(8px) scale(0.7);transition:opacity 0.3s ease, transform 0.3s ease;";
       winEn.appendChild(sp);
       setTimeout(() => { sp.style.opacity = "1"; sp.style.transform = "translateY(0) scale(1)"; }, 120 + i * 140);
     });
