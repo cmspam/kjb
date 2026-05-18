@@ -45,6 +45,7 @@ window.STORY = {
         id: "meet",
         title: "First Meeting",
         intro: "A purple octopus in a tall paper hat waves eight arms at you on an Osaka street.",
+        scene: "tako-osaka-stall",
         start: "n1",
         nodes: {
           "n1": {
@@ -140,6 +141,7 @@ window.STORY = {
         id: "origin",
         title: "How I Grew Big",
         intro: "Tako wants to tell you the story of how he became a giant octopus chef.",
+        scene: "tako-deep-sea",
         start: "n1",
         nodes: {
           "n1": {
@@ -215,6 +217,7 @@ window.STORY = {
         id: "arms",
         title: "Eight Arms",
         intro: "Tako sits down and starts demonstrating things with his eight arms.",
+        scene: "tako-osaka-stall",
         start: "n1",
         nodes: {
           "n1": {
@@ -314,6 +317,7 @@ window.STORY = {
         id: "meet",
         title: "Don't Touch The Bomb",
         intro: "A robot crocodile lands in front of you. He has a bomb. He smells.",
+        scene: "unko-swamp-empire",
         start: "n1",
         nodes: {
           "n1": {
@@ -388,6 +392,7 @@ window.STORY = {
         id: "homework",
         title: "Your Homework",
         intro: "Unkodilo's robot belly is full. You suspect he ate something of yours.",
+        scene: "unko-swamp-empire",
         start: "n1",
         nodes: {
           "n1": {
@@ -446,6 +451,7 @@ window.STORY = {
         id: "smell",
         title: "The Smell",
         intro: "Unkodilo holds his metal nose. He smells bad and he knows it.",
+        scene: "unko-throne-room",
         start: "n1",
         nodes: {
           "n1": {
@@ -517,6 +523,7 @@ window.STORY = {
       {
         id: "opera",
         title: "I Sing Opera",
+        scene: "tral-opera-house",
         intro: "A fish in blue sneakers struts up to you. Loudly.",
         start: "n1",
         nodes: {
@@ -593,6 +600,7 @@ window.STORY = {
         id: "shoes",
         title: "Three Blue Shoes",
         intro: "Tralalero points proudly at his three legs and three blue sneakers.",
+        scene: "tral-fish-market",
         start: "n1",
         nodes: {
           "n1": {
@@ -677,6 +685,7 @@ window.STORY = {
         id: "hug",
         title: "Hug Me Please",
         intro: "A fluffy pink plushy walks up with arms wide open. So fluffy.",
+        scene: "pamp-toy-shop",
         start: "n1",
         nodes: {
           "n1": {
@@ -751,6 +760,7 @@ window.STORY = {
         id: "pink",
         title: "Pink Palace",
         intro: "Inside her fluffy pink palace, Pampamu shows you around.",
+        scene: "pamp-cloud-factory",
         start: "n1",
         nodes: {
           "n1": {
@@ -814,6 +824,7 @@ window.STORY = {
         id: "sweet",
         title: "Sweet Fish",
         intro: "A fish inside a parfait glass slides up. Cherry on top.",
+        scene: "parfait-underwater-cafe",
         start: "n1",
         nodes: {
           "n1": {
@@ -880,6 +891,7 @@ window.STORY = {
         id: "grandparents",
         title: "Grandma and Grandpa",
         intro: "Parfait Iwashi's parfait glass shakes — the two grandparents inside wave.",
+        scene: "parfait-ice-cave",
         start: "n1",
         nodes: {
           "n1": {
@@ -943,6 +955,7 @@ window.STORY = {
         id: "breadfish",
         title: "Bread and Fish",
         intro: "A creature with a red-bean-bun head and a tuna body steps forward.",
+        scene: "anpan-bakery",
         start: "n1",
         nodes: {
           "n1": {
@@ -1016,6 +1029,7 @@ window.STORY = {
         id: "throne",
         title: "The Throne",
         intro: "Anpan Maguro sits on a small cardboard throne with a flag.",
+        scene: "anpan-ocean",
         start: "n1",
         nodes: {
           "n1": {
@@ -1081,6 +1095,7 @@ window.STORY = {
         id: "old",
         title: "Three Hundred Years",
         intro: "An old camel with a monkey's face and a long white beard greets you.",
+        scene: "temee-ghenghis-throne",
         start: "n1",
         nodes: {
           "n1": {
@@ -1152,6 +1167,7 @@ window.STORY = {
       // 2. THE HUMPS
       {
         id: "humps",
+        scene: "temee-mongolia-day",
         title: "Two Humps",
         intro: "Temee gestures at the two humps on his back.",
         start: "n1",
@@ -1210,6 +1226,7 @@ window.STORY = {
         id: "coin",
         title: "Insert One Hundred Yen",
         intro: "A glass UFO catcher with green Cyrillic glitches across its screen.",
+        scene: "catcherski-arcade",
         start: "n1",
         nodes: {
           "n1": {
@@ -1290,6 +1307,7 @@ window.STORY = {
       // 2. STOLEN EMOJI
       {
         id: "emoji",
+        scene: "catcherski-hacked",
         title: "The Stolen Emoji",
         intro: "Catcherski's screen flashes through a hundred trapped emoji.",
         start: "n1",
