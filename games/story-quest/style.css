@@ -1,17 +1,36 @@
-/* Non-VN screens must be scrollable on mobile. The base .screen
-   class is position:absolute inset:0 + justify-content:center which
-   clips tall content. The VN screen-story stays full-bleed (already
-   has its own padding:0 + align-items:stretch override). */
+/* Non-VN screens must be scrollable on mobile.
+ *
+ * The base .screen class (in shared/style.css) is position:absolute +
+ * inset:0 + justify-content:center, and body has overflow:hidden. On
+ * iOS Safari, an absolute-positioned container with overflow-y:auto
+ * fails to scroll reliably even with -webkit-overflow-scrolling:touch
+ * once you have a flex layout with overflow content — the touch pan
+ * gets eaten somewhere and the screen just sits still.
+ *
+ * Cure: take the scrollable screens OUT of position:absolute and let
+ * the body scroll natively. body's overflow gets overridden to auto
+ * for this game, the screen becomes position:static with
+ * min-height:100vh, and content can grow past the viewport so body's
+ * native touch-scroll picks it up — which iOS handles correctly.
+ *
+ * The VN screen-story stays position:absolute (it has its own
+ * full-bleed override later in this file) so its overlay layout is
+ * unaffected. */
+body { overflow: auto !important; -webkit-overflow-scrolling: touch; }
+
 #screen-title,
 #screen-journal,
 #screen-kaiju,
 #screen-conv-pick,
 #screen-end {
-  overflow-y: auto;
-  overflow-x: hidden;
+  position: static !important;
+  inset: auto;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
   justify-content: flex-start;
   padding: 16px 12px 80px;
-  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .title-buttons {
