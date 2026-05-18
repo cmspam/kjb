@@ -835,14 +835,9 @@
     } else { shake.x = 0; shake.y = 0; }
 
     if (comboTextT > 0) comboTextT -= dt;
-    // Ambient kaiju chatter: every 7-15 seconds the kaiju mutters
-    // something from their healthy/slingshot taunt pool. Skipped if
-    // we already played a voice line recently (rate-limited inside
-    // playKaijuLine via _lastVoiceAt).
-    if (t > _nextAmbientAt) {
-      playKaijuLine("healthy", 1800);
-      _nextAmbientAt = t + 7000 + Math.random() * 8000;
-    }
+    // (Ambient kaiju chatter intentionally disabled per user feedback.
+    //  The kaiju now only speaks during play when the kid grabs a
+    //  WRONG word, so those reactions are clearly audible.)
 
     const step = tun.speed * dts;
     pipes.forEach(p => p.x -= step);
@@ -920,10 +915,9 @@
         comboTextVal = State.combo;
         comboTextT = 800;
       }
-      // Combo voice — every 3-correct streak the kaiju panics a bit.
-      if (State.combo >= 3 && State.combo % 3 === 0) {
-        playKaijuLine("high_combo", 2500);
-      }
+      // (Combo voice intentionally NOT triggered on correct pickups.
+      //  Per user feedback: kaiju voice during collection drowns out
+      //  the wrong-word reaction lines, making them hard to hear.)
       renderHUD();
       if (State.progress >= State.tokens.length) {
         setTimeout(winSequence, 700);
@@ -932,8 +926,12 @@
       State.pickupsWrong++;
       State.combo = 0;
       SND.sfxWrong();
-      // ~35% chance the kaiju jeers when the kid grabs the wrong word.
-      if (Math.random() < 0.35) playKaijuLine("slingshot", 2200);
+      // Wrong-word jeer is now the kaiju's ONLY in-play voice line —
+      // bumped to ~55% from 35% since there's no ambient/combo chatter
+      // competing with it anymore. Still rate-limited inside
+      // playKaijuLine so two wrongs in quick succession don't talk
+      // over each other.
+      if (Math.random() < 0.55) playKaijuLine("slingshot", 2200);
       flash(tk.x, tk.y, "✕", "#ff3b6b");
       // Feather/smoke burst at impact
       burstFeathers(tk.x, tk.y, 14);
