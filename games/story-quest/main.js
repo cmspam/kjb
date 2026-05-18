@@ -197,7 +197,25 @@
         <div class="kc-name">${kd.name}</div>
         <div class="kc-count">${completedCount}/${total} かいわ</div>
       `;
-      div.addEventListener("click", () => { SND.sfxPop(); openConvPicker(id); });
+      // Long-press / right-click previews the kaiju's English voice
+      // saying their name. Useful for kids who want to hear who
+      // they're about to pick.
+      let pressTimer = null;
+      let suppressClick = false;
+      div.addEventListener("pointerdown", () => {
+        pressTimer = setTimeout(() => {
+          suppressClick = true;
+          playKaijuAudio(id, kd.nameEn || kd.name);
+        }, 500);
+      });
+      div.addEventListener("pointerup",   () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+      div.addEventListener("pointerleave",() => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+      div.addEventListener("contextmenu", (e) => { e.preventDefault(); suppressClick = true; playKaijuAudio(id, kd.nameEn || kd.name); });
+      div.addEventListener("click", (e) => {
+        if (suppressClick) { suppressClick = false; return; }
+        SND.sfxPop();
+        openConvPicker(id);
+      });
       grid.appendChild(div);
     });
   }
