@@ -468,7 +468,12 @@
     const iv = State.currentInvader; const tm = iv._timer;
     if (tm) clearTimeout(tm);
     setTimeout(() => {
+      // Particle burst at invader position
+      const r = iv.getBoundingClientRect();
+      spawnHitBurst(r.left + r.width/2, r.top + r.height/2);
       iv.classList.add("beaten");
+      // Small screen shake on hit for impact
+      shakeField(180, 6);
       setTimeout(() => {
         try { iv.remove(); } catch (_) {}
         State.locked = false;
@@ -478,6 +483,46 @@
         else spawnInvader();
       }, 700);
     }, 500);
+  }
+
+  // Hit particle burst at a screen position.
+  function spawnHitBurst(x, y) {
+    const layer = document.createElement("div");
+    layer.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:850;overflow:hidden;";
+    document.body.appendChild(layer);
+    const emojis = ["✨","💥","⭐","🌟"];
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement("div");
+      p.textContent = emojis[(Math.random()*emojis.length)|0];
+      p.style.cssText = `position:absolute;left:${x}px;top:${y}px;font-size:${14+Math.random()*16}px;`;
+      const dx = (Math.random()-0.5) * 320;
+      const dy = (Math.random()-0.6) * 240;
+      const rot = (Math.random()-0.5) * 540;
+      p.animate(
+        [{ transform:"translate(0,0) rotate(0)", opacity: 1 },
+         { transform:`translate(${dx}px, ${dy}px) rotate(${rot}deg)`, opacity: 0 }],
+        { duration: 700 + Math.random()*400, easing: "cubic-bezier(.22,.61,.36,1)", fill:"forwards" }
+      );
+      layer.appendChild(p);
+    }
+    setTimeout(() => { try { layer.remove(); } catch (_) {} }, 1300);
+  }
+
+  // Brief field shake on hit for kinetic feel.
+  function shakeField(durMs, mag) {
+    const f = document.getElementById("field");
+    if (!f) return;
+    const start = performance.now();
+    function step(now) {
+      const t = (now - start);
+      if (t >= durMs) { f.style.transform = ""; return; }
+      const k = 1 - t / durMs;
+      const x = (Math.random()*2 - 1) * mag * k;
+      const y = (Math.random()*2 - 1) * mag * k;
+      f.style.transform = `translate(${x}px, ${y}px)`;
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
   }
 
   function handleWrong(btn) {
