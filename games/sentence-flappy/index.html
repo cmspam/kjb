@@ -14,6 +14,10 @@
   <h1 class="h1-card">ぶんぽう フラッピー</h1>
   <div class="hint-jp">SENTENCE FLAPPY · ことば を じゅんばん に あつめろ！ まちがえる と カイジュウ が こわれる</div>
 
+  <!-- Animated kaiju showcase that cycles through the cast. Gives the
+       title screen life and signals which kaiju are playable. -->
+  <div class="title-kaiju" id="title-kaiju"></div>
+
   <div class="level-pick">
     <button class="btn-cool huge" data-lv="0">🐣 入門 (たんご 1〜2 ご)</button>
     <button class="btn-hot huge" data-lv="1">⭐ ふつう (みじかい ぶん)</button>
@@ -82,5 +86,29 @@
 <script src="sentences.js"></script>
 <script src="sentences-extra.js"></script>
 <script src="main.js"></script>
+
+<!-- Cycling kaiju showcase on the title screen. Bounces in, holds for
+     a beat, fades out, swaps to the next. Touch-pause when the kid
+     hovers/taps so they can read the kaiju's name. -->
+<script>
+(function () {
+  const slot = document.getElementById("title-kaiju");
+  if (!slot || !window.GamesArt) return;
+  const ids = ["tako","unko","tral","pamp","parfait","anpan","temee","catcherski"];
+  let i = 0; let paused = false;
+  function tick() {
+    if (paused) return;
+    const boss = GamesArt.get(ids[i % ids.length], true);
+    if (!boss) { i++; return; }
+    slot.innerHTML = `<div class="tk-sv">${GamesArt.renderSVG(boss)}</div><div class="tk-name">${boss.name_jp || ids[i % ids.length]}</div>`;
+    slot.classList.remove("tk-in"); void slot.offsetWidth; slot.classList.add("tk-in");
+    i++;
+  }
+  tick();
+  const iv = setInterval(tick, 3200);
+  slot.addEventListener("pointerenter", () => paused = true);
+  slot.addEventListener("pointerleave", () => paused = false);
+})();
+</script>
 </body>
 </html>
