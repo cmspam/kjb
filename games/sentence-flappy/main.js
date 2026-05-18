@@ -29,10 +29,14 @@
   const SENTENCES = window.SENTENCES;
 
   // ---- LEVEL CONFIG ----
+  // Tighter gaps + more tokens per user feedback. Token spawn rate
+  // increased ~15% and pipe gap reduced ~10% across the board. Pipe
+  // rate also slightly faster so the screen feels denser. Token
+  // placement now constrained to reachable regions (see spawnToken).
   const LEVEL_TUNING = {
-    0: { speed: 130, gravity: 700, flap: -310, pipeGap: 0.46, pipeRate: 4200, tokenRate: 1600, pipeStyle: "cloud", parts: 5 },
-    1: { speed: 170, gravity: 850, flap: -360, pipeGap: 0.36, pipeRate: 3600, tokenRate: 1500, pipeStyle: "pipe",  parts: 5 },
-    2: { speed: 210, gravity: 950, flap: -390, pipeGap: 0.30, pipeRate: 3100, tokenRate: 1400, pipeStyle: "pipe",  parts: 5 },
+    0: { speed: 130, gravity: 700, flap: -310, pipeGap: 0.42, pipeRate: 3900, tokenRate: 1350, pipeStyle: "cloud", parts: 5 },
+    1: { speed: 170, gravity: 850, flap: -360, pipeGap: 0.32, pipeRate: 3300, tokenRate: 1250, pipeStyle: "pipe",  parts: 5 },
+    2: { speed: 210, gravity: 950, flap: -390, pipeGap: 0.27, pipeRate: 2900, tokenRate: 1150, pipeStyle: "pipe",  parts: 5 },
   };
 
   const KAIJU_BY_LEVEL = {
@@ -314,12 +318,52 @@
     });
   }
 
+  // Reachability budget: maximum vertical distance the player can
+  // shift over a given horizontal distance, given the level's
+  // physics. Used by both pipe smoothing (so consecutive pipes are
+  // navigable) and token placement (so tokens never appear in
+  // unreachable spots between two pipes).
+  function reachShift(distX) {
+    const tun = LEVEL_TUNING[State.level];
+    const dt = Math.abs(distX) / tun.speed;
+    // Conservative max-up: hold-flap, dampened by gravity.
+    const up = Math.abs(tun.flap) * dt * 0.7;
+    // Conservative max-down: gravity from initial flap-velocity.
+    // Starting at vy=flap (just flapped) and free-falling:
+    //   distance = flap*dt + 0.5*g*dt^2 (flap is negative, so this
+    //   eats some of the descent budget — fine, conservative).
+    // We just want an absolute bound, so:
+    const down = 0.5 * tun.gravity * dt * dt + Math.abs(tun.flap) * dt;
+    return { up, down };
+  }
+
   function spawnPipe(t) {
     const tun = LEVEL_TUNING[State.level];
     const gap = H * tun.pipeGap;
     const topMin = H * 0.10;
     const topMax = H - gap - H * 0.10;
-    const topH = topMin + Math.random() * (topMax - topMin);
+
+    // Smooth pipe placement: limit topH change between consecutive
+    // pipes to what the player can physically traverse in the
+    // horizontal time between them. Stops impossible jumps where
+    // pipe N forces y=high and pipe N+1 forces y=low without enough
+    // air time in between.
+    let topH;
+    const last = pipes[pipes.length - 1];
+    if (last) {
+      const dx = (W + 30) - last.x;
+      const shift = reachShift(dx);
+      // Use the more constraining of up/down so the player has slack
+      // either way. Also leave a small margin (40px) so it's not at
+      // the literal physical limit.
+      const budget = Math.max(0, Math.min(shift.up, shift.down) - 40);
+      const minHere = Math.max(topMin, last.topH - budget);
+      const maxHere = Math.min(topMax, last.topH + budget);
+      topH = minHere + Math.random() * Math.max(1, maxHere - minHere);
+    } else {
+      topH = topMin + Math.random() * (topMax - topMin);
+    }
+
     pipes.push({ x: W + 30, topH, gap, w: Math.max(48, W * 0.085), style: tun.pipeStyle });
   }
 
@@ -341,8 +385,63 @@
       else word = sentencePool[(Math.random() * sentencePool.length) | 0];
     }
     if (!word) return;
-    const y = 60 + Math.random() * (H - 160);
-    tokens.push({ x: W + 30, y, word: word, picked: false, scale: 0.6, scaleT: 0 });
+
+    // Token-Y placement: constrained so the token (a) never visually
+    // overlaps any pipe and (b) sits at a Y the player can physically
+    // reach without crashing into the pipes that bracket it. Pipes
+    // and tokens scroll at the same speed, so each pipe's x relative
+    // to this token is fixed for the rest of its lifetime — meaning
+    // we can compute the constraints once at spawn time.
+    const tokenX = W + 30;
+    const tokenHalfW = 30;  // approximate token width / 2
+    const playerX = W * 0.25;
+    let minY = 60;
+    let maxY = H - 100;
+    let hardOverlapPipe = null;  // pipe whose x overlaps the token's x range
+
+    pipes.forEach(p => {
+      // Pipes already past the player don't constrain (the player has
+      // already cleared them when this token arrives).
+      if (p.x + p.w < playerX) return;
+      const pipeTop = p.topH;
+      const pipeBottom = p.topH + p.gap;
+      // Horizontal-overlap test (token currently inside pipe x range).
+      // If so the token would be drawn ON the pipe — force Y into the gap.
+      if (tokenX - tokenHalfW < p.x + p.w && tokenX + tokenHalfW > p.x) {
+        hardOverlapPipe = p;
+        minY = Math.max(minY, pipeTop + 24);
+        maxY = Math.min(maxY, pipeBottom - 24);
+        return;
+      }
+      // Otherwise the player must be in this pipe's gap when crossing
+      // it. The horizontal distance from the token-grab moment to the
+      // pipe-crossing moment is |p.x - tokenX| (since both move at
+      // the same speed). In that time the player can shift Y by
+      // reachShift(distX). So the token Y must be within
+      // (pipe gap) ± reach.
+      const distX = Math.abs(p.x - tokenX);
+      const shift = reachShift(distX);
+      minY = Math.max(minY, pipeTop - shift.up);
+      maxY = Math.min(maxY, pipeBottom + shift.down);
+    });
+
+    // Sanity fallback: if constraints conflict, drop the token into
+    // the gap of the nearest forward pipe rather than skip the spawn.
+    if (minY >= maxY - 8) {
+      const nearest = hardOverlapPipe || pipes.find(p => p.x + p.w >= playerX);
+      if (nearest) {
+        const center = nearest.topH + nearest.gap * 0.5;
+        const half = Math.max(8, nearest.gap * 0.3);
+        minY = center - half;
+        maxY = center + half;
+      } else {
+        minY = H * 0.35;
+        maxY = H * 0.65;
+      }
+    }
+
+    const y = minY + Math.random() * (maxY - minY);
+    tokens.push({ x: tokenX, y, word: word, picked: false, scale: 0.6, scaleT: 0 });
   }
 
   function loop(t) {
