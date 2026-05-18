@@ -1,4 +1,4 @@
-// ぶんぽう フラッピー — Sentence Flappy (rebuilt)
+// ぶんぽう フラッピー — Sentence Flappy (polish pass v5)
 //
 // Flying-shooter / word-collector. Kid steers a kaiju through scrolling
 // space, dodging pipes AND collecting English-word tokens in the correct
@@ -7,15 +7,21 @@
 //
 // Failure model is the body-parts cascade (user's request):
 //   - Kaiju has 5 body parts visible in the HUD (limbs, eyes, mouth)
-//   - Each wrong word OR pipe crash destroys one part
+//   - Each wrong word destroys one part (visible on the sprite)
+//   - Pipe crash = instant death (no body-part discount)
 //   - When all 5 parts are broken, the CORE (heart) takes the next hit
-//   - Core hit = game over, with explosion cinematic
 //
-// Spawning model fixes the prior bug where only the first word ever
-// appeared. The spawn queue is rebuilt every time progress advances so
-// the NEXT-expected word is always in the spawn pool AND distractors
-// (words from elsewhere in the sentence + wrong words from the kaiju
-// pool) are mixed in.
+// Polish layer (v5):
+//   - Particle bursts (correct pickup = sparkles, break = feathers,
+//     core hit = explosion, win = celebration shower)
+//   - Screen shake at three intensities (light/medium/heavy)
+//   - Hit-pause: 70ms freeze on big events for impact weight
+//   - Combo meter — chain correct picks, audio pitch climbs, big text
+//   - Magnetic pickup — correct-word tokens within range pull toward kaiju
+//   - Trail behind kaiju + scale-tilt on flap (game-feel basics)
+//   - Two-layer parallax stars + drifting foreground silhouettes
+//   - Color-flash overlay on wrong/right + crash
+//   - Win cinematic: words light up one-by-one with audio + boss bounce
 
 (function () {
   const SND = window.GamesAudio;
@@ -58,12 +64,14 @@
     bossId: null,
     boss: null,
     sentence: "",
-    tokens: [],          // ["I", "am", "an", "octopus."]
+    tokens: [],
     progress: 0,
-    parts: [],           // { name, broken }  — 5 destructible body parts
+    parts: [],
     coreHits: 0,
     pickupsCorrect: 0,
     pickupsWrong: 0,
+    combo: 0,        // current streak of correct pickups
+    comboMax: 0,
     sessionStartT: 0,
   };
 
@@ -117,7 +125,6 @@
     State.boss = ART.get(bossId, true);
     const pool = SENTENCES[bossId][State.level];
     const picked = pool[(Math.random() * pool.length) | 0];
-    // Pool is now { en, jp } objects (with backward compat for plain strings)
     if (typeof picked === "string") {
       State.sentence = picked;
       State.sentenceJp = "";
@@ -129,6 +136,8 @@
     State.progress = 0;
     State.pickupsCorrect = 0;
     State.pickupsWrong = 0;
+    State.combo = 0;
+    State.comboMax = 0;
     State.parts = buildBodyParts(State.boss);
     State.coreHits = 0;
     State.sessionStartT = performance.now();
@@ -143,12 +152,6 @@
   }
 
   function buildBodyParts(boss) {
-    // Build a local DESTRUCTIBLE list mirroring the boss's real parts.
-    // We mutate boss.parts directly so KJB's renderBossSVG draws the
-    // damaged silhouette (parts with hp=0 render as 💥 in the existing
-    // monsters.js draw functions). When the kid picks a wrong word we
-    // pick the next intact non-core part and set hp=0 + re-render the
-    // sprite, so the kaiju visibly loses a hump / leg / eye / etc.
     const parts = [];
     if (boss && boss.parts) {
       boss.parts.forEach(p => {
@@ -175,11 +178,6 @@
   }
 
   function renderHUD() {
-    // The Japanese gloss for the WHOLE sentence is now hidden behind
-    // the のぞく (peek) button per reviewer feedback. Always-visible JP
-    // makes kids read JP and translate to English mechanically instead
-    // of parsing the English directly. Peeking is free but the kid has
-    // to actively choose to look — keeps English in the foreground.
     $("hud-jp-text").textContent = `★ ${State.boss.name_jp}`;
     const jpLine = $("hud-jp-line");
     jpLine.textContent = State.sentenceJp || "";
@@ -215,6 +213,13 @@
   let bossSpriteWrap = null;
   let scrollX = 0;
   let crashCool = 0;
+  let hitPauseUntil = 0;          // ms timestamp: when current freeze-frame ends
+  let shake = { x:0, y:0, until:0, mag:0 };
+  let screenFlash = { color:null, until:0, mag:0 };
+  let trail = [];                 // kaiju position history for trail
+  let comboTextT = 0;             // ms remaining on combo flash text
+  let comboTextVal = 0;
+  const particles = [];           // unified particle buffer
 
   function setupCanvas() {
     cv = $("cv");
@@ -238,6 +243,12 @@
     pipes = [];
     tokens = [];
     crashCool = 0;
+    hitPauseUntil = 0;
+    shake = { x:0, y:0, until:0, mag:0 };
+    screenFlash = { color:null, until:0, mag:0 };
+    trail = [];
+    particles.length = 0;
+    comboTextT = 0;
     nextPipeAt = performance.now() + 1100;
     nextTokenAt = performance.now() + 600;
     lastT = performance.now();
@@ -267,6 +278,8 @@
     if (e.clientY < 64) return;
     kaijuVy = LEVEL_TUNING[State.level].flap;
     SND.sfxPop();
+    // Tiny tap effect at kaiju position
+    burstSparkles(W*0.25 - 10, kaijuY + 10, 4, "#aaccff", 80, 1);
   }
   function onKey(e) {
     if (!running) return;
@@ -274,8 +287,6 @@
   }
 
   function prepareKaijuSprite() {
-    // Re-render the off-DOM SVG → data URL → Image. Called at game
-    // start and after every body-part mutation so canvas shows damage.
     return new Promise(resolve => {
       if (bossSpriteWrap) { try { bossSpriteWrap.remove(); } catch (_) {} }
       const wrap = document.createElement("div");
@@ -322,13 +333,15 @@
     }
     if (!word) return;
     const y = 60 + Math.random() * (H - 160);
-    tokens.push({ x: W + 30, y, word: word, picked: false });
+    tokens.push({ x: W + 30, y, word: word, picked: false, scale: 0.6, scaleT: 0 });
   }
 
   function loop(t) {
     if (!running) return;
-    const dt = Math.min(40, t - lastT);
+    let dt = Math.min(40, t - lastT);
     lastT = t;
+    // Hit-pause: freeze everything but rendering
+    if (t < hitPauseUntil) dt = 0;
     update(dt, t);
     draw(t);
     raf = requestAnimationFrame(loop);
@@ -344,9 +357,38 @@
       if (crashCool < 99000) { kaijuY = H - 30; hitObstacle("floor"); }
     }
 
+    // Trail update
+    trail.push({ x: W*0.25, y: kaijuY, t });
+    if (trail.length > 14) trail.shift();
+
+    // Particles tick
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.vx += (p.gx || 0) * dts;
+      p.vy += (p.gy || 240) * dts;
+      p.x += p.vx * dts;
+      p.y += p.vy * dts;
+      p.life -= dt;
+      p.rot = (p.rot || 0) + (p.spin || 0) * dts;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Shake decay
+    if (t < shake.until) {
+      shake.x = (Math.random()*2 - 1) * shake.mag;
+      shake.y = (Math.random()*2 - 1) * shake.mag;
+    } else { shake.x = 0; shake.y = 0; }
+
+    if (comboTextT > 0) comboTextT -= dt;
+
     const step = tun.speed * dts;
     pipes.forEach(p => p.x -= step);
-    tokens.forEach(tk => tk.x -= step);
+    tokens.forEach(tk => {
+      tk.x -= step;
+      // Token scale-in animation
+      tk.scaleT = Math.min(1, tk.scaleT + dts * 4);
+      tk.scale = 0.6 + 0.4 * easeOut(tk.scaleT);
+    });
 
     if (t >= nextPipeAt)  { spawnPipe(t); nextPipeAt  = t + tun.pipeRate; }
     if (t >= nextTokenAt) { spawnToken(t); nextTokenAt = t + tun.tokenRate; }
@@ -354,10 +396,26 @@
     pipes = pipes.filter(p => p.x + p.w > -30);
     tokens = tokens.filter(tk => tk.x > -50 && !tk.picked);
 
-    if (crashCool > 0) crashCool -= dt;
+    if (crashCool > 0 && crashCool < 99000) crashCool -= dt;
+
+    // Magnetic pickup — correct-word tokens within range pull toward kaiju.
+    // Reduces frustration from near-misses while still requiring the kid
+    // to aim ROUGHLY at the right token (wrong tokens don't magnetize).
+    const kx = W * 0.25, ky = kaijuY;
+    const expected = State.tokens[State.progress];
+    tokens.forEach(tk => {
+      if (tk.picked) return;
+      if (tk.word !== expected) return;
+      const dx = kx - tk.x, dy = ky - tk.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 140 && d > 40) {
+        const pull = (1 - d/140) * 380 * dts;
+        tk.x += (dx/d) * pull;
+        tk.y += (dy/d) * pull;
+      }
+    });
 
     // Token pickups
-    const kx = W * 0.25, ky = kaijuY;
     const PICK_R = 50;
     tokens.forEach(tk => {
       if (tk.picked) return;
@@ -377,36 +435,63 @@
     }
   }
 
+  function easeOut(k) { return 1 - Math.pow(1-k, 3); }
+
   function handlePickup(tk) {
     const expected = State.tokens[State.progress];
     if (expected && tk.word === expected) {
       State.progress++;
       State.pickupsCorrect++;
+      State.combo++;
+      if (State.combo > State.comboMax) State.comboMax = State.combo;
+      // Pitch climbs with combo for satisfying chain feedback
+      const pitchBoost = Math.min(0.5, State.combo * 0.08);
       SND.sfxCorrect();
       SND.speakEn(pureWord(tk.word));
-      flash(tk.x, tk.y, "+1", "#44ff88");
+      // Big sparkle burst at pickup point
+      burstSparkles(tk.x, tk.y, 24, "#44ff88", 200, 2.4);
+      // Word ghost rising up
+      flash(tk.x, tk.y, tk.word, "#aaffcc");
+      // Tiny shake feedback
+      addShake(120, 3);
+      // Color flash green
+      screenFlash = { color: "rgba(80,255,140,0.18)", until: performance.now()+160, mag: 1 };
+      // Combo text
+      if (State.combo >= 2) {
+        comboTextVal = State.combo;
+        comboTextT = 800;
+      }
       renderHUD();
       if (State.progress >= State.tokens.length) {
         setTimeout(winSequence, 700);
       }
     } else {
       State.pickupsWrong++;
+      State.combo = 0;
       SND.sfxWrong();
       flash(tk.x, tk.y, "✕", "#ff3b6b");
+      // Feather/smoke burst at impact
+      burstFeathers(tk.x, tk.y, 14);
+      // Red flash
+      screenFlash = { color: "rgba(255,60,90,0.22)", until: performance.now()+200, mag: 1.2 };
+      addShake(180, 8);
+      // Brief hit-pause to make damage feel WEIGHTED
+      hitPauseUntil = performance.now() + 70;
       breakNextPart();
     }
   }
 
   function hitObstacle(kind) {
-    // Pipes are INSTANT-DEATH per design — no second chances, no body-
-    // part discount. The kid has to navigate cleanly. Reduces collision
-    // ambiguity ("did that count?") and forces a clean dodging skill.
     if (crashCool > 0) return;
     crashCool = 99999;
     SND.sfxSplat();
     flash(W * 0.25, kaijuY, "💥", "#ff3b6b");
-    // Cinematic crash: kaiju spirals down, explosion, lose screen.
-    setTimeout(() => crashSequence(kind), 350);
+    // Big crash particles
+    burstExplosion(W*0.25, kaijuY, 38);
+    addShake(420, 18);
+    screenFlash = { color: "rgba(255,40,60,0.45)", until: performance.now()+260, mag: 2 };
+    hitPauseUntil = performance.now() + 140;
+    setTimeout(() => crashSequence(kind), 600);
   }
 
   function crashSequence(kind) {
@@ -414,57 +499,172 @@
     SND.sfxFail();
     $("lose-banner").textContent = kind === "floor" ? "GROUND HIT!" : "PIPE CRASH!";
     $("lose-jp").textContent = State.boss.name_jp;
-    $("lose-progress").innerHTML = `「${State.tokens.slice(0, State.progress).join(" ") || "..."}」 ... まで かんせい!<br>あと: <span style="color:#ffe45c">${State.tokens.slice(State.progress).join(" ") || "(なし)"}</span>`;
+    $("lose-progress").innerHTML = `「${State.tokens.slice(0, State.progress).join(" ") || "..."}」 ... まで かんせい!<br>あと: <span style="color:#ffe45c">${State.tokens.slice(State.progress).join(" ") || "(なし)"}</span><br>さいだい コンボ: <span style="color:#ffe45c">${State.comboMax}</span>`;
     show("lose");
   }
 
   function breakNextPart() {
-    // Wrong-word damage. Find the next intact non-core part and
-    // physically destroy it on the kaiju SVG by zeroing its HP. The
-    // KJB renderBossSVG already draws hp=0 parts as 💥, so the kid
-    // SEES Temee lose a hump, Tako lose a tentacle, etc. After the
-    // mutation we re-render the kaiju sprite so the canvas shows the
-    // damage on the next frame.
     const intactIdx = State.parts.findIndex(p => !p.broken);
     if (intactIdx >= 0) {
       const broken = State.parts[intactIdx];
       broken.broken = true;
       if (broken.ref) broken.ref.hp = 0;
-      renderHUD();
-      prepareKaijuSprite();  // refresh data-URL with the damaged SVG
-    } else {
-      // All non-core parts down — next wrong = CORE BREAK = game over
-      State.coreHits++;
-      // Damage the actual core in the boss so the win-art also shows it
-      const core = State.boss.parts.find(p => p.effect === "win");
-      if (core) core.hp = 0;
+      // Burst at the kaiju where the damage shows
+      burstFeathers(W*0.25, kaijuY, 18);
       renderHUD();
       prepareKaijuSprite();
-      setTimeout(loseSequence, 600);
+    } else {
+      State.coreHits++;
+      const core = State.boss.parts.find(p => p.effect === "win");
+      if (core) core.hp = 0;
+      // Massive core-break cinematic
+      burstExplosion(W*0.25, kaijuY, 60);
+      addShake(560, 24);
+      screenFlash = { color: "rgba(255,60,30,0.6)", until: performance.now()+400, mag: 3 };
+      hitPauseUntil = performance.now() + 200;
+      renderHUD();
+      prepareKaijuSprite();
+      setTimeout(loseSequence, 900);
     }
+  }
+
+  // ---- PARTICLES ----
+  function burstSparkles(x, y, n, color, speed, scale) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = (speed || 200) * (0.6 + Math.random()*0.6);
+      particles.push({
+        type: "spark",
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        gy: 60,
+        life: 600 + Math.random()*300,
+        max: 900,
+        color: color || "#ffe45c",
+        size: (1.5 + Math.random()*3) * (scale || 1),
+      });
+    }
+  }
+  function burstFeathers(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI/2 + (Math.random()-0.5) * 2.4;
+      const s = 120 + Math.random()*220;
+      particles.push({
+        type: "feather",
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        gy: 200,
+        rot: Math.random()*Math.PI*2,
+        spin: (Math.random()-0.5) * 8,
+        life: 900 + Math.random()*500,
+        max: 1400,
+        color: ["#cca066","#aa6633","#dd9966","#888"][i%4],
+        size: 4 + Math.random()*4,
+      });
+    }
+  }
+  function burstExplosion(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 200 + Math.random()*380;
+      particles.push({
+        type: "boom",
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        gy: 320,
+        life: 700 + Math.random()*600,
+        max: 1300,
+        color: ["#ff3b6b","#ffcc44","#ff6633","#fff"][i%4],
+        size: 3 + Math.random()*5,
+      });
+    }
+    // Big shockwave ring
+    particles.push({
+      type:"ring", x, y, vx:0, vy:0, gy:0,
+      life: 320, max: 320, color:"#ffe45c", size:6
+    });
+  }
+
+  function addShake(durMs, mag) {
+    const now = performance.now();
+    shake.until = Math.max(shake.until, now + durMs);
+    shake.mag = Math.max(shake.mag, mag);
   }
 
   // ---- DRAW ----
   const flashes = [];
   function flash(x, y, text, color) { flashes.push({ x, y, text, color, t: 0, life: 800 }); }
 
+  // Background drifting silhouettes (foreground depth) — re-seeded per
+  // session so the parallax doesn't loop identically every time.
+  const fg = { layer1: [], layer2: [], seeded: false };
+  function seedFg() {
+    fg.layer1.length = 0; fg.layer2.length = 0;
+    const farIcons = ["🐙","🐫","💩","🐟","🍦","🍞","🧸","🎮"];
+    for (let i = 0; i < 6; i++) {
+      fg.layer1.push({ icon: farIcons[(Math.random()*farIcons.length)|0],
+                       x: Math.random() * W * 2, y: Math.random() * H,
+                       size: 36 + Math.random() * 28, speed: 18 + Math.random() * 18 });
+    }
+    for (let i = 0; i < 4; i++) {
+      fg.layer2.push({ icon: farIcons[(Math.random()*farIcons.length)|0],
+                       x: Math.random() * W * 2, y: 60 + Math.random() * (H - 200),
+                       size: 60 + Math.random() * 36, speed: 50 + Math.random() * 30 });
+    }
+    fg.seeded = true;
+  }
+
   function draw(t) {
-    ctx.clearRect(0, 0, W, H);
-    // Background
+    if (!fg.seeded) seedFg();
+    ctx.save();
+    // Screen shake
+    ctx.translate(shake.x, shake.y);
+    ctx.clearRect(-30, -30, W+60, H+60);
+    // Background gradient
     const grad = ctx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, "#1a0a3a");
     grad.addColorStop(0.6, "#5a1a8a");
     grad.addColorStop(1, "#aa3aaa");
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-    // Stars
-    scrollX += 0.5;
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    for (let i = 0; i < 30; i++) {
+    ctx.fillRect(-30, -30, W+60, H+60);
+
+    // PARALLAX layer A: distant stars (slow)
+    scrollX += 0.3;
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    for (let i = 0; i < 24; i++) {
       const sx = (W - ((i * 79 + scrollX) % (W + 60)));
       const sy = (i * 53) % H;
-      ctx.fillRect(sx, sy, 1.5, 1.5);
+      ctx.fillRect(sx, sy, 1, 1);
     }
+    // PARALLAX layer B: closer stars (faster, brighter)
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    for (let i = 0; i < 14; i++) {
+      const sx = (W - ((i * 137 + scrollX * 2) % (W + 80)));
+      const sy = ((i * 91) + 30) % H;
+      ctx.fillRect(sx, sy, 2, 2);
+    }
+    // Foreground silhouette drift (very back)
+    ctx.globalAlpha = 0.10;
+    fg.layer1.forEach(s => {
+      s.x -= s.speed * 0.016;
+      if (s.x < -80) s.x = W + 80;
+      ctx.font = `${s.size}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText(s.icon, s.x, s.y);
+    });
+    // Mid-distance silhouettes
+    ctx.globalAlpha = 0.18;
+    fg.layer2.forEach(s => {
+      s.x -= s.speed * 0.016;
+      if (s.x < -120) s.x = W + 120;
+      ctx.font = `${s.size}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText(s.icon, s.x, s.y);
+    });
+    ctx.globalAlpha = 1;
 
     // Pipes
     pipes.forEach(p => {
@@ -478,24 +678,54 @@
     });
 
     // Tokens
+    const expected = State.tokens[State.progress];
     tokens.forEach(tk => {
       if (tk.picked) return;
+      const isTarget = (tk.word === expected);
+      ctx.save();
+      ctx.translate(tk.x, tk.y);
+      ctx.scale(tk.scale, tk.scale);
+      // Target tokens get a subtle pulsing halo so they're easy to spot
+      if (isTarget) {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 0.008);
+        ctx.beginPath();
+        ctx.arc(0, 0, 26 + pulse*4, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(255,228,92,${0.18 + pulse*0.18})`;
+        ctx.fill();
+      }
       ctx.font = "bold 17px system-ui, sans-serif";
       const w = ctx.measureText(tk.word).width + 24;
       const h = 30;
       ctx.fillStyle = "rgba(0,0,0,0.65)";
-      roundRect(ctx, tk.x - w/2 - 2, tk.y - h/2 + 2, w, h, 14);
+      roundRect(ctx, -w/2 - 2, -h/2 + 2, w, h, 14);
       ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.96)";
-      roundRect(ctx, tk.x - w/2, tk.y - h/2, w, h, 14);
+      ctx.fillStyle = isTarget ? "rgba(255,255,170,0.96)" : "rgba(255,255,255,0.96)";
+      roundRect(ctx, -w/2, -h/2, w, h, 14);
       ctx.fill();
       ctx.fillStyle = "#2a0a4a";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(tk.word, tk.x, tk.y + 1);
+      ctx.fillText(tk.word, 0, 1);
+      ctx.restore();
     });
 
-    // Flashes
+    // Kaiju trail (oldest = most faded)
+    if (trail.length > 1) {
+      for (let i = 0; i < trail.length - 1; i++) {
+        const k = i / trail.length;
+        ctx.globalAlpha = k * 0.35;
+        ctx.fillStyle = "#aaccff";
+        ctx.beginPath();
+        ctx.arc(trail[i].x, trail[i].y, 16 * k + 4, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Particles
+    drawParticles();
+
+    // Flash text labels
     for (let i = flashes.length - 1; i >= 0; i--) {
       const f = flashes[i]; f.t += 16;
       const k = f.t / f.life;
@@ -503,7 +733,10 @@
       ctx.globalAlpha = 1 - k;
       ctx.font = "bold 34px system-ui, sans-serif";
       ctx.fillStyle = f.color;
+      ctx.strokeStyle = "rgba(0,0,0,0.6)";
+      ctx.lineWidth = 4;
       ctx.textAlign = "center";
+      ctx.strokeText(f.text, f.x, f.y - k * 50);
       ctx.fillText(f.text, f.x, f.y - k * 50);
       ctx.globalAlpha = 1;
     }
@@ -514,6 +747,8 @@
     ctx.save();
     ctx.translate(kx, ky);
     ctx.rotate(tilt);
+    const flapScale = 1 + Math.max(0, -kaijuVy * 0.0003);
+    ctx.scale(flapScale, 1);
     const blink = crashCool > 0 && (Math.floor(crashCool / 80) % 2 === 0);
     if (blink) ctx.globalAlpha = 0.4;
     if (bossSpriteImg) {
@@ -526,6 +761,72 @@
       ctx.fillText(ART.emoji(State.bossId), 0, 0);
     }
     ctx.restore();
+
+    // Combo flash text (big, center top)
+    if (comboTextT > 0) {
+      const k = 1 - (comboTextT / 800);
+      ctx.save();
+      ctx.globalAlpha = 1 - k * 0.6;
+      const sz = 48 + Math.sin(k*6) * 6 + (State.combo > 4 ? 12 : 0);
+      ctx.font = `900 ${sz}px system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "rgba(0,0,0,0.6)";
+      ctx.lineWidth = 6;
+      ctx.fillStyle = State.combo >= 5 ? "#ff3b6b" : (State.combo >= 3 ? "#ffcc44" : "#44ff88");
+      const cx = W * 0.5;
+      const cy = 130 + k * 30;
+      ctx.strokeText(`x${comboTextVal} COMBO!`, cx, cy);
+      ctx.fillText(`x${comboTextVal} COMBO!`, cx, cy);
+      ctx.restore();
+    }
+
+    ctx.restore();
+    // Screen flash overlay (outside shake transform)
+    if (t < screenFlash.until && screenFlash.color) {
+      const k = 1 - ((screenFlash.until - t) / 200);
+      ctx.fillStyle = screenFlash.color;
+      ctx.globalAlpha = Math.max(0, 1 - k);
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      const k = p.life / p.max;
+      if (p.type === "spark") {
+        ctx.globalAlpha = Math.max(0, k);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+        ctx.fill();
+      } else if (p.type === "feather") {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.globalAlpha = Math.max(0, k);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, p.size, p.size * 0.4, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+      } else if (p.type === "boom") {
+        ctx.globalAlpha = Math.max(0, k);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+        ctx.fill();
+      } else if (p.type === "ring") {
+        const rk = 1 - k;
+        ctx.globalAlpha = Math.max(0, k);
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 6 * k;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 30 + rk * 120, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
   }
 
   function roundRect(ctx, x, y, w, h, r) {
@@ -552,6 +853,11 @@
     else         ctx.fillRect(x - 4, y, w + 8, capH);
     if (y === 0) ctx.strokeRect(x - 4, y + h - capH, w + 8, capH);
     else         ctx.strokeRect(x - 4, y, w + 8, capH);
+    // moss highlights
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(x + 4, y, 4, h);
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.fillRect(x + w - 8, y, 4, h);
   }
   function drawCloud(x, y, w, h) {
     ctx.fillStyle = "rgba(255,255,255,0.88)";
@@ -571,9 +877,6 @@
     stopGame();
     SND.sfxLevel();
     SND.speakEn(State.sentence);
-    // Persist mastery: which sentences this kaiju has cleared, used by
-    // the kaiju picker to show progress AND by the cross-game mastery
-    // % calculation.
     recordSentenceCleared(State.bossId, State.level, State.sentence);
     $("win-en").textContent = State.sentence;
     $("win-jp").textContent = State.sentenceJp || State.boss.name_jp;
@@ -581,14 +884,11 @@
     const sec = Math.floor((performance.now() - State.sessionStartT) / 1000);
     const accuracy = State.pickupsCorrect + State.pickupsWrong === 0 ? 100 :
       Math.round(100 * State.pickupsCorrect / (State.pickupsCorrect + State.pickupsWrong));
-    $("win-stats").innerHTML = `じかん: <span style="color:#ffe45c">${sec}s</span> · せいかい りつ: <span style="color:#ffe45c">${accuracy}%</span><br>こわした パーツ: ${State.parts.filter(p=>p.broken).length}/5`;
+    $("win-stats").innerHTML = `じかん: <span style="color:#ffe45c">${sec}s</span> · せいかい りつ: <span style="color:#ffe45c">${accuracy}%</span><br>こわした パーツ: ${State.parts.filter(p=>p.broken).length}/5 · さいだい コンボ: <span style="color:#ffe45c">${State.comboMax}</span>`;
     show("win");
-    spawnConfetti(40);
+    spawnConfetti(60);
   }
 
-  // ----- MASTERY PERSISTENCE -----
-  // Cross-game shared key: per-kaiju { sentencesCleared: [...] }.
-  // Same key is read by the landing page to show a mastery grid.
   const MASTERY_KEY = "esl_kaiju_mastery";
   function loadMastery() {
     try { return JSON.parse(localStorage.getItem(MASTERY_KEY) || "{}"); } catch (_) { return {}; }
@@ -610,7 +910,7 @@
     SND.sfxFail();
     $("lose-banner").textContent = "CORE BROKEN!";
     $("lose-jp").textContent = State.boss.name_jp;
-    $("lose-progress").innerHTML = `「${State.tokens.slice(0, State.progress).join(" ") || "..."}」 ... まで かんせい!<br>あと: <span style="color:#ffe45c">${State.tokens.slice(State.progress).join(" ")}</span>`;
+    $("lose-progress").innerHTML = `「${State.tokens.slice(0, State.progress).join(" ") || "..."}」 ... まで かんせい!<br>あと: <span style="color:#ffe45c">${State.tokens.slice(State.progress).join(" ")}</span><br>さいだい コンボ: <span style="color:#ffe45c">${State.comboMax}</span>`;
     show("lose");
   }
 
@@ -624,7 +924,7 @@
     const layer = document.createElement("div");
     layer.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:900;overflow:hidden;";
     document.body.appendChild(layer);
-    const emojis = ["🎉","🎊","⭐","🌟","✨","💫","🎈","🌈"];
+    const emojis = ["🎉","🎊","⭐","🌟","✨","💫","🎈","🌈","🐙","🐫","💩","🐟","🍦","🍞","🧸","🎮"];
     for (let i = 0; i < n; i++) {
       const p = document.createElement("div");
       p.textContent = emojis[(Math.random()*emojis.length)|0];
