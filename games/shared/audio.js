@@ -106,6 +106,43 @@ window.GamesAudio = (() => {
     browserTTS(text, { rate: prof.rate, pitch: prof.pitch });
   }
 
+  // Play a pre-rendered English line in the SPECIFIC KAIJU'S VOICE.
+  // Path: ../../assets/audio/en/<bossId>/<djb2-hash>.opus. Used by
+  // sentence-flappy for the prep-screen and win-screen sentence
+  // playback so the kaiju "tells" the kid the sentence in their own
+  // voice (Andrew for Tako, Christopher for Unko, etc. — same as
+  // story-quest's per-kaiju voices). Single-word collection feedback
+  // keeps using speakEn() with the generic kid voice so the kid
+  // hears a clean pronunciation for the word they just grabbed.
+  function playKaijuEn(bossId, text, opts) {
+    if (muted) return null;
+    if (!bossId) return speakEn(text, opts);
+    const cleaned = cleanForHash(text);
+    if (!cleaned) return null;
+    // On Opus-unsupported devices fall back to browser TTS using
+    // the kaiju's rate/pitch profile — same gesture-preserving
+    // synchronous path as speakEn().
+    if (!supportsOpus()) {
+      const prof = KAIJU_TTS[bossId] || { rate: 1.0, pitch: 1.0 };
+      browserTTS(cleaned, { rate: prof.rate, pitch: prof.pitch,
+                            volume: (opts && opts.volume != null) ? opts.volume : 0.95 });
+      return null;
+    }
+    const hash = djb2(cleaned);
+    const url = `../../assets/audio/en/${encodeURIComponent(bossId)}/${hash}.opus`;
+    let a;
+    try { a = new Audio(url); } catch (_) { return null; }
+    a.preload = "auto";
+    a.volume = (opts && opts.volume != null) ? opts.volume : 0.95;
+    const p = a.play();
+    if (p && p.catch) {
+      // If the per-kaiju render is missing, fall back to the generic
+      // pack first (speakEn will handle Opus support + TTS chain).
+      p.catch(() => speakEn(cleaned, opts));
+    }
+    return a;
+  }
+
   // Browser SpeechSynthesis fallback. Auto-picks an en-US voice if one
   // is available; otherwise default voice.
   function browserTTS(text, opts) {
@@ -189,7 +226,7 @@ window.GamesAudio = (() => {
   function isMuted()   { return muted; }
 
   return {
-    speakEn, speakAsKaiju, browserTTS, playBossLine,
+    speakEn, playKaijuEn, speakAsKaiju, browserTTS, playBossLine,
     sfxCorrect, sfxWrong, sfxPop, sfxConfirm, sfxLevel, sfxFail, sfxSplat, sfxSparkle,
     setMuted, isMuted,
     djb2, cleanForHash,

@@ -327,7 +327,7 @@
   // to pick a different kaiju (or have a different sentence rolled).
   $("prep-go").addEventListener("click", () => { SND.sfxConfirm(); startGameplay(); });
   $("prep-back").addEventListener("click", () => { SND.sfxPop(); buildPickGrid(); show("pick"); });
-  $("prep-replay-en").addEventListener("click", () => { SND.sfxPop(); SND.speakEn(State.sentence); });
+  $("prep-replay-en").addEventListener("click", () => { SND.sfxPop(); SND.playKaijuEn(State.bossId, State.sentence); });
 
   function buildPickGrid() {
     const grid = $("pick-grid"); grid.innerHTML = "";
@@ -447,13 +447,10 @@
         hint.textContent = `えいご に ${totalBlanks} ご ぬけています。 にほんご を ヒント に かんがえよう。 じゅんびできたら スタート！`;
       }
     }
-    // Speak the full English sentence on prep, so kids hear it once
-    // before being asked to identify pieces of it. We call this
-    // SYNCHRONOUSLY (no setTimeout) because mobile browsers only let
-    // audio play within a user-gesture token, and the click on the
-    // profile-go button is what got us here. Previous 350ms timeout
-    // silently dropped the audio on iOS / mobile Safari.
-    try { SND.speakEn(State.sentence); } catch (_) {}
+    // Speak the full English sentence on prep in the kaiju's voice.
+    // Synchronous so the mobile gesture window survives. Falls back
+    // to the generic kid pack and then to TTS if missing.
+    try { SND.playKaijuEn(State.bossId, State.sentence); } catch (_) {}
   }
 
   // The actual gameplay entry — called when the kid taps the START
@@ -901,7 +898,10 @@
       // Pitch climbs with combo for satisfying chain feedback
       const pitchBoost = Math.min(0.5, State.combo * 0.08);
       SND.sfxCorrect();
-      SND.speakEn(pureWord(tk.word));
+      // Collected words speak in the active kaiju's voice — same
+      // voice the kid hears for the prep-screen sentence. No more
+      // fallback to the generic KJB AnaNeural pack mid-round.
+      SND.playKaijuEn(State.bossId, pureWord(tk.word));
       // Big sparkle burst at pickup point
       burstSparkles(tk.x, tk.y, 24, "#44ff88", 200, 2.4);
       // Word ghost rising up
@@ -920,7 +920,15 @@
       //  the wrong-word reaction lines, making them hard to hear.)
       renderHUD();
       if (State.progress >= State.tokens.length) {
-        setTimeout(winSequence, 700);
+        // Cut to the win screen instantly — previous 700ms gap let
+        // the kaiju drift into a pipe AFTER the kid had won, with
+        // collisions still live in the loop. stopGame() halts the
+        // raf+input pipeline before any further frame can fire a
+        // hitObstacle. We still hold the visual for a brief beat so
+        // the final-word sparkle reads.
+        stopGame();
+        crashCool = 99999;  // belt-and-suspenders against in-flight collisions
+        setTimeout(winSequence, 350);
       }
     } else {
       State.pickupsWrong++;
@@ -948,13 +956,17 @@
     if (crashCool > 0) return;
     crashCool = 99999;
     SND.sfxSplat();
-    flash(W * 0.25, kaijuY, "💥", "#ff3b6b");
-    // Big crash particles
-    burstExplosion(W*0.25, kaijuY, 38);
-    addShake(420, 18);
-    screenFlash = { color: "rgba(255,40,60,0.45)", until: performance.now()+260, mag: 2 };
-    hitPauseUntil = performance.now() + 140;
-    setTimeout(() => crashSequence(kind), 600);
+    // Beefier death cinematic: bigger blast, three rings of debris,
+    // longer shake, longer red flash. The kid SEES the kaiju explode
+    // for a beat before the lose screen.
+    flash(W * 0.25, kaijuY, "💥 BOOM!", "#ff3b6b");
+    burstExplosion(W*0.25, kaijuY, 80);
+    setTimeout(() => burstExplosion(W*0.25, kaijuY, 60), 110);
+    setTimeout(() => burstExplosion(W*0.25, kaijuY, 40), 230);
+    addShake(680, 26);
+    screenFlash = { color: "rgba(255,40,60,0.55)", until: performance.now()+420, mag: 2.5 };
+    hitPauseUntil = performance.now() + 220;
+    setTimeout(() => crashSequence(kind), 950);
   }
 
   function crashSequence(kind) {
@@ -975,22 +987,29 @@
       const broken = State.parts[intactIdx];
       broken.broken = true;
       if (broken.ref) broken.ref.hp = 0;
-      // Burst at the kaiju where the damage shows
-      burstFeathers(W*0.25, kaijuY, 18);
+      // Body-part destruction — feathers/debris PLUS a small explosion
+      // so each part loss actually feels like something blew off.
+      burstFeathers(W*0.25, kaijuY, 22);
+      burstExplosion(W*0.25, kaijuY, 28);
+      addShake(220, 12);
+      flash(W*0.25 - 30, kaijuY - 40, "💥", "#ff9533");
       renderHUD();
       prepareKaijuSprite();
     } else {
       State.coreHits++;
       const core = State.boss.parts.find(p => p.effect === "win");
       if (core) core.hp = 0;
-      // Massive core-break cinematic
-      burstExplosion(W*0.25, kaijuY, 60);
-      addShake(560, 24);
-      screenFlash = { color: "rgba(255,60,30,0.6)", until: performance.now()+400, mag: 3 };
-      hitPauseUntil = performance.now() + 200;
+      // CORE BROKEN — full-screen explosion cinematic, multi-burst.
+      flash(W*0.25, kaijuY, "💥 BOOM!", "#ff3b6b");
+      burstExplosion(W*0.25, kaijuY, 100);
+      setTimeout(() => burstExplosion(W*0.25, kaijuY, 80), 140);
+      setTimeout(() => burstExplosion(W*0.25, kaijuY, 60), 280);
+      addShake(820, 30);
+      screenFlash = { color: "rgba(255,60,30,0.65)", until: performance.now()+500, mag: 3.2 };
+      hitPauseUntil = performance.now() + 260;
       renderHUD();
       prepareKaijuSprite();
-      setTimeout(loseSequence, 900);
+      setTimeout(loseSequence, 1200);
     }
   }
 
@@ -1621,7 +1640,7 @@
     // version since each kaiju has both.
     playKaijuLine("desperate", 0);
     setTimeout(() => playTheme(State.bossId), 1400);
-    SND.speakEn(State.sentence);
+    SND.playKaijuEn(State.bossId, State.sentence);
     recordSentenceCleared(State.bossId, State.level, State.sentence);
     // Animated word-by-word reveal of the cleared sentence.
     const winEn = $("win-en"); winEn.innerHTML = "";
