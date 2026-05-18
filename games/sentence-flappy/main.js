@@ -123,6 +123,15 @@
     SND.sfxLevel();
     State.bossId = bossId;
     State.boss = ART.get(bossId, true);
+    // ~1-in-7 chance the kaiju spawns shiny — uses KJB's existing
+    // shiny art (Mongolian hat for Temee, etc). Rare visual variety
+    // that rewards repeat play. The kaiju's shiny voice lines aren't
+    // hooked here since flappy uses generic en-US speakers — visual
+    // only.
+    State.isShiny = Math.random() < 0.14;
+    if (State.isShiny && window.Monsters && Monsters.applyShiny) {
+      try { Monsters.applyShiny(State.boss); } catch (_) { State.isShiny = false; }
+    }
     const pool = SENTENCES[bossId][State.level];
     const picked = pool[(Math.random() * pool.length) | 0];
     if (typeof picked === "string") {
@@ -930,7 +939,15 @@
       Math.round(100 * State.pickupsCorrect / (State.pickupsCorrect + State.pickupsWrong));
     $("win-stats").innerHTML = `じかん: <span style="color:#ffe45c">${sec}s</span> · せいかい りつ: <span style="color:#ffe45c">${accuracy}%</span><br>こわした パーツ: ${State.parts.filter(p=>p.broken).length}/5 · さいだい コンボ: <span style="color:#ffe45c">${State.comboMax}</span>`;
     show("win");
-    spawnConfetti(60);
+    spawnConfetti(State.isShiny ? 100 : 60);
+    if (State.isShiny) {
+      // Surprise banner on shiny win
+      const sh = document.createElement("div");
+      sh.textContent = "★ SHINY ★";
+      sh.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);font-size:36px;font-weight:900;background:linear-gradient(90deg,#ff3b6b,#ffcc44,#44eeff,#aa66ff,#ff3b6b);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:6px;animation:shimmer 1.8s linear infinite;z-index:1000;pointer-events:none;";
+      document.body.appendChild(sh);
+      setTimeout(() => { try { sh.remove(); } catch (_) {} }, 3200);
+    }
   }
 
   const MASTERY_KEY = "esl_kaiju_mastery";
