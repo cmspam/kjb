@@ -1087,7 +1087,7 @@ window.STORY = {
   temee: {
     name: "ティメー サルマクチン",
     nameEn: "Temee Sarmagchin",
-    voice: "en-US-BrandonNeural",
+    voice: "en-US-GuyNeural",
     moodEmoji: { happy:"😊", proud:"🐫", sad:"😢", angry:"😠", confused:"🤔", scared:"😱", wise:"🧙" },
     conversations: [
       // 1. THE OLD CAMEL

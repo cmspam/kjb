@@ -127,13 +127,15 @@ def parse_extension_file(text):
 
 # ---- collect work --------------------------------------------------
 base_text = read(SQ_DIR / "dialogue.js")
-deep_text = read(SQ_DIR / "dialogue-deep.js") if (SQ_DIR / "dialogue-deep.js").exists() else ""
-help_text = read(SQ_DIR / "dialogue-help.js") if (SQ_DIR / "dialogue-help.js").exists() else ""
+deep_text = read(SQ_DIR / "dialogue-deep.js")     if (SQ_DIR / "dialogue-deep.js").exists() else ""
+help_text = read(SQ_DIR / "dialogue-help.js")     if (SQ_DIR / "dialogue-help.js").exists() else ""
+msg_text  = read(SQ_DIR / "dialogue-messages.js") if (SQ_DIR / "dialogue-messages.js").exists() else ""
 
 VOICES = parse_voices_base(base_text)
 LINES_BASE = parse_lines_base(base_text)
 LINES_DEEP = parse_extension_file(deep_text) if deep_text else {}
 LINES_HELP = parse_extension_file(help_text) if help_text else {}
+LINES_MSG  = parse_extension_file(msg_text)  if msg_text  else {}
 
 # Heuristic: in the base file, each conversation lists kaiju-spoken
 # lines (nodes) AND kid-spoken lines (choices). We can't easily tell
@@ -172,12 +174,12 @@ def add_line(out_dir: Path, voice: str, text: str):
     to_render.append((out_dir, voice, text_c, key))
 
 # Per-kaiju lines (assume each line is kaiju-spoken)
-for kid in sorted(set(list(VOICES.keys()) + list(LINES_BASE.keys()) + list(LINES_DEEP.keys()) + list(LINES_HELP.keys()))):
+for kid in sorted(set(list(VOICES.keys()) + list(LINES_BASE.keys()) + list(LINES_DEEP.keys()) + list(LINES_HELP.keys()) + list(LINES_MSG.keys()))):
     voice = VOICES.get(kid)
     if not voice: continue
     out_dir = OUT_ROOT / kid
     out_dir.mkdir(exist_ok=True, parents=True)
-    for src in (LINES_BASE.get(kid, []), LINES_DEEP.get(kid, []), LINES_HELP.get(kid, [])):
+    for src in (LINES_BASE.get(kid, []), LINES_DEEP.get(kid, []), LINES_HELP.get(kid, []), LINES_MSG.get(kid, [])):
         for ln in src:
             add_line(out_dir, voice, ln)
 
@@ -188,7 +190,7 @@ for kid in sorted(set(list(VOICES.keys()) + list(LINES_BASE.keys()) + list(LINES
 kid_dir = OUT_ROOT / "kid"
 kid_dir.mkdir(exist_ok=True, parents=True)
 all_lines = set()
-for d in (LINES_BASE, LINES_DEEP, LINES_HELP):
+for d in (LINES_BASE, LINES_DEEP, LINES_HELP, LINES_MSG):
     for kid, lst in d.items():
         for ln in lst:
             all_lines.add(ln)
@@ -205,17 +207,25 @@ print(f"queued {len(to_render)} lines to render")
 
 
 # ---- render --------------------------------------------------------
+# Uses chunk-write rather than comm.save() because edge-tts's save()
+# silently fails to flush bytes on Windows in some versions. Also
+# substituted Brandon→Guy in the voice map below when needed since
+# en-US-BrandonNeural appears retired from the service.
 async def render_one(out_dir, voice, text, key):
     safe_name = hash_for(text)
     out_path = out_dir / (safe_name + ".opus")
     tmp_mp3  = TMP_DIR / (safe_name + ".mp3")
     try:
         comm = edge_tts.Communicate(text, voice)
-        await comm.save(str(tmp_mp3))
+        with open(tmp_mp3, "wb") as f:
+            async for chunk in comm.stream():
+                if chunk.get("type") == "audio":
+                    f.write(chunk["data"])
     except Exception as e:
         print(f"  render fail [{voice}] {text[:40]!r}: {e}", file=sys.stderr)
         return False
-    # Convert mp3 -> opus 32k mono 48k (matches existing pack)
+    if not tmp_mp3.exists() or tmp_mp3.stat().st_size < 256:
+        return False
     try:
         subprocess.run([
             "ffmpeg", "-y", "-loglevel", "error",

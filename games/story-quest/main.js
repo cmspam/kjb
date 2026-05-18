@@ -26,31 +26,27 @@
   function show(id) { screens.forEach(s => $("screen-" + s).classList.toggle("hidden", s !== id)); }
 
   // ----- AUDIO HELPERS -----
+  // All three call SND.tryOpus which probes Opus support up-front
+  // (iOS < 17 falls through to browserTTS synchronously to keep the
+  // user-gesture audio token). Without this, iOS rejects the Opus
+  // playback async and the gesture is gone by the time we try TTS.
   function playKaijuAudio(kaijuId, text) {
     if (!text) return;
     const hash = SND.djb2(SND.cleanForHash(text));
     const url = `../../assets/voices/story/${encodeURIComponent(kaijuId)}/${hash}.opus`;
-    const a = new Audio(url);
-    a.volume = 0.95;
-    const p = a.play();
-    if (p && p.catch) p.catch(() => SND.browserTTS(text));
+    SND.tryOpus(url, text, { lang: "en-US", volume: 0.95 });
   }
   function playKidAudio(text) {
     if (!text) return;
     const hash = SND.djb2(SND.cleanForHash(text));
     const url = `../../assets/voices/story/kid/${hash}.opus`;
-    const a = new Audio(url);
-    a.volume = 0.95;
-    const p = a.play();
-    if (p && p.catch) p.catch(() => SND.browserTTS(text));
+    SND.tryOpus(url, text, { lang: "en-US", volume: 0.95 });
   }
   function playWordAudio(word) {
+    if (!word) return;
     const hash = SND.djb2(SND.cleanForHash(word));
     const url = `../../assets/voices/story/word/${hash}.opus`;
-    const a = new Audio(url);
-    a.volume = 0.95;
-    const p = a.play();
-    if (p && p.catch) p.catch(() => SND.browserTTS(word));
+    SND.tryOpus(url, word, { lang: "en-US", volume: 0.95 });
   }
 
   // ----- WORD WRAPPING for per-word tap -----

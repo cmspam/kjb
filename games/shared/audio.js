@@ -233,8 +233,61 @@ window.GamesAudio = (() => {
   function setMuted(v) { muted = !!v; }
   function isMuted()   { return muted; }
 
+  // Generic Opus-with-fallback player. Mirrors the speakEn pattern
+  // for games that store audio in their own paths: pass the full
+  // URL + fallback text and we'll handle the iOS no-Opus case
+  // synchronously. On platforms that DO decode Opus the file plays;
+  // if the play promise then rejects (e.g. file missing) we still
+  // try browserTTS — best-effort but the gesture window may have
+  // closed by then.
+  //   opts: { volume, lang ('en-US' / 'ja-JP'), rate, pitch }
+  function tryOpus(url, fallbackText, opts) {
+    if (muted) return null;
+    opts = opts || {};
+    if (!supportsOpus()) {
+      if (!fallbackText) return null;
+      if (!window.speechSynthesis) return null;
+      try {
+        const u = new SpeechSynthesisUtterance(fallbackText);
+        u.lang = opts.lang || "en-US";
+        u.rate = opts.rate || 0.95;
+        u.pitch = opts.pitch || 1.0;
+        u.volume = (opts.volume != null) ? opts.volume : 0.95;
+        // Try to pick a matching-language voice
+        const voices = window.speechSynthesis.getVoices();
+        const want = (opts.lang || "en-US").toLowerCase().split("-")[0];
+        const match = voices.find(v => v.lang.toLowerCase().startsWith(want));
+        if (match) u.voice = match;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+      } catch (_) {}
+      return null;
+    }
+    let a;
+    try { a = new Audio(url); } catch (_) { return null; }
+    a.preload = "auto";
+    a.volume = (opts.volume != null) ? opts.volume : 0.95;
+    const p = a.play();
+    if (p && p.catch) {
+      p.catch(() => {
+        // Async fallback — gesture window may be gone, but try anyway.
+        if (fallbackText) {
+          try {
+            const u = new SpeechSynthesisUtterance(fallbackText);
+            u.lang = opts.lang || "en-US";
+            u.rate = opts.rate || 0.95;
+            u.pitch = opts.pitch || 1.0;
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(u);
+          } catch (_) {}
+        }
+      });
+    }
+    return a;
+  }
+
   return {
-    speakEn, playKaijuEn, speakAsKaiju, browserTTS, playBossLine,
+    speakEn, playKaijuEn, speakAsKaiju, browserTTS, playBossLine, tryOpus,
     sfxCorrect, sfxWrong, sfxPop, sfxConfirm, sfxLevel, sfxFail, sfxSplat, sfxSparkle,
     setMuted, isMuted,
     djb2, cleanForHash,

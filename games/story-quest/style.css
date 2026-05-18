@@ -1,3 +1,19 @@
+/* Non-VN screens must be scrollable on mobile. The base .screen
+   class is position:absolute inset:0 + justify-content:center which
+   clips tall content. The VN screen-story stays full-bleed (already
+   has its own padding:0 + align-items:stretch override). */
+#screen-title,
+#screen-journal,
+#screen-kaiju,
+#screen-conv-pick,
+#screen-end {
+  overflow-y: auto;
+  overflow-x: hidden;
+  justify-content: flex-start;
+  padding: 16px 12px 80px;
+  -webkit-overflow-scrolling: touch;
+}
+
 .title-buttons {
   display: flex; flex-direction: column; gap: 10px; align-items: stretch;
   width: 100%; max-width: 360px;
