@@ -533,8 +533,8 @@
           ],
         },
         "n2list": {
-          en: "Bake. Sweep. Open window. Sign out. Smile practice.",
-          jp: "やく。 そうじ。 まど。 サイン。 えがお の れんしゅう。",
+          en: "There are five jobs. We bake the bread, we sweep the floor, we open the window, we put up the sign, and we practice our smile.",
+          jp: "5つ の しごと が ある。 パン を やく、 ゆか を そうじ する、 まど を あける、 サイン を だす、 えがお を れんしゅう する。",
           mood: "happy",
           choices: [
             { en: "Smile practice is best.",          jp: "えがお れんしゅう は さいこう。", outcome:"good",   next:"n3smile" },
@@ -556,17 +556,17 @@
           jp: "えがお れんしゅう！ いちばん の えがお みせて。",
           mood: "happy",
           choices: [
-            { en: "Big toothy smile!",                jp: "おおきい は えがお！",            outcome:"good",   next:"n4" },
-            { en: "Quiet shy smile.",                 jp: "しずか な はずかしい えがお。",  outcome:"good",   next:"n4" },
+            { en: "I will show a big toothy smile!",   jp: "おおきい は えがお を みせる！",       outcome:"good",   next:"n4" },
+            { en: "I will give a quiet shy smile.",    jp: "しずか で はずかしい えがお を みせる。", outcome:"good",   next:"n4" },
           ],
         },
         "n4": {
-          en: "Perfect. Door unlocked. Lights on. Bread smells real.",
-          jp: "かんぺき。 ドア を あけた。 でんき オン。 パン の におい が ほんもの。",
+          en: "Perfect. The door is unlocked, the lights are on, and the bread really smells like bread.",
+          jp: "かんぺき。 ドア が あいて、 でんき が ついて、 パン の におい が ほんとう に する。",
           mood: "happy",
           choices: [
-            { en: "First customer is me!",            jp: "さいしょ の お きゃくさん は ぼく！", outcome:"good", next:"endWarm" },
-            { en: "Welcome the next kid.",            jp: "つぎ の こども を むかえて。",   outcome:"good",   next:"endWarm" },
+            { en: "I will be your first customer!",   jp: "わたし が さいしょ の おきゃくさん に なる！",  outcome:"good", next:"endWarm" },
+            { en: "Let us welcome the next kid.",      jp: "つぎ の こども を むかえよう。",                outcome:"good", next:"endWarm" },
           ],
         },
         "n4honest": {
