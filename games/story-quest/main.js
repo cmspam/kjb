@@ -232,18 +232,50 @@
     State.conv = conv;
     State.nodeId = conv.start;
     State.outcomes = [];
+    State.currentScene = null;
     const kd = STORY[State.kaijuId];
-    // Backdrop
-    const scene = $("vn-scene");
-    if (window.Stages && Stages.exists && Stages.exists(State.kaijuId)) {
-      scene.innerHTML = Stages.render(State.kaijuId);
-    } else {
-      scene.innerHTML = "";
-    }
     $("vn-name").textContent = kd.name;
     $("vn-kaiju").innerHTML = ART.renderSVG(ART.get(State.kaijuId, true));
+    // Initial scene = conv.scene (if set) or the start node's scene, else fall back
+    const initial = conv.scene || (conv.nodes[conv.start] && conv.nodes[conv.start].scene) || null;
+    setScene(initial, true);
     show("story");
     renderNode();
+  }
+
+  // Scene management with crossfade. The vn-scene element holds two
+  // layered SVGs (back + front). On change we fade the new one in and
+  // remove the previous after the transition. This is the single
+  // biggest perceived-quality lever in the VN — backstory beats land
+  // visually, not just in dialogue.
+  function setScene(sceneId, instant) {
+    const slot = $("vn-scene");
+    if (!slot) return;
+    if (sceneId === State.currentScene && !instant) return;
+    State.currentScene = sceneId;
+    // Pick markup
+    let html = "";
+    if (sceneId && window.Scenes && Scenes.exists(sceneId)) {
+      html = Scenes.render(sceneId);
+    } else if (window.Stages && Stages.exists && Stages.exists(State.kaijuId)) {
+      html = Stages.render(State.kaijuId);
+    }
+    if (instant) {
+      slot.innerHTML = `<div class="scene-layer">${html}</div>`;
+      return;
+    }
+    // Crossfade: append new layer, fade in, drop old when done
+    const next = document.createElement("div");
+    next.className = "scene-layer fade-in";
+    next.innerHTML = html;
+    slot.appendChild(next);
+    // Force reflow then trigger animation
+    requestAnimationFrame(() => { next.classList.remove("fade-in"); next.classList.add("fade-active"); });
+    setTimeout(() => {
+      // Drop all but the latest
+      const layers = slot.querySelectorAll(".scene-layer");
+      for (let i = 0; i < layers.length - 1; i++) layers[i].remove();
+    }, 900);
   }
   $("vn-quit").addEventListener("click", () => { SND.sfxPop(); show("title"); renderMetShelf(); });
 
@@ -255,6 +287,8 @@
     // Record this line in the phrase journal so the kid can replay
     // it any time from the journal panel.
     if (node.en) recordPhrase(State.kaijuId, node.en, node.jp);
+    // Scene transition if this node specifies one
+    if (node.scene) setScene(node.scene);
     // Mood emoji
     const moodMap = kd.moodEmoji || {};
     $("vn-mood").textContent = moodMap[node.mood] || "😄";
