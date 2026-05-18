@@ -114,6 +114,15 @@
     brainrot:   ["cosmic","nature","animal"],
   };
 
+  // Merge in extras (extras.js loads before main.js and exposes the
+  // expanded item / template / verb pools via window.CD_EXTRA). We
+  // push instead of reassign so the existing local references stay
+  // valid throughout the IIFE.
+  if (window.CD_EXTRA) {
+    if (Array.isArray(window.CD_EXTRA.items))     window.CD_EXTRA.items.forEach(it => ITEMS.push(it));
+    // templates pushed below after TEMPLATES is declared
+  }
+
   // Per-kaiju verb pool. Each kaiju has their characteristic verbs +
   // a few shared ones. Verb selection drives the demand structure.
   const VERBS = {
@@ -144,6 +153,17 @@
     { en:"Trade a {0} for a {1}.",          jp:"〜を 〜と こうかん。",        slots:2 },
     { en:"Bring me a {0} on a {1}.",        jp:"〜の うえ に〜を のせて。",  slots:2 },
   ];
+  // Merge template + verb extras.
+  if (window.CD_EXTRA) {
+    if (Array.isArray(window.CD_EXTRA.templates)) window.CD_EXTRA.templates.forEach(t => TEMPLATES.push(t));
+    if (window.CD_EXTRA.verbsExtra) {
+      Object.keys(window.CD_EXTRA.verbsExtra).forEach(k => {
+        if (VERBS[k]) window.CD_EXTRA.verbsExtra[k].forEach(v => VERBS[k].push(v));
+      });
+    }
+  }
+  const EVENTS = (window.CD_EXTRA && window.CD_EXTRA.events) || {};
+  let activeEventBonus = 0;  // points added to next correct demand
 
   const $ = (id) => document.getElementById(id);
   const screens = ["title", "game", "result"];
@@ -213,8 +233,34 @@
     // FIND the emoji. Previously playtested as unplayable even by
     // fluent adults.
     State.speedFactor = 1 + State.wave * 0.05;
+    // Check wave events: every 4th = sandstorm, 5th = bombing, 7th =
+    // opera, 9th = cosmic. Same wave can trigger multiple events; we
+    // pick the highest-bonus one if so to keep the screen readable.
+    const eventCandidates = Object.entries(EVENTS).filter(([k,e]) => State.wave > 0 && State.wave % e.every === 0);
+    if (eventCandidates.length > 0) {
+      eventCandidates.sort((a,b) => (b[1].bonus||0) - (a[1].bonus||0));
+      triggerEvent(eventCandidates[0][1]);
+    }
     if (State.bossWave) bossWarning();
     setTimeout(spawnInvader, State.bossWave ? 1700 : 300);
+  }
+
+  function triggerEvent(evt) {
+    const banner = $("event-banner");
+    const veil = $("event-veil");
+    if (banner) {
+      banner.textContent = evt.banner;
+      banner.classList.remove("hidden");
+      setTimeout(() => banner.classList.add("hidden"), evt.duration);
+    }
+    if (veil) {
+      veil.style.backdropFilter = evt.filter;
+      veil.style.webkitBackdropFilter = evt.filter;
+      veil.classList.remove("hidden");
+      setTimeout(() => veil.classList.add("hidden"), evt.duration);
+    }
+    activeEventBonus = evt.bonus || 0;
+    try { SND.sfxLevel(); } catch (_) {}
   }
 
   function pickKaiju() {
@@ -408,7 +454,11 @@
     State.locked = true;
     if (btn) btn.classList.add("correct");
     SND.sfxCorrect();
-    State.score += State.bossWave ? 30 : 10;
+    State.score += (State.bossWave ? 30 : 10) + activeEventBonus;
+    if (activeEventBonus > 0) {
+      try { spawnConfetti(8); } catch (_) {}
+      activeEventBonus = 0;  // bonus is one-shot per event window
+    }
     // Contribute to cross-game mastery store
     recordKaijuDefeated(State.currentBossId);
     // Speak full success

@@ -1,0 +1,143 @@
+// Castle-defense data expansion — extra items, sentence templates,
+// verbs, and wave-event configuration. Mutates the module's internal
+// arrays via exposed window.CD_DATA hook (the main module reads these
+// at boot and appends them to its in-scope ITEMS / TEMPLATES / VERBS
+// arrays).
+
+window.CD_EXTRA = {
+  items: [
+    // food
+    { w:"noodles",   e:"🍜",  jp:"ラーメン",     k:null,         cat:"food" },
+    { w:"rice",      e:"🍚",  jp:"ごはん",       k:null,         cat:"food" },
+    { w:"tea",       e:"🍵",  jp:"おちゃ",       k:null,         cat:"food" },
+    { w:"corn",      e:"🌽",  jp:"とうもろこし", k:null,         cat:"food" },
+    { w:"carrot",    e:"🥕",  jp:"にんじん",     k:null,         cat:"food" },
+    { w:"mushroom",  e:"🍄",  jp:"きのこ",       k:null,         cat:"food" },
+    { w:"pepper",    e:"🌶",  jp:"とうがらし",   k:"tral",       cat:"food" },
+    { w:"cookie",    e:"🍪",  jp:"クッキー",     k:null,         cat:"food" },
+    { w:"candy",     e:"🍬",  jp:"キャンディ",   k:"parfait",    cat:"food" },
+    { w:"watermelon",e:"🍉",  jp:"スイカ",       k:null,         cat:"food" },
+    { w:"melon",     e:"🍈",  jp:"メロン",       k:"parfait",    cat:"food" },
+    { w:"grapes",    e:"🍇",  jp:"ぶどう",       k:null,         cat:"food" },
+    { w:"peach",     e:"🍑",  jp:"もも",         k:"parfait",    cat:"food" },
+    { w:"pear",      e:"🍐",  jp:"なし",         k:null,         cat:"food" },
+    { w:"avocado",   e:"🥑",  jp:"アボカド",     k:null,         cat:"food" },
+    // weapons / extras
+    { w:"axe",       e:"🪓",  jp:"おの",         k:null,         cat:"weapon" },
+    { w:"hammer",    e:"🔨",  jp:"ハンマー",     k:null,         cat:"weapon" },
+    { w:"dynamite",  e:"🧨",  jp:"ダイナマイト", k:"unko",       cat:"weapon" },
+    { w:"bow",       e:"🏹",  jp:"ゆみ",         k:null,         cat:"weapon" },
+    // animals
+    { w:"snake",     e:"🐍",  jp:"へび",         k:null,         cat:"animal" },
+    { w:"rabbit",    e:"🐰",  jp:"うさぎ",       k:"pamp",       cat:"animal" },
+    { w:"bear",      e:"🐻",  jp:"くま",         k:null,         cat:"animal" },
+    { w:"horse",     e:"🐴",  jp:"うま",         k:"temee",      cat:"animal" },
+    { w:"pig",       e:"🐷",  jp:"ぶた",         k:null,         cat:"animal" },
+    { w:"unicorn",   e:"🦄",  jp:"ユニコーン",   k:"pamp",       cat:"animal" },
+    { w:"butterfly", e:"🦋",  jp:"ちょうちょ",   k:"pamp",       cat:"animal" },
+    { w:"penguin",   e:"🐧",  jp:"ペンギン",     k:null,         cat:"animal" },
+    { w:"whale",     e:"🐳",  jp:"くじら",       k:"anpan",      cat:"animal" },
+    { w:"dolphin",   e:"🐬",  jp:"イルカ",       k:null,         cat:"animal" },
+    { w:"shrimp",    e:"🦐",  jp:"えび",         k:"tako",       cat:"animal" },
+    { w:"squid",     e:"🦑",  jp:"いか",         k:"tako",       cat:"animal" },
+    // tools / mechanical
+    { w:"laptop",    e:"💻",  jp:"ノートパソコン", k:"catcherski", cat:"tool" },
+    { w:"battery",   e:"🔋",  jp:"バッテリー",   k:"catcherski", cat:"tool" },
+    { w:"plug",      e:"🔌",  jp:"プラグ",       k:"catcherski", cat:"tool" },
+    { w:"chip",      e:"💾",  jp:"チップ",       k:"catcherski", cat:"tool" },
+    { w:"camera",    e:"📷",  jp:"カメラ",       k:null,         cat:"tool" },
+    { w:"clock",     e:"⏰",  jp:"とけい",       k:null,         cat:"tool" },
+    { w:"map",       e:"🗺",  jp:"ちず",         k:"temee",      cat:"tool" },
+    { w:"flashlight",e:"🔦",  jp:"かいちゅう でんとう", k:null,  cat:"tool" },
+    // cosmic
+    { w:"planet",    e:"🪐",  jp:"わくせい",     k:"brainrot",   cat:"cosmic" },
+    { w:"rocket",    e:"🚀",  jp:"ロケット",     k:"brainrot",   cat:"cosmic" },
+    { w:"telescope", e:"🔭",  jp:"ぼうえんきょう", k:"brainrot", cat:"cosmic" },
+    // clothing
+    { w:"scarf",     e:"🧣",  jp:"マフラー",     k:"temee",      cat:"clothing" },
+    { w:"gloves",    e:"🧤",  jp:"てぶくろ",     k:"temee",      cat:"clothing" },
+    { w:"jacket",    e:"🧥",  jp:"ジャケット",   k:null,         cat:"clothing" },
+    { w:"boot",      e:"🥾",  jp:"ブーツ",       k:"temee",      cat:"clothing" },
+    { w:"sandal",    e:"🩴",  jp:"サンダル",     k:null,         cat:"clothing" },
+    { w:"bag",       e:"👜",  jp:"かばん",       k:null,         cat:"clothing" },
+    { w:"umbrella",  e:"☂",   jp:"かさ",         k:null,         cat:"clothing" },
+    // nature
+    { w:"leaf",      e:"🍃",  jp:"はっぱ",       k:null,         cat:"nature" },
+    { w:"cactus",    e:"🌵",  jp:"サボテン",     k:"temee",      cat:"nature" },
+    { w:"island",    e:"🏝",  jp:"しま",         k:"tral",       cat:"nature" },
+    { w:"volcano",   e:"🌋",  jp:"かざん",       k:"unko",       cat:"nature" },
+    { w:"wave",      e:"🌊",  jp:"なみ",         k:"anpan",      cat:"nature" },
+    { w:"fog",       e:"🌫",  jp:"きり",         k:null,         cat:"nature" },
+    { w:"tornado",   e:"🌪",  jp:"たつまき",     k:"brainrot",   cat:"nature" },
+    // body / abstract
+    { w:"ear",       e:"👂",  jp:"みみ",         k:null,         cat:"body" },
+    { w:"nose",      e:"👃",  jp:"はな",         k:"unko",       cat:"body" },
+    { w:"hand",      e:"✋",  jp:"て",           k:null,         cat:"body" },
+    { w:"foot",      e:"🦶",  jp:"あし",         k:"tral",       cat:"body" },
+    { w:"bone",      e:"🦴",  jp:"ほね",         k:null,         cat:"body" },
+    { w:"brain",     e:"🧠",  jp:"のう",         k:"brainrot",   cat:"body" },
+    { w:"tear",      e:"💧",  jp:"なみだ",       k:"temee",      cat:"body" },
+    { w:"laugh",     e:"😂",  jp:"わらい",       k:"parfait",    cat:"body" },
+    { w:"dream",     e:"💭",  jp:"ゆめ",         k:"pamp",       cat:"body" },
+  ],
+  templates: [
+    // 12 new templates on top of the existing 8 — covers articles, plurals,
+    // possessives, comparatives, and a few culture-themed grammar slots.
+    { en:"The {0} is bigger than the {1}.",   jp:"〜は〜より おおきい。",     slots:2 },
+    { en:"Show me your {0} and your {1}.",     jp:"あなた の〜と〜を みせて。", slots:2 },
+    { en:"I see two {0}s and one {1}.",         jp:"2つ の〜と 1つ の〜。",      slots:2 },
+    { en:"My {0} ate my {1} again!",           jp:"わたし の〜が また〜を たべた！", slots:2 },
+    { en:"Throw the {0} at the {1}!",          jp:"〜を〜に なげろ！",          slots:2 },
+    { en:"A {0} on top of a {1}.",              jp:"〜の うえ に〜。",            slots:2 },
+    { en:"No {0} without a {1}.",               jp:"〜なし で は〜なし。",       slots:2 },
+    { en:"Buy a {0}, sell a {1}.",              jp:"〜を かって、〜を うれ。",   slots:2 },
+    { en:"I forgot the {0} and the {1}.",       jp:"〜と〜を わすれた。",         slots:2 },
+    { en:"Hide the {0} from the {1}!",          jp:"〜から〜を かくせ！",         slots:2 },
+    { en:"Big {0}, small {1}.",                 jp:"おおきい〜、 ちいさい〜。",   slots:2 },
+    { en:"The {0} dances with the {1}.",        jp:"〜は〜と おどる。",           slots:2 },
+  ],
+  verbsExtra: {
+    tako:       [{en:"Fry me", jp:"〜を あげて"}, {en:"Steam me", jp:"〜むして"}],
+    unko:       [{en:"Detonate", jp:"〜ばくは"}, {en:"Smell", jp:"〜の におい"}],
+    tral:       [{en:"Sing for", jp:"〜の ために うたう"}, {en:"Dance with", jp:"〜と おどる"}],
+    pamp:       [{en:"Cuddle a", jp:"〜だっこ"}, {en:"Wrap a", jp:"〜つつむ"}],
+    parfait:    [{en:"Freeze a", jp:"〜こおらせる"}, {en:"Melt a", jp:"〜とかす"}],
+    anpan:      [{en:"Toast a", jp:"〜やく"}, {en:"Slice a", jp:"〜きる"}],
+    temee:      [{en:"Ride a", jp:"〜のる"}, {en:"Lead a", jp:"〜ひきいる"}],
+    catcherski: [{en:"Plug in", jp:"〜さしこむ"}, {en:"Glitch a", jp:"〜グリッチ"}],
+    brainrot:   [{en:"Eat a", jp:"〜たべる"}, {en:"Erase a", jp:"〜けす"}],
+  },
+  // Wave events: every nth wave triggers a brief themed screen effect
+  // that grants a small score bonus on the next correct demand. Keeps
+  // long-session play from feeling samey.
+  events: {
+    sandstorm: {
+      every: 4,
+      banner: "🌪 SANDSTORM!  +20 to next correct",
+      filter: "sepia(0.6) contrast(1.1) brightness(0.85)",
+      bonus: 20,
+      duration: 6500,
+    },
+    bombing: {
+      every: 5,
+      banner: "💣 BOMBING RUN!  cannon shots double",
+      filter: "hue-rotate(20deg) brightness(1.05)",
+      bonus: 0,
+      duration: 6500,
+    },
+    opera: {
+      every: 7,
+      banner: "🎵 OPERA INTERMISSION!  free idle time",
+      filter: "saturate(1.4) brightness(1.1)",
+      bonus: 5,
+      duration: 5500,
+    },
+    cosmic: {
+      every: 9,
+      banner: "🌌 COSMIC RIPPLE!  +50 to next correct",
+      filter: "hue-rotate(200deg) contrast(1.2)",
+      bonus: 50,
+      duration: 6500,
+    },
+  },
+};
