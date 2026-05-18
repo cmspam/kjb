@@ -68,16 +68,76 @@
     bossId: null,
     boss: null,
     sentence: "",
-    tokens: [],
-    progress: 0,
+    tokens: [],       // FULL tokenization of the sentence ("I", "am", "an", "octopus.")
+    blanks: [],       // ascending indices into `tokens` the kid must collect.
+                      // L0: every index (collect the whole sentence in order).
+                      // L1: ~30% of indices (blanks shown as ___ in HUD; kid fills from JP).
+                      // L2: ~50% of indices.
+    progress: 0,      // index into `blanks` (how many blanks the kid has filled so far)
     parts: [],
     coreHits: 0,
     pickupsCorrect: 0,
     pickupsWrong: 0,
-    combo: 0,        // current streak of correct pickups
+    combo: 0,         // current streak of correct pickups
     comboMax: 0,
     sessionStartT: 0,
   };
+
+  // The word the kid currently needs to grab. Returns null when the
+  // round is complete. Single source of truth used by spawn, pickup,
+  // and HUD render.
+  function currentTargetWord() {
+    if (State.progress >= State.blanks.length) return null;
+    return State.tokens[State.blanks[State.progress]];
+  }
+
+  // Decide which token indices are "blanked" (kid must figure out
+  // from JP and collect). Level drives the count:
+  //   L0: all indices — kid sees the full sentence and collects in order
+  //   L1: ~30% — kid sees most of the sentence, fills 1-2 holes
+  //   L2: ~50% — kid sees half, fills the rest
+  // Returned indices are sorted ascending so collection follows reading order.
+  function pickBlanks(tokens, level) {
+    const total = tokens.length;
+    if (total <= 1 || level === 0) return tokens.map((_, i) => i);
+    let count;
+    if (level === 1) {
+      count = Math.min(2, Math.max(1, Math.ceil(total * 0.3)));
+    } else {
+      // L2 and higher
+      count = Math.min(total - 1, Math.max(2, Math.ceil(total * 0.5)));
+    }
+    // Bias slightly against blanking single-letter pronouns ("I") as the
+    // first word — they're too easy to spot from JP word order and feel
+    // unsatisfying. Drop them from the pool if there are other options.
+    const candidates = tokens.map((_, i) => i)
+      .filter(i => !(i === 0 && tokens[i].length <= 2 && total > 3));
+    // Shuffle
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    return candidates.slice(0, count).sort((a, b) => a - b);
+  }
+
+  // Sentence pool selection per level. L0 was previously single-word
+  // entries (round ended immediately, not fun per user feedback) — now
+  // L0 borrows from the L1 pool so it always serves real sentences.
+  // L1 and L2 use their existing pools; difficulty is differentiated
+  // by the number of blanks rather than sentence length alone.
+  function getSentencePool(bossId, level) {
+    const pools = (SENTENCES[bossId] || {});
+    let chosen;
+    if (level === 0)      chosen = pools[1] || pools[0] || [];
+    else if (level === 1) chosen = pools[1] || pools[0] || [];
+    else                  chosen = pools[2] || pools[1] || [];
+    // Filter out single-word entries so a round always has multiple
+    // tokens to interact with.
+    return chosen.filter(s => {
+      const en = typeof s === "string" ? s : s.en;
+      return tokenize(en).length >= 2;
+    });
+  }
 
   // ---- TITLE / PICK ----
   document.querySelectorAll(".level-pick button").forEach(btn => {
@@ -99,7 +159,7 @@
       if (!boss) return;
       const div = document.createElement("button");
       div.className = "pick-card";
-      const pool = SENTENCES[id][State.level] || [];
+      const pool = getSentencePool(id, State.level);
       const cleared = (m[id] && m[id].flappy && m[id].flappy[String(State.level)]) || [];
       const total = pool.length;
       const done = cleared.length;
@@ -136,16 +196,23 @@
     if (State.isShiny && window.Monsters && Monsters.applyShiny) {
       try { Monsters.applyShiny(State.boss); } catch (_) { State.isShiny = false; }
     }
-    const pool = SENTENCES[bossId][State.level];
-    const picked = pool[(Math.random() * pool.length) | 0];
-    if (typeof picked === "string") {
-      State.sentence = picked;
-      State.sentenceJp = "";
+    const pool = getSentencePool(bossId, State.level);
+    if (pool.length === 0) {
+      // Defensive: fall back to L1 if pool empty for some reason.
+      State.sentence = "I am a kaiju.";
+      State.sentenceJp = "わたし は カイジュウ です。";
     } else {
-      State.sentence = picked.en;
-      State.sentenceJp = picked.jp || "";
+      const picked = pool[(Math.random() * pool.length) | 0];
+      if (typeof picked === "string") {
+        State.sentence = picked;
+        State.sentenceJp = "";
+      } else {
+        State.sentence = picked.en;
+        State.sentenceJp = picked.jp || "";
+      }
     }
     State.tokens = tokenize(State.sentence);
+    State.blanks = pickBlanks(State.tokens, State.level);
     State.progress = 0;
     State.pickupsCorrect = 0;
     State.pickupsWrong = 0;
@@ -194,13 +261,38 @@
     $("hud-jp-text").textContent = `★ ${State.boss.name_jp}`;
     const jpLine = $("hud-jp-line");
     jpLine.textContent = State.sentenceJp || "";
+    // At L1+ the JP translation is REQUIRED to figure out the blanks,
+    // so force it visible and hide the peek button. At L0 the JP stays
+    // behind the peek button (kid can choose to look it up).
+    const peekBtn = $("hud-peek");
+    if (State.level >= 1) {
+      jpLine.classList.add("peek");
+      if (peekBtn) peekBtn.style.display = "none";
+    } else {
+      // Don't force-toggle .peek here — let the kid use the button.
+      if (peekBtn) peekBtn.style.display = "";
+    }
     const en = $("hud-en"); en.innerHTML = "";
+    const blanksSet = new Set(State.blanks);
+    const currentBlankIdx = State.blanks[State.progress];
+    const collected = new Set(State.blanks.slice(0, State.progress));
     State.tokens.forEach((tok, i) => {
       const sp = document.createElement("span");
       sp.className = "slot";
-      if (i < State.progress) sp.classList.add("done");
-      else if (i === State.progress) sp.classList.add("next");
-      sp.textContent = tok;
+      if (!blanksSet.has(i)) {
+        // Visible context word — not a target, just displayed for reading.
+        sp.classList.add("context");
+        sp.textContent = tok;
+      } else if (collected.has(i)) {
+        sp.classList.add("done");
+        sp.textContent = tok;
+      } else if (i === currentBlankIdx) {
+        sp.classList.add("next", "blank");
+        sp.textContent = "___";
+      } else {
+        sp.classList.add("blank");
+        sp.textContent = "___";
+      }
       en.appendChild(sp);
     });
     const partsEl = $("hud-parts"); partsEl.innerHTML = "";
@@ -369,19 +461,26 @@
 
   function spawnToken(t) {
     const wantTarget = Math.random() < 0.55;
+    const expected = currentTargetWord();
+    if (!expected) return;  // round already complete
     let word;
     if (wantTarget) {
-      word = State.tokens[State.progress];
+      word = expected;
     } else {
-      const all = SENTENCES[State.bossId][State.level] || [];
+      // Distractor pool: every word in this kaiju's sentence pool (any
+      // level) plus every word in the current sentence — minus the
+      // current expected target. At L1+ this naturally tempts the kid
+      // with the visible context words too, which is fine: those are
+      // wrong answers in this round and they have to read carefully.
+      const all = getSentencePool(State.bossId, State.level);
       const allWords = new Set();
       State.tokens.forEach(t => allWords.add(t));
       all.forEach(s => {
         const en = typeof s === "string" ? s : s.en;
         tokenize(en).forEach(t => allWords.add(t));
       });
-      const sentencePool = [...allWords].filter(w => w !== State.tokens[State.progress]);
-      if (sentencePool.length === 0) word = State.tokens[State.progress];
+      const sentencePool = [...allWords].filter(w => w !== expected);
+      if (sentencePool.length === 0) word = expected;
       else word = sentencePool[(Math.random() * sentencePool.length) | 0];
     }
     if (!word) return;
@@ -506,22 +605,11 @@
 
     if (crashCool > 0 && crashCool < 99000) crashCool -= dt;
 
-    // Magnetic pickup — correct-word tokens within range pull toward kaiju.
-    // Reduces frustration from near-misses while still requiring the kid
-    // to aim ROUGHLY at the right token (wrong tokens don't magnetize).
+    // Magnetic pickup removed: it telegraphed which token was correct
+    // (the right token "jumped" toward the player), which let the kid
+    // skip reading. Per user feedback, all tokens should look and
+    // behave identically; the kid has to read.
     const kx = W * 0.25, ky = kaijuY;
-    const expected = State.tokens[State.progress];
-    tokens.forEach(tk => {
-      if (tk.picked) return;
-      if (tk.word !== expected) return;
-      const dx = kx - tk.x, dy = ky - tk.y;
-      const d = Math.sqrt(dx*dx + dy*dy);
-      if (d < 140 && d > 40) {
-        const pull = (1 - d/140) * 380 * dts;
-        tk.x += (dx/d) * pull;
-        tk.y += (dy/d) * pull;
-      }
-    });
 
     // Token pickups
     const PICK_R = 50;
@@ -546,7 +634,7 @@
   function easeOut(k) { return 1 - Math.pow(1-k, 3); }
 
   function handlePickup(tk) {
-    const expected = State.tokens[State.progress];
+    const expected = currentTargetWord();
     if (expected && tk.word === expected) {
       State.progress++;
       State.pickupsCorrect++;
@@ -570,7 +658,7 @@
         comboTextT = 800;
       }
       renderHUD();
-      if (State.progress >= State.tokens.length) {
+      if (State.progress >= State.blanks.length) {
         setTimeout(winSequence, 700);
       }
     } else {
@@ -786,29 +874,22 @@
       }
     });
 
-    // Tokens
-    const expected = State.tokens[State.progress];
+    // Tokens — all tokens render identically. No halo or tint on the
+    // "correct" word; the kid has to read the text to decide. (Was
+    // previously highlighting the target with a pulsing yellow halo;
+    // removed per user feedback so the kid can't skip reading.)
     tokens.forEach(tk => {
       if (tk.picked) return;
-      const isTarget = (tk.word === expected);
       ctx.save();
       ctx.translate(tk.x, tk.y);
       ctx.scale(tk.scale, tk.scale);
-      // Target tokens get a subtle pulsing halo so they're easy to spot
-      if (isTarget) {
-        const pulse = 0.5 + 0.5 * Math.sin(t * 0.008);
-        ctx.beginPath();
-        ctx.arc(0, 0, 26 + pulse*4, 0, Math.PI*2);
-        ctx.fillStyle = `rgba(255,228,92,${0.18 + pulse*0.18})`;
-        ctx.fill();
-      }
       ctx.font = "bold 17px system-ui, sans-serif";
       const w = ctx.measureText(tk.word).width + 24;
       const h = 30;
       ctx.fillStyle = "rgba(0,0,0,0.65)";
       roundRect(ctx, -w/2 - 2, -h/2 + 2, w, h, 14);
       ctx.fill();
-      ctx.fillStyle = isTarget ? "rgba(255,255,170,0.96)" : "rgba(255,255,255,0.96)";
+      ctx.fillStyle = "rgba(255,255,255,0.96)";
       roundRect(ctx, -w/2, -h/2, w, h, 14);
       ctx.fill();
       ctx.fillStyle = "#2a0a4a";

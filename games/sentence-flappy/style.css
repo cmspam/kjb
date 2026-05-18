@@ -69,13 +69,23 @@
   margin-top: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.hud-en .slot       { opacity: 0.32; padding: 0 3px; }
-.hud-en .slot.done  { opacity: 1; color: var(--good); text-shadow: 0 0 6px #44ff88; }
-.hud-en .slot.next  {
+.hud-en .slot         { opacity: 0.32; padding: 0 3px; }
+/* Context word — not a target, just visible for reading */
+.hud-en .slot.context { opacity: 0.78; color: #ccddff; }
+/* A blank waiting to be filled */
+.hud-en .slot.blank   { opacity: 0.55; color: #888; letter-spacing: 1px; }
+.hud-en .slot.done    { opacity: 1; color: var(--good); text-shadow: 0 0 6px #44ff88; }
+.hud-en .slot.next    {
   opacity: 1; color: #ffe45c;
   text-shadow: 0 0 8px #ffe45c, 0 1px 0 #000;
   animation: pulse 0.85s ease-in-out infinite alternate;
   border-bottom: 2px solid #ffe45c;
+}
+.hud-en .slot.next.blank {
+  color: #ffe45c;
+  background: rgba(255,228,92,0.08);
+  border-radius: 4px;
+  padding: 0 6px;
 }
 @keyframes pulse { from { opacity:.7; } to { opacity:1; } }
 
