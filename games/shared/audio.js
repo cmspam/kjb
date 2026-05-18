@@ -52,12 +52,38 @@ window.GamesAudio = (() => {
     brainrot:   { rate: 0.88, pitch: 0.60 },
   };
 
+  // Opus codec support detection. iOS Safari can't decode Opus until
+  // iOS 17 — on older devices a.play() returns a rejecting promise,
+  // and by the time the .catch fires the user-gesture token has
+  // already expired so speechSynthesis.speak() in the fallback is
+  // silently dropped. We detect once and skip Opus entirely on
+  // unsupported platforms, going to browserTTS SYNCHRONOUSLY inside
+  // the gesture handler so the speech permission survives.
+  let _opusCache = null;
+  function supportsOpus() {
+    if (_opusCache !== null) return _opusCache;
+    try {
+      const probe = document.createElement('audio');
+      const a = probe.canPlayType('audio/ogg; codecs="opus"');
+      const b = probe.canPlayType('audio/opus');
+      _opusCache = !!(a && a !== "") || !!(b && b !== "");
+    } catch (_) { _opusCache = false; }
+    return _opusCache;
+  }
+
   // Play a pre-rendered English word from the KJB question pack.
   // Returns the Audio element so callers can chain. Silent on miss.
   function speakEn(text, opts) {
     if (muted) return null;
     const cleaned = cleanForHash(text);
     if (!cleaned) return null;
+    // iOS Safari (< 17) — skip the opus path entirely and speak
+    // via browserTTS synchronously so we don't lose the gesture
+    // window. The opus playback would silently reject anyway.
+    if (!supportsOpus()) {
+      browserTTS(cleaned, opts);
+      return null;
+    }
     const hash = djb2(cleaned);
     const url = `../../assets/audio/en/${hash}.opus`;
     let a;
@@ -104,6 +130,25 @@ window.GamesAudio = (() => {
     if (muted || !bossId || !text) return null;
     const cleaned = cleanForHash(text);
     if (!cleaned) return null;
+    // iOS Safari without opus — fall back to Japanese TTS so the
+    // kaiju line is at least audible (generic JP voice, not the
+    // character voice — but better than silence). Synchronous so
+    // the gesture window holds.
+    if (!supportsOpus()) {
+      try {
+        if (!window.speechSynthesis) return null;
+        const u = new SpeechSynthesisUtterance(cleaned);
+        u.lang = "ja-JP";
+        u.rate = 1.0; u.pitch = 1.0;
+        u.volume = (opts && opts.volume != null) ? opts.volume : 0.95;
+        const voices = window.speechSynthesis.getVoices();
+        const jp = voices.find(v => /^ja/i.test(v.lang));
+        if (jp) u.voice = jp;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+      } catch (_) {}
+      return null;
+    }
     const hash = djb2(cleaned);
     const shiny = !!(opts && opts.shiny);
     const dir = shiny ? `${bossId}_shiny` : bossId;
