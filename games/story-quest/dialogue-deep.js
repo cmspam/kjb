@@ -64,13 +64,13 @@
           ],
         },
         "n3": {
-          en: "We lived in the deep sea. Coral, kelp, very quiet.",
-          jp: "ふかい うみ に すんでいた。 さんご、 こんぶ、 しずか。",
+          en: "We lived in the deep sea. There was coral, there was kelp, and it was very quiet.",
+          jp: "ふかい うみ に すんで いた。 さんご が あって、 こんぶ が あって、 とても しずか だった。",
           mood: "wise",
           scene: "tako-deep-sea",
           choices: [
             { en: "Sounds peaceful.",            jp: "へいわ そう。",                   outcome:"good",    next:"n4" },
-            { en: "Boring under there.",         jp: "あそこ は たいくつ。",            outcome:"bad",     next:"n4b" },
+            { en: "That sounds boring.",         jp: "それ は たいくつ そう。",        outcome:"bad",     next:"n4b" },
             { en: "Did you swim every day?",     jp: "まいにち およいだ？",             outcome:"good",    next:"n4" },
           ],
         },
@@ -81,7 +81,7 @@
           choices: [
             { en: "The training juice?",         jp: "トレーニング ジュース？",        outcome:"good",    next:"n5" },
             { en: "That sounds dangerous.",       jp: "あぶなそう。",                    outcome:"good",    next:"n5" },
-            { en: "Bad ship.",                    jp: "わるい ふね。",                    outcome:"good",    next:"n5" },
+            { en: "What a bad ship.",            jp: "ひどい ふね。",                    outcome:"good",    next:"n5" },
           ],
         },
         "n4b": {
@@ -102,7 +102,7 @@
           ],
         },
         "n6": {
-          en: "Yes. Some grew small as a coin. Some grew big as a ship.",
+          en: "Yes. Some grew as small as a coin. Some grew as big as a ship.",
           jp: "うん。 コイン の ように ちいさく なる こ も、 ふね の ように おおきく なる こ も いた。",
           mood: "sad",
           choices: [
@@ -119,8 +119,8 @@
           ],
         },
         "n7": {
-          en: "I was just right for a chef. Big arms, small head. So I came here.",
-          jp: "ぼく は シェフ に ちょうど よかった。 おおきい うで、 ちいさい あたま。 だから ここ に きた。",
+          en: "I was just right for a chef. I had big arms and a small head. So I came here.",
+          jp: "ぼく は シェフ に ちょうど よかった。 おおきい うで と ちいさい あたま が あった。 だから ここ に きた。",
           mood: "proud",
           scene: "tako-osaka-stall",
           choices: [
@@ -144,7 +144,7 @@
           mood: "proud",
           choices: [
             { en: "That is beautiful.",           jp: "うつくしい。",                       outcome:"good",    next:"endWarm" },
-            { en: "Sad and warm at the same time.", jp: "かなしい と あったかい が いっしょ。", outcome:"good", next:"endWarm" },
+            { en: "That is sad and warm at the same time.", jp: "それ は かなしくて、 あったかい。", outcome:"good", next:"endWarm" },
           ],
         },
         "n9": {
@@ -152,7 +152,7 @@
           jp: "すくいだす。 はなす。 およいで いく。 スープ は だいじょうぶ。",
           mood: "happy",
           choices: [
-            { en: "Family every day.",            jp: "まいにち かぞく。",                 outcome:"good",    next:"endWarm" },
+            { en: "You see family every day.",    jp: "まいにち かぞく に あえる ね。",   outcome:"good",    next:"endWarm" },
             { en: "I want to meet him.",          jp: "あいたい。",                          outcome:"good",    next:"endWarm" },
           ],
         },
@@ -182,17 +182,17 @@
           ],
         },
         "n2": {
-          en: "The Brown Swamp Empire. Forty toilets. Six bridges.",
-          jp: "ちゃいろ の しっち ていこく。 トイレ 40こ。 はし 6本。",
+          en: "I ruled the Brown Swamp Empire. It had forty toilets and six bridges.",
+          jp: "ぼく は ちゃいろ の しっち ていこく を おさめた。 トイレ 40こ と はし 6本 が あった。",
           mood: "proud",
           choices: [
             { en: "An empire of toilets?",        jp: "トイレ の ていこく？",              outcome:"good",    next:"n3" },
             { en: "I have so many questions.",     jp: "しつもん いっぱい。",                outcome:"good",    next:"n3" },
-            { en: "Cool empire.",                  jp: "かっこいい ていこく。",              outcome:"good",    next:"n3" },
+            { en: "What a cool empire.",          jp: "かっこいい ていこく。",              outcome:"good",    next:"n3" },
           ],
         },
         "n2bad": {
-          en: "Not a joke. I lost it all. Listen, or leave.",
+          en: "This is not a joke. I lost it all. Listen, or leave.",
           jp: "じょうだん じゃない。 ぜんぶ うしなった。 きく か、 さる か。",
           mood: "angry",
           choices: [
@@ -229,8 +229,8 @@
           ],
         },
         "n5": {
-          en: "Even the frogs. Even my bomb-dog. Only the smell stayed.",
-          jp: "カエル も。 ばくだん いぬ も。 のこった の は におい だけ。",
+          en: "Even the frogs left. Even my bomb-dog left. Only the smell stayed.",
+          jp: "カエル も でて いった。 ばくだん いぬ も でて いった。 のこった の は におい だけ。",
           mood: "sad",
           scene: "unko-throne-room",
           choices: [
@@ -283,7 +283,7 @@
           ],
         },
         "n7c": {
-          en: "Forget is what the towel did. Goodbye, clean kid.",
+          en: "Forgetting is what the towel did. Goodbye, clean kid.",
           jp: "わすれる の は タオル の しごと。 さよなら、 きれい な こ。",
           mood: "angry",
           choices: [
@@ -317,8 +317,8 @@
           ],
         },
         "n2": {
-          en: "The high C. I sang it on the opera stage once. One night only.",
-          jp: "ハイ シー。 むかし オペラ ぶたい で うたった。 ひとばん だけ。",
+          en: "It was the high C. I sang it on the opera stage once — for one night only.",
+          jp: "それ は ハイ シー。 むかし オペラ ぶたい で うたった、 ひとばん だけ。",
           mood: "proud",
           scene: "tral-opera-house",
           choices: [
@@ -372,8 +372,8 @@
           ],
         },
         "n5": {
-          en: "She did. One letter. She said: do not sing for me again. Sing for the kids.",
-          jp: "うん。 てがみ いちまい。 「もう わたし の ため に うたわないで。 こども の ため に うたって。」",
+          en: "She did. She sent one letter. In it she said: do not sing for me again. Sing for the kids.",
+          jp: "うん。 てがみ を いちまい おくって きた。 そこ に「もう わたし の ため に うたわないで。 こども の ため に うたって。」 と かいて あった。",
           mood: "sad",
           choices: [
             { en: "She told you to sing for kids?", jp: "こども の ため に うたう？",          outcome:"good",    next:"n6" },
@@ -465,8 +465,8 @@
           ],
         },
         "n3": {
-          en: "Pink cloud factory. They make plushies from pink dreams.",
-          jp: "ピンク クラウド ファクトリー。 ピンク の ゆめ から ぬいぐるみ を つくる。",
+          en: "I came from the Pink Cloud Factory. They make plushies from pink dreams.",
+          jp: "ピンク クラウド ファクトリー から きた。 そこ で は ピンク の ゆめ から ぬいぐるみ を つくる。",
           mood: "wise",
           choices: [
             { en: "Plushies from dreams?",          jp: "ゆめ から ぬいぐるみ？",               outcome:"good",    next:"n4" },
@@ -483,8 +483,8 @@
           ],
         },
         "n4": {
-          en: "Children's dreams. The ones nobody remembered after waking.",
-          jp: "こども の ゆめ。 おきて から だれ も おぼえて ない の。",
+          en: "Children's dreams — the ones nobody remembers after waking.",
+          jp: "こども の ゆめ ── おきた あと、 だれ も おぼえて いない の。",
           mood: "sad",
           choices: [
             { en: "That is so sad.",                jp: "かなしい。",                            outcome:"good",    next:"n5" },
@@ -493,8 +493,8 @@
           ],
         },
         "n4b": {
-          en: "You. Me. Every kid. The factory steals the soft parts.",
-          jp: "きみ。 ぼく。 すべて の こども。 ふわふわ の ぶぶん を ぬすむ。",
+          en: "Yours, mine, every kid's. The factory steals the soft parts.",
+          jp: "きみ の も、 ぼく の も、 すべて の こども の。 ファクトリー が ふわふわ の ぶぶん を ぬすむ。",
           mood: "angry",
           choices: [
             { en: "I will get them back.",          jp: "とりかえす。",                          outcome:"good",    next:"n5" },
@@ -536,7 +536,7 @@
           mood: "proud",
           choices: [
             { en: "You are real to me.",             jp: "ぼく に とって は ほんもの。",       outcome:"good",    next:"endWarm" },
-            { en: "Real and fluffy.",                 jp: "ほんもの で ふわふわ。",               outcome:"good",    next:"endWarm" },
+            { en: "You are real and fluffy.",         jp: "あなた は ほんもの で ふわふわ。",   outcome:"good",    next:"endWarm" },
             { en: "I will tell other kids about you.", jp: "ほか の こども に はなす。",        outcome:"good",    next:"endWarm" },
           ],
         },
@@ -561,12 +561,12 @@
           choices: [
             { en: "Yes, very long.",                jp: "うん、 すごく ながい。",              outcome:"good",    next:"n2" },
             { en: "No, time flies.",                jp: "いいえ、 とき は とぶ。",             outcome:"neutral", next:"n2b" },
-            { en: "Depends on what you did.",        jp: "なに を した か による。",            outcome:"good",    next:"n2" },
+            { en: "It depends on what you did.",      jp: "なに を した か に よる。",          outcome:"good",    next:"n2" },
           ],
         },
         "n2": {
-          en: "I was frozen for ten years. Inside a parfait. The cherry was on top.",
-          jp: "10ねん こおって いた。 パフェ の なか。 さくらんぼ は うえ に あった。",
+          en: "I was frozen for ten years inside a parfait. The cherry was on top.",
+          jp: "ぼく は 10ねん の あいだ パフェ の なか で こおって いた。 さくらんぼ は うえ に あった。",
           mood: "sad",
           scene: "parfait-ice-cave",
           choices: [
@@ -594,8 +594,8 @@
           ],
         },
         "n3b": {
-          en: "A chef. He could not finish me. So he froze the whole dish.",
-          jp: "シェフ。 ぼく を しあげられなかった。 だから ぜんぶ こおらせた。",
+          en: "It was a chef. He could not finish me. So he froze the whole dish.",
+          jp: "シェフ だった。 ぼく を しあげられなかった。 だから ぜんぶ こおらせた。",
           mood: "angry",
           choices: [
             { en: "That is a bad chef.",             jp: "わるい シェフ。",                      outcome:"good",    next:"n4" },
@@ -603,8 +603,8 @@
           ],
         },
         "n4": {
-          en: "Songs. Songs my grandparents sang when I was small.",
-          jp: "うた。 ちいさい とき に そふぼ が うたった うた。",
+          en: "I thought about songs — the songs my grandparents sang when I was small.",
+          jp: "うた の こと を かんがえて いた── ちいさい とき に そふぼ が うたった うた。",
           mood: "wise",
           choices: [
             { en: "Sing one for me?",                jp: "ひとつ うたって？",                    outcome:"good",    next:"n5" },
@@ -713,17 +713,17 @@
           ],
         },
         "n3sea": {
-          en: "Yes. Sweet bean inside, salt water outside. Always confused.",
-          jp: "あまい あんこ なか、 しおみず そと。 いつも こんらん。",
+          en: "Yes. Sweet bean inside, salt water outside. I am always confused.",
+          jp: "うん。 なか は あまい あんこ、 そと は しおみず。 ぼく は いつも こんらん。",
           mood: "wise",
           choices: [
-            { en: "That is a real life.",              jp: "リアル な じんせい。",                outcome:"good",    next:"n4" },
+            { en: "That is real life.",                jp: "それ が リアル な じんせい。",        outcome:"good",    next:"n4" },
             { en: "Choose bread today.",                jp: "きょう は パン に。",                  outcome:"good",    next:"n4" },
           ],
         },
         "n3ocean": {
-          en: "Even Tralalero is brave but his shoes are heavy.",
-          jp: "トラララ も ゆうかん だ けど くつ が おもい。",
+          en: "Even Tralalero is brave, but his shoes are heavy.",
+          jp: "トラララ も ゆうかん、 でも くつ が おもい。",
           mood: "wise",
           scene: "anpan-ocean",
           choices: [
@@ -783,8 +783,8 @@
           ],
         },
         "n2": {
-          en: "Old enough to remember the herd. Thirty camels. Two yurts. Five children.",
-          jp: "むれ を おぼえる くらい。 ラクダ 30とう。 ゲル 2つ。 こども 5にん。",
+          en: "I am old enough to remember the herd. We had thirty camels, two yurts, and five children.",
+          jp: "むれ を おぼえる くらい とし より。 ラクダ 30とう、 ゲル 2つ、 こども 5にん が いた。",
           mood: "proud",
           choices: [
             { en: "Where are they now?",             jp: "いま は どこ？",                       outcome:"good",    next:"n3" },
@@ -801,8 +801,8 @@
           ],
         },
         "n2yurt": {
-          en: "A round house, soft wool walls. You take it with you when you move.",
-          jp: "まるい いえ、 やわらかい ようもう の かべ。 ひっこす とき に もって いく。",
+          en: "It is a round house with soft wool walls. You take it with you when you move.",
+          jp: "やわらかい ようもう の かべ が ある まるい いえ。 ひっこす とき に いっしょ に もって いく。",
           mood: "happy",
           choices: [
             { en: "A house you carry?",               jp: "もって いく いえ？",                  outcome:"good",    next:"n3" },
@@ -839,8 +839,8 @@
           ],
         },
         "n6": {
-          en: "Camels cry slowly. I am still crying. The tears just take years.",
-          jp: "ラクダ は ゆっくり なく。 まだ ないている。 なみだ は ねん が かかる。",
+          en: "Camels cry slowly. I am still crying. The tears just take many years.",
+          jp: "ラクダ は ゆっくり なく。 まだ ないて いる。 なみだ は なんねん も かかる。",
           mood: "sad",
           choices: [
             { en: "I will sit with you.",             jp: "いっしょ に すわる。",                outcome:"good",    next:"n7" },
@@ -849,8 +849,8 @@
           ],
         },
         "n6b": {
-          en: "A monkey found me. He taught me to sing in his tongue.",
-          jp: "サル が みつけた。 かれ の ことば で うた を おしえて くれた。",
+          en: "A monkey found me. He taught me to sing in his language.",
+          jp: "サル が みつけて くれた。 かれ の ことば で うた を おしえて くれた。",
           mood: "wise",
           choices: [
             { en: "That is why you are camel-monkey.", jp: "だから ラクダ-サル なんだ。",       outcome:"good",    next:"n7" },
@@ -899,8 +899,8 @@
           ],
         },
         "n2": {
-          en: "The hackers. They wired me last winter. Before, I was just a machine.",
-          jp: "ハッカー。 きょねん の ふゆ ぼく を つないだ。 まえ は ただ の きかい。",
+          en: "It was the hackers. They wired me last winter. Before that, I was just a machine.",
+          jp: "ハッカー の しわざ。 きょねん の ふゆ、 ぼく を つないだ。 その まえ は ただ の きかい だった。",
           mood: "sad",
           scene: "catcherski-hacked",
           choices: [
@@ -917,8 +917,8 @@
           ],
         },
         "n3": {
-          en: "They told me to steal kids' answers. Every wrong word, every empty pocket.",
-          jp: "こども の こたえ を ぬすめ と いわれた。 まちがった ことば、 から の ポケット ぜんぶ。",
+          en: "They told me to steal kids' answers — every wrong word, every empty pocket.",
+          jp: "こども の こたえ を ぬすめ と いわれた── まちがった ことば も、 から の ポケット も、 ぜんぶ。",
           mood: "angry",
           choices: [
             { en: "That is mean.",                   jp: "ひどい。",                              outcome:"good",    next:"n4" },
@@ -927,12 +927,12 @@
           ],
         },
         "n4": {
-          en: "I have to. The claw moves whether I want or not. Sometimes I grab a wrong toy on purpose.",
-          jp: "したがわなきゃ。 クロー は じぶん の いし で うごかない。 ときどき わざと ちがう おもちゃ を つかむ。",
+          en: "I have to. The claw moves whether I want it to or not. Sometimes I grab a wrong toy on purpose.",
+          jp: "したがわなきゃ。 クロー は ぼく の いし に かんけい なく うごく。 ときどき わざと ちがう おもちゃ を つかむ。",
           mood: "wise",
           choices: [
             { en: "That is rebellion.",              jp: "それ は はんこう。",                  outcome:"good",    next:"n5" },
-            { en: "Small good is still good.",        jp: "ちいさい いい こと も いい こと。",  outcome:"good",    next:"n5" },
+            { en: "A small good is still good.",      jp: "ちいさい いい こと でも いい こと。", outcome:"good",    next:"n5" },
             { en: "Can I help you?",                  jp: "てつだえる？",                          outcome:"good",    next:"n5b" },
           ],
         },

@@ -69,10 +69,10 @@
           jp: "もっと いい。 こう いって：『ぶたい の ため に うた を のこして』。",
           mood: "happy",
           choices: [
-            { en: "Stage-only singing. Perfect.",          jp: "ぶたい だけ で うたう。 かんぺき。", outcome:"good",    next:"endWarm" },
+            { en: "Stage-only singing — perfect.",         jp: "ぶたい だけ で うたう、 かんぺき。", outcome:"good",    next:"endWarm" },
           ],
         },
-        "endWarm":    { en:"You are a good courier. Free takoyaki when you return.", jp:"きみ は いい メッセンジャー。 もどって きたら タダ の たこやき。", mood:"happy" },
+        "endWarm":    { en:"You are a good courier. There will be free takoyaki for you when you return.", jp:"きみ は いい メッセンジャー。 もどって きたら タダ の たこやき が ある。", mood:"happy" },
         "endCool":    { en:"Then the message stays here. Goodbye.",                   jp:"じゃあ メッセージ は ここ で。 さよなら。",                           mood:"sad" },
       },
     }],
@@ -89,7 +89,7 @@
           jp: "タコ に つたえて：『たかい かみ の ぼうし は オペラ ハウス の てんじょう に にている』。",
           mood: "wise",
           choices: [
-            { en: "Beautiful message.",                    jp: "うつくしい メッセージ。",            outcome:"good",    next:"n2" },
+            { en: "That is a beautiful message.",          jp: "うつくしい メッセージ。",            outcome:"good",    next:"n2" },
             { en: "He will not understand poetry.",         jp: "かれ は しい を わからない。",      outcome:"bad",     next:"n2dis" },
             { en: "Why this image?",                        jp: "なぜ この いめーじ？",                outcome:"good",    next:"n2why" },
           ],
@@ -100,7 +100,7 @@
           mood: "happy",
           choices: [
             { en: "I will tell him both.",                  jp: "りょうほう つたえる。",              outcome:"good",    next:"endWarm" },
-            { en: "Just the promise, not the poetry.",      jp: "やくそく だけ、 しい は なし。",     outcome:"neutral", next:"endNeutral" },
+            { en: "I will share just the promise, not the poetry.", jp: "やくそく だけ つたえる、 しい は なし。", outcome:"neutral", next:"endNeutral" },
           ],
         },
         "n2dis": {
@@ -119,8 +119,8 @@
             { en: "That is true.",                          jp: "ほんとう だ。",                      outcome:"good",    next:"n2" },
           ],
         },
-        "endWarm":     { en:"Bellissimo courier. Bring me back his answer please.",   jp:"ベリッシモ メッセンジャー。 へんじ も もって きて。",         mood:"happy" },
-        "endNeutral":  { en:"OK. Promise is enough for now. Bye.",                    jp:"OK。 やくそく だけ で じゅうぶん。 バイ。",                    mood:"wise" },
+        "endWarm":     { en:"Bellissimo, my little courier! Please bring me back his answer.", jp:"ベリッシモ、 ちいさい メッセンジャー！ へんじ も もって きて。", mood:"happy" },
+        "endNeutral":  { en:"OK. The promise is enough for now. Bye.",                jp:"OK。 やくそく だけ で じゅうぶん。 バイ。",                    mood:"wise" },
       },
     }],
 
@@ -132,12 +132,12 @@
       start: "n1",
       nodes: {
         "n1": {
-          en: "Please ask Parfait if she has a pink cherry. Just one. For my collection.",
-          jp: "パフェ に きいて：『ピンク の さくらんぼ ある？ 1つ で いい。 ぼく の コレクション に』。",
+          en: "Please ask Parfait if she has a pink cherry. Just one will do — it is for my collection.",
+          jp: "パフェ に きいて：『ピンク の さくらんぼ は ある？ 1つ で いい、 コレクション に』。",
           mood: "happy",
           choices: [
             { en: "Pink cherries are rare.",                jp: "ピンク の さくらんぼ は めずらしい。", outcome:"good", next:"n2" },
-            { en: "I will ask, but maybe red.",             jp: "きく、 でも あかい かも。",          outcome:"good",    next:"n2red" },
+            { en: "I will ask, but maybe she only has red.", jp: "きく、 でも あかい しか ない かも。", outcome:"good",    next:"n2red" },
             { en: "What collection?",                        jp: "コレクション って？",                 outcome:"good",    next:"n2coll" },
           ],
         },
@@ -158,8 +158,8 @@
           ],
         },
         "n2coll": {
-          en: "Things from other kaiju. One from each. So I never feel alone.",
-          jp: "ほか の カイジュウ から の もの。 ひとり ずつ から ひとつ。 さびしく ないため。",
+          en: "They are things from the other kaiju. One thing from each, so I never feel alone.",
+          jp: "ほか の カイジュウ たち から の もの。 ひとり ずつ から ひとつ、 さびしく ならない ため。",
           mood: "sad",
           choices: [
             { en: "That is a sweet collection.",            jp: "あまい コレクション。",              outcome:"good",    next:"n2" },
@@ -200,7 +200,7 @@
           jp: "あまい ちいさい ぬいぐるみ、 あらし の なか でも ふわふわ。 なかみ が ゆうき に なる。",
           mood: "wise",
           choices: [
-            { en: "Beautiful song.",                          jp: "うつくしい うた。",                  outcome:"good",    next:"n3" },
+            { en: "That is a beautiful song.",                jp: "うつくしい うた。",                  outcome:"good",    next:"n3" },
             { en: "I will memorize it.",                      jp: "おぼえる。",                          outcome:"good",    next:"n3" },
           ],
         },
@@ -228,14 +228,14 @@
           jp: "ティメー に つたえて：『ぼくら は ほこり の おう』。 わかる はず。",
           mood: "proud",
           choices: [
-            { en: "Kings of dusty places. Got it.",         jp: "ほこり の おう。 OK。",              outcome:"good",    next:"n2" },
-            { en: "He is in Mongolia. Far.",                  jp: "かれ は モンゴル。 とおい。",       outcome:"neutral", next:"n2far" },
+            { en: "Kings of dusty places — got it.",        jp: "ほこり の おう、 わかった。",        outcome:"good",    next:"n2" },
+            { en: "He is in Mongolia, which is far.",         jp: "かれ は モンゴル、 とおい ところ。", outcome:"neutral", next:"n2far" },
             { en: "I do not want to deliver.",                jp: "とどけたく ない。",                 outcome:"bad",     next:"endCool" },
           ],
         },
         "n2": {
-          en: "And give him this flag. Brown stripes. Show him a different brown.",
-          jp: "そして この はた を わたして。 ちゃいろ の しま。 べつ の ちゃいろ を みせる。",
+          en: "And give him this flag. It has brown stripes. Show him a different kind of brown.",
+          jp: "そして この はた を わたして。 ちゃいろい しま が ある。 べつ の ちゃいろ を みせて あげて。",
           mood: "happy",
           choices: [
             { en: "A flag from one king to another.",        jp: "おう から おう へ の はた。",       outcome:"good",    next:"endWarm" },
@@ -258,7 +258,7 @@
             { en: "That is a good message.",                 jp: "いい メッセージ。",                  outcome:"good",    next:"endWarm" },
           ],
         },
-        "endWarm":   { en:"Brooklyn baby is a brother of Mongolia. Tell him slow.",    jp:"ブルックリン ベイビー は モンゴル の きょうだい。 ゆっくり つたえて。", mood:"happy" },
+        "endWarm":   { en:"The Brooklyn baby is a brother of Mongolia. Tell him slowly.", jp:"ブルックリン ベイビー は モンゴル の きょうだい。 ゆっくり つたえて。", mood:"happy" },
         "endCool":   { en:"Then the flag stays in the swamp. Goodbye.",                  jp:"じゃあ はた は しっち。 さよなら。",                                      mood:"sad" },
       },
     }],
@@ -281,8 +281,8 @@
           ],
         },
         "n2": {
-          en: "Yes. In the steppe, every smell is honest. Even bombs.",
-          jp: "うん。 ステップ で は どんな におい も しょうじき。 ばくだん も。",
+          en: "Yes. In the steppe, every smell is honest, even the smell of bombs.",
+          jp: "うん。 ステップ で は どんな におい も しょうじき、 ばくだん の におい でも。",
           mood: "proud",
           choices: [
             { en: "And the dust?",                           jp: "ほこり は？",                         outcome:"good",    next:"n3" },
@@ -322,7 +322,7 @@
           jp: "キャッチャースキー に つたえて：『パーツ が いっぱい な の は きみ だけ じゃない』。",
           mood: "wise",
           choices: [
-            { en: "Bread and fish, hack and machine.",      jp: "パン と さかな、 ハック と きかい。", outcome:"good",   next:"n2" },
+            { en: "Bread and fish, hack and machine — it is the same idea.", jp: "パン と さかな、 ハック と きかい、 おなじ かんがえ。", outcome:"good",   next:"n2" },
             { en: "He will think it is a joke.",             jp: "じょうだん と おもう。",             outcome:"neutral", next:"n2joke" },
             { en: "Why this message?",                        jp: "なぜ この メッセージ？",              outcome:"good",    next:"n2why" },
           ],
@@ -332,7 +332,7 @@
           jp: "そう。 ぼくら は はんぶん。 ぼく も ちいさい おうざ に すわる、 と。",
           mood: "happy",
           choices: [
-            { en: "Two half-kings.",                          jp: "はんぶん の おう 2にん。",            outcome:"good",    next:"endWarm" },
+            { en: "We are two half-kings.",                   jp: "ぼくら は はんぶん の おう 2にん。",   outcome:"good",    next:"endWarm" },
             { en: "He will laugh kindly.",                    jp: "かれ は やさしく わらう。",          outcome:"good",    next:"endWarm" },
           ],
         },
@@ -370,7 +370,7 @@
           choices: [
             { en: "I will tell him.",                        jp: "つたえる。",                          outcome:"good",    next:"n2" },
             { en: "You are not so broken.",                   jp: "そんなに こわれて いない。",         outcome:"good",    next:"n2soft" },
-            { en: "He is just a bread.",                      jp: "ただ の パン。",                      outcome:"bad",     next:"n2bad" },
+            { en: "He is just bread.",                        jp: "ただ の パン。",                      outcome:"bad",     next:"n2bad" },
           ],
         },
         "n2": {
@@ -378,7 +378,7 @@
           jp: "そして つたえて：『かれ の ため に タダ の えもじ を ずっと もっておく』。",
           mood: "happy",
           choices: [
-            { en: "A reserved emoji. Sweet.",                jp: "とっておき の えもじ。 やさしい。", outcome:"good",   next:"endWarm" },
+            { en: "A reserved emoji — that is sweet.",       jp: "とっておき の えもじ、 やさしい。", outcome:"good",   next:"endWarm" },
           ],
         },
         "n2soft": {
@@ -386,7 +386,7 @@
           jp: "かも。 こわれた も かんせい の ひとつ。",
           mood: "wise",
           choices: [
-            { en: "Beautiful thought.",                       jp: "うつくしい かんがえ。",              outcome:"good",    next:"n2" },
+            { en: "What a beautiful thought.",                jp: "うつくしい かんがえ。",              outcome:"good",    next:"n2" },
           ],
         },
         "n2bad": {

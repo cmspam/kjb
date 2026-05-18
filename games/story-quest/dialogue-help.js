@@ -75,8 +75,8 @@
           ],
         },
         "n3towel": {
-          en: "A towel? I am not a swimmer. Apron is heritage.",
-          jp: "タオル？ ぼく は スイマー じゃない。 エプロン は でんとう。",
+          en: "A towel? I am not a swimmer. The apron is a family heirloom.",
+          jp: "タオル？ ぼく は スイマー じゃない。 エプロン は かぞく の たから。",
           mood: "sad",
           choices: [
             { en: "Sorry. Let us find the real one.", jp: "ごめん。 ほんもの を さがそう。", outcome:"good", next:"n3sea" },
@@ -100,8 +100,8 @@
           ],
         },
         "n4tent": {
-          en: "Then a kelp tent. Kelp is bossy but useful.",
-          jp: "じゃあ こんぶ テント。 えらそう だけど やくだつ。",
+          en: "Then make a kelp tent. Kelp is bossy, but it is useful.",
+          jp: "じゃあ こんぶ で テント を つくる。 こんぶ は えらそう、 でも やくだつ。",
           mood: "happy",
           choices: [
             { en: "Kelp tent it is.",                jp: "こんぶ テント で。",              outcome:"good",    next:"n4" },
@@ -204,8 +204,8 @@
           ],
         },
         "n4": {
-          en: "Good. Now cover the roots. Soft hands. Even brown hands.",
-          jp: "いい。 ね を おおう。 やさしい て で。 ちゃいろ の て でも。",
+          en: "Good. Now cover the roots with soft hands. Even brown hands are okay.",
+          jp: "いい。 やさしい て で ね を おおって。 ちゃいろ の て でも だいじょうぶ。",
           mood: "happy",
           choices: [
             { en: "Covered, gently.",                     jp: "やさしく おおった。",             outcome:"good",    next:"n5" },
@@ -271,8 +271,8 @@
           ],
         },
         "n3": {
-          en: "Yes. Dear son. Now the next line.",
-          jp: "うん。 あい する むすこ。 つぎ の ぎょう を。",
+          en: "Yes. That means 'dear son.' Now try the next line.",
+          jp: "うん。 それ は『あい する むすこ』 と いう いみ。 つぎ の ぎょう を よんで。",
           mood: "proud",
           choices: [
             { en: "Vieni a casa... come home?",       jp: "Vieni a casa…『いえ に かえって』？", outcome:"good", next:"n4" },
@@ -316,14 +316,14 @@
           ],
         },
         "n5stay": {
-          en: "You are kind. Two homes is better than one.",
-          jp: "やさしい ね。 いえ ふたつ は ひとつ より いい。",
+          en: "You are kind. Two homes are better than one.",
+          jp: "やさしい ね。 いえ が ふたつ ある の は ひとつ より いい。",
           mood: "happy",
           choices: [
             { en: "Two homes, one heart.",              jp: "いえ ふたつ、 こころ ひとつ。",  outcome:"good",    next:"endWarm" },
           ],
         },
-        "endWarm":    { en:"Bellissimo translator. You are a small bridge.",                jp:"ベリッシモ ほんやくか。 きみ は ちいさい はし。",         mood:"happy" },
+        "endWarm":    { en:"Bellissimo, my little translator! You are a small bridge.", jp:"ベリッシモ、 ちいさい ほんやくか！ きみ は ちいさい はし。", mood:"happy" },
         "endCool":    { en:"Then I will fold the letter and sing instead. Goodbye.",        jp:"じゃあ てがみ を たたんで うたう。 さよなら。",            mood:"sad" },
       },
     }],
@@ -348,8 +348,8 @@
           ],
         },
         "n2pink": {
-          en: "Pink, my classic color. Safe and soft.",
-          jp: "ピンク、 ぼく の クラシック な いろ。 あんぜん で やわらかい。",
+          en: "Pink is my classic color. It is safe and soft.",
+          jp: "ピンク は ぼく の クラシック な いろ。 あんぜん で やわらかい。",
           mood: "happy",
           choices: [
             { en: "Soft is best for hugs.",          jp: "やわらかい は ハグ に いちばん。", outcome:"good",  next:"n3" },
@@ -371,7 +371,7 @@
           mood: "happy",
           choices: [
             { en: "Yellow looks great on you.",       jp: "きいろ、 にあう。",               outcome:"good",   next:"n3" },
-            { en: "Sun-plushy! New hero.",            jp: "たいよう ぬいぐるみ！ あたらしい ヒーロー。", outcome:"good", next:"n3" },
+            { en: "Sun-plushy! You are a new hero!",  jp: "たいよう ぬいぐるみ！ あなた は あたらしい ヒーロー！", outcome:"good", next:"n3" },
           ],
         },
         "n2all": {
@@ -384,8 +384,8 @@
           ],
         },
         "n3blue": {
-          en: "I feel different. Bigger. ...Maybe braver.",
-          jp: "なんか ちがう きもち。 おおきく かんじる。 …ゆうかん かも。",
+          en: "I feel different. I feel bigger. ...Maybe even braver.",
+          jp: "なんか ちがう きもち。 おおきく かんじる。 …ゆうかん にも かんじる。",
           mood: "proud",
           choices: [
             { en: "Color can change you a little.",   jp: "いろ は すこし きみ を かえる。", outcome:"good",   next:"endWarm" },
@@ -397,7 +397,7 @@
           jp: "よし！ きつく むすんだ。 みせ が あたらしく かんじる。",
           mood: "happy",
           choices: [
-            { en: "Same plushy, new color.",          jp: "おなじ ぬいぐるみ、 あたらしい いろ。", outcome:"good", next:"endWarm" },
+            { en: "Same plushy, but a new color.",     jp: "おなじ ぬいぐるみ、 でも あたらしい いろ。", outcome:"good", next:"endWarm" },
             { en: "Show me a hug to test it.",         jp: "ハグ で テスト して。",          outcome:"good",   next:"endWarm" },
           ],
         },
@@ -424,14 +424,14 @@
           ],
         },
         "n2": {
-          en: "Three places. The Ice Cave. The Cherry Tree. The Lost Lunchbox.",
-          jp: "3つ の ばしょ。 アイス どうくつ。 さくら の き。 なくした お べんとう。",
+          en: "There are three places to look: the Ice Cave, the Cherry Tree, and the Lost Lunchbox.",
+          jp: "さがす ばしょ は 3つ。 アイス どうくつ、 さくら の き、 そして なくした おべんとう。",
           mood: "happy",
           scene: "parfait-ice-cave",
           choices: [
-            { en: "Ice Cave first.",                  jp: "まず アイス どうくつ。",          outcome:"good",    next:"n3ice" },
-            { en: "Cherry Tree first.",                jp: "まず さくら の き。",            outcome:"good",    next:"n3tree" },
-            { en: "Lost Lunchbox first.",              jp: "まず なくした おべんとう。",     outcome:"good",    next:"n3lunch" },
+            { en: "Let us check the Ice Cave first.",     jp: "まず アイス どうくつ を みる。",      outcome:"good",    next:"n3ice" },
+            { en: "Let us check the Cherry Tree first.",   jp: "まず さくら の き を みる。",        outcome:"good",    next:"n3tree" },
+            { en: "Let us check the Lost Lunchbox first.", jp: "まず なくした おべんとう を みる。", outcome:"good",    next:"n3lunch" },
           ],
         },
         "n2bad": {
@@ -448,7 +448,7 @@
           mood: "wise",
           choices: [
             { en: "I will bring the frozen one.",     jp: "こおった の を もって くる。",   outcome:"good",    next:"n4ice" },
-            { en: "Too cold. Try another place.",     jp: "さむ すぎ。 べつ の ところ。",   outcome:"neutral", next:"n2" },
+            { en: "It is too cold. Let us try another place.", jp: "さむ すぎる。 べつ の ところ に しよう。", outcome:"neutral", next:"n2" },
           ],
         },
         "n3tree": {
@@ -470,7 +470,7 @@
           ],
         },
         "n4ice": {
-          en: "Frozen eternal cherry. Perfect for a cafe that remembers.",
+          en: "A frozen, eternal cherry. It is perfect for a cafe that remembers.",
           jp: "こおった えいえん の さくらんぼ。 おぼえる カフェ に ぴったり。",
           mood: "proud",
           choices: [
@@ -482,7 +482,7 @@
           jp: "へへへ！ きこえた？ さくらんぼ が ころがって くる。",
           mood: "happy",
           choices: [
-            { en: "Got it! Perfectly red.",           jp: "ゲット！ かんぺき に あかい。",  outcome:"good",    next:"endWarm" },
+            { en: "I got it! It is perfectly red.",    jp: "とった！ かんぺき に あかい。",        outcome:"good",    next:"endWarm" },
           ],
         },
         "n4lunch": {
@@ -490,10 +490,10 @@
           jp: "ゆっくり… さくらんぼ が でて くる。 やわらかい こえ が ひつよう。",
           mood: "happy",
           choices: [
-            { en: "Soft voice forever.",              jp: "ずっと やわらかい こえ。",       outcome:"good",    next:"endWarm" },
+            { en: "I will use a soft voice forever.",  jp: "ずっと やわらかい こえ を つかう。",    outcome:"good",    next:"endWarm" },
           ],
         },
-        "endWarm":    { en:"Anniversary saved. Sweet little sardine swam home.", jp:"きねんび、 まもれた。 あまい ちいさい いわし が いえ に かえった。", mood:"happy" },
+        "endWarm":    { en:"The anniversary is saved. The sweet little sardine swam home.", jp:"きねんび は まもられた。 あまい ちいさい いわし が いえ に かえった。", mood:"happy" },
       },
     }],
 
@@ -506,8 +506,8 @@
       start: "n1",
       nodes: {
         "n1": {
-          en: "Five jobs before we open. Help me choose the order.",
-          jp: "ひらく まえ に 5つ。 じゅんばん を きめて。",
+          en: "I have five jobs before we open. Help me choose the order.",
+          jp: "ひらく まえ に 5つ の しごと が ある。 じゅんばん を きめて。",
           mood: "happy",
           choices: [
             { en: "Bake bread first.",               jp: "まず パン を やく。",             outcome:"good",    next:"n2bake" },
@@ -516,20 +516,20 @@
           ],
         },
         "n2bake": {
-          en: "Bake first is brave. Bread needs forty minutes.",
-          jp: "やく が さき は ゆうかん。 パン は 40ぷん。",
+          en: "Baking first is brave. The bread needs forty minutes.",
+          jp: "やく の が さき なら ゆうかん。 パン は 40ぷん いる。",
           mood: "proud",
           choices: [
-            { en: "Sweep while bread bakes.",        jp: "やく あいだ に そうじ。",         outcome:"good",    next:"n3" },
-            { en: "Open the window for steam.",       jp: "じょうき の ため に まど を あける。", outcome:"good", next:"n3" },
+            { en: "Sweep while the bread bakes.",        jp: "パン を やいて いる あいだ に そうじ する。",   outcome:"good",    next:"n3" },
+            { en: "Open the window to let out the steam.", jp: "じょうき を にがす ため に まど を あける。", outcome:"good", next:"n3" },
           ],
         },
         "n2sweep": {
-          en: "Clean first is wise. A clean floor is a polite floor.",
-          jp: "そうじ が さき は かしこい。 きれい な ゆか は ていねい な ゆか。",
+          en: "Cleaning first is wise. A clean floor is a polite floor.",
+          jp: "そうじ が さき なら かしこい。 きれい な ゆか は ていねい な ゆか。",
           mood: "wise",
           choices: [
-            { en: "Then bake.",                       jp: "つぎに やく。",                   outcome:"good",    next:"n3" },
+            { en: "Then we bake the bread.",          jp: "つぎ に パン を やく。",          outcome:"good",    next:"n3" },
           ],
         },
         "n2list": {
@@ -538,7 +538,7 @@
           mood: "happy",
           choices: [
             { en: "Smile practice is best.",          jp: "えがお れんしゅう は さいこう。", outcome:"good",   next:"n3smile" },
-            { en: "Bake first, then list.",            jp: "まず やく、 つぎに リスト。",   outcome:"good",   next:"n2bake" },
+            { en: "Let us bake first, then make a list.", jp: "まず やいて、 つぎ に リスト を つくる。", outcome:"good", next:"n2bake" },
           ],
         },
         "n3": {
@@ -546,9 +546,9 @@
           jp: "サイン。 『OPEN』 か 『パン と さかな』？",
           mood: "confused",
           choices: [
-            { en: "OPEN. Clear.",                     jp: "OPEN。 わかりやすい。",            outcome:"good",   next:"n4" },
-            { en: "BREAD AND FISH. Honest.",          jp: "パン と さかな。 しょうじき。",   outcome:"good",   next:"n4honest" },
-            { en: "Both signs!",                       jp: "りょうほう！",                    outcome:"good",   next:"n4both" },
+            { en: "'OPEN' — that is clear.",          jp: "『OPEN』 が わかりやすい。",        outcome:"good",   next:"n4" },
+            { en: "'BREAD AND FISH' — that is honest.", jp: "『パン と さかな』 が しょうじき。", outcome:"good", next:"n4honest" },
+            { en: "Put up both signs!",                jp: "りょうほう を かざろう！",         outcome:"good",   next:"n4both" },
           ],
         },
         "n3smile": {
@@ -570,16 +570,16 @@
           ],
         },
         "n4honest": {
-          en: "Bread and Fish! Now my crisis is everyone's crisis.",
-          jp: "パン と さかな！ ぼく の こんらん は みんな の こんらん。",
+          en: "Bread and Fish it is! Now my crisis is everyone's crisis.",
+          jp: "パン と さかな に きまり！ ぼく の こんらん は みんな の こんらん。",
           mood: "happy",
           choices: [
-            { en: "Shared crisis is community.",      jp: "わかちあう こんらん は コミュニティ。", outcome:"good", next:"endWarm" },
+            { en: "A shared crisis is community.", jp: "わかちあう こんらん は コミュニティ。", outcome:"good", next:"endWarm" },
           ],
         },
         "n4both": {
-          en: "Both signs! Customers will be confused but they will laugh.",
-          jp: "りょうほう！ おきゃくさん は こんらん するが わらう。",
+          en: "Both signs! The customers will be confused, but they will laugh.",
+          jp: "りょうほう！ おきゃくさん は こんらん する、 でも わらう。",
           mood: "happy",
           choices: [
             { en: "Laughter sells bread.",            jp: "わらい は パン を うる。",       outcome:"good",   next:"endWarm" },
@@ -625,8 +625,8 @@
           ],
         },
         "n3": {
-          en: "Good. Next line. Hmm-hmm, lost herd, hmm-hmm, find me.",
-          jp: "いい。 つぎ の ぎょう。 フン フン、 まよえる むれ、 フン フン、 ぼく を みつけて。",
+          en: "Good. The next line is: hmm-hmm, lost herd, hmm-hmm, find me.",
+          jp: "いい。 つぎ の ぎょう は： フン フン、 まよえる むれ、 フン フン、 ぼく を みつけて。",
           mood: "sad",
           scene: "temee-herd-lost",
           choices: [
@@ -635,8 +635,8 @@
           ],
         },
         "n4": {
-          en: "Final line. Hmm-hmm, slow tears, hmm-hmm, one herd.",
-          jp: "さいご の ぎょう。 フン フン、 おそい なみだ、 フン フン、 ひとつ の むれ。",
+          en: "The final line is: hmm-hmm, slow tears, hmm-hmm, one herd.",
+          jp: "さいご の ぎょう は： フン フン、 おそい なみだ、 フン フン、 ひとつ の むれ。",
           mood: "happy",
           choices: [
             { en: "Slow tears, one herd.",            jp: "おそい なみだ、 ひとつ の むれ。", outcome:"good", next:"n5" },
@@ -644,8 +644,8 @@
           ],
         },
         "n4soft": {
-          en: "Sadness is the song's coat. Underneath is warm. Try again.",
-          jp: "かなしみ は うた の うわぎ。 した は あったかい。 もう いちど。",
+          en: "Sadness is the song's coat. Underneath, it is warm. Try it again.",
+          jp: "かなしみ は うた の うわぎ。 した は あったかい。 もう いちど ためして。",
           mood: "wise",
           choices: [
             { en: "Lost herd, find me.",              jp: "まよえる むれ、 ぼく を みつけて。", outcome:"good", next:"n4" },
@@ -657,9 +657,9 @@
           mood: "proud",
           scene: "temee-mongolia-day",
           choices: [
-            { en: "I sing the song carefully.",       jp: "ていねい に うたう。",            outcome:"good",   next:"endWarm" },
-            { en: "I sing the song loudly.",          jp: "おおきく うたう。",               outcome:"good",   next:"endLoud" },
-            { en: "I forget the second line.",         jp: "2 ぎょうめ を わすれた。",      outcome:"neutral", next:"n5retry" },
+            { en: "I will sing the song carefully.",   jp: "ていねい に うたう。",            outcome:"good",   next:"endWarm" },
+            { en: "I will sing the song loudly.",      jp: "おおきく うたう。",               outcome:"good",   next:"endLoud" },
+            { en: "I forgot the second line.",          jp: "2 ぎょうめ を わすれた。",      outcome:"neutral", next:"n5retry" },
           ],
         },
         "n5retry": {
@@ -671,7 +671,7 @@
           ],
         },
         "endWarm":    { en:"You are now the herd. One child is enough.",                  jp:"きみ は いま むれ。 こども ひとり で じゅうぶん。",         mood:"happy" },
-        "endLoud":    { en:"Loud song. The sky heard. That is how Mongolians sing.",      jp:"おおきい うた。 そら が きいた。 モンゴル の うたい かた。", mood:"proud" },
+        "endLoud":    { en:"A loud song. The sky heard you. That is how Mongolians sing.", jp:"おおきい うた。 そら が きみ を きいた。 モンゴル の ひと は そう うたう。", mood:"proud" },
         "endCool":    { en:"Then the herd stays only in my chest. Goodbye.",               jp:"じゃあ むれ は ぼく の むね だけ に。 さよなら。",          mood:"sad" },
       },
     }],
@@ -713,8 +713,8 @@
           ],
         },
         "n2half": {
-          en: "Half of me. The half the hackers wired. The other half is yours now.",
-          jp: "ぼく の はんぶん。 ハッカー が つないだ はんぶん。 のこり の はんぶん は きみ の もの。",
+          en: "Only half of me. The half that the hackers wired. The other half is yours now.",
+          jp: "ぼく の はんぶん だけ。 ハッカー が つないだ はんぶん。 のこり の はんぶん は きみ の もの。",
           mood: "wise",
           choices: [
             { en: "Then I will keep your half.",      jp: "じゃあ きみ の はんぶん を もっておく。", outcome:"good", next:"n2" },
@@ -722,8 +722,8 @@
           ],
         },
         "n3trust": {
-          en: "Red. Yellow. Now blue, not green. Blue is freedom.",
-          jp: "あか。 きいろ。 つぎ は あお、 みどり じゃない。 あお は じゆう。",
+          en: "First press red. Then yellow. Then blue, not green. Blue is freedom.",
+          jp: "まず あか を おして。 つぎ に きいろ。 つぎ に あお、 みどり じゃない。 あお は じゆう。",
           mood: "proud",
           choices: [
             { en: "Red, yellow, blue.",               jp: "あか、 きいろ、 あお。",         outcome:"good",    next:"n4free" },
@@ -731,8 +731,8 @@
           ],
         },
         "n3unsure": {
-          en: "Green. Yellow. Black. Black hides me. I sleep, the hack sleeps.",
-          jp: "みどり。 きいろ。 くろ。 くろ は ぼく を かくす。 ぼく は ねる、 ハック も ねる。",
+          en: "First press green. Then yellow. Then black. Black hides me. When I sleep, the hack sleeps.",
+          jp: "まず みどり を おして。 つぎ に きいろ。 つぎ に くろ。 くろ は ぼく を かくす。 ぼく が ねむれば、 ハック も ねむる。",
           mood: "sad",
           choices: [
             { en: "Green, yellow, black.",            jp: "みどり、 きいろ、 くろ。",       outcome:"good",    next:"n4hide" },
@@ -740,8 +740,8 @@
           ],
         },
         "n3hold": {
-          en: "OK. Press only yellow. Yellow is a wave hello.",
-          jp: "わかった。 きいろ だけ。 きいろ は あいさつ。",
+          en: "OK. Press only yellow. Yellow is a friendly wave.",
+          jp: "わかった。 きいろ だけ おして。 きいろ は やさしい あいさつ。",
           mood: "happy",
           choices: [
             { en: "Yellow only.",                     jp: "きいろ だけ。",                   outcome:"good",    next:"n4hold" },
@@ -757,8 +757,8 @@
           ],
         },
         "n4hide": {
-          en: "Click. ...Black screen. I am safe but small now. Visit me sometimes.",
-          jp: "カチッ。 …くろい がめん。 あんぜん だけど ちいさく なった。 たまに きて。",
+          en: "Click. ...A black screen. I am safe, but I am small now. Please visit me sometimes.",
+          jp: "カチッ。 …くろい がめん。 あんぜん、 でも ちいさく なった。 たまに あいに きて。",
           mood: "wise",
           choices: [
             { en: "I will visit every week.",         jp: "まいしゅう くる。",               outcome:"good",    next:"endHide" },
@@ -769,7 +769,7 @@
           jp: "あいさつ かえす。 じゆう でも、 きえる でも ない、 もたれた だけ。 じゅうぶん。",
           mood: "happy",
           choices: [
-            { en: "Held is enough.",                  jp: "もたれた で じゅうぶん。",        outcome:"good",    next:"endWarm" },
+            { en: "Being held is enough.",            jp: "もたれている だけ で じゅうぶん。", outcome:"good",    next:"endWarm" },
           ],
         },
         "endWarm":    { en:"Now I steal nothing. Sometimes I give a free emoji.",   jp:"いま は なに も ぬすまない。 ときどき タダ の えもじ を あげる。", mood:"happy" },

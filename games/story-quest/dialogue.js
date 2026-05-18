@@ -122,8 +122,8 @@ window.STORY = {
             ],
           },
           "n4a": {
-            en: "Yes! I cook my cousins. It is sad but the world wants takoyaki.",
-            jp: "うん！ ぼく は いとこ を りょうり する。 かなしい けど せかい は たこやき を ほしい。",
+            en: "Yes! I cook my cousins. It is sad, but the world wants takoyaki.",
+            jp: "うん！ ぼく は いとこ を りょうり する。 かなしい、 でも せかい は たこやき を ほしがる。",
             mood: "sad",
             choices: [
               { en: "That is brave of you.",     jp: "ゆうき が ある ね。",            outcome:"good",    next:"endWarm" },
@@ -190,8 +190,8 @@ window.STORY = {
             ],
           },
           "n3c": {
-            en: "A little. But also it felt amazing.",
-            jp: "すこし。 でも すごく いい きぶん。",
+            en: "A little. But it also felt amazing.",
+            jp: "すこし。 でも すごく いい きぶん だった。",
             mood: "happy",
             choices: [
               { en: "Wow, lucky octopus.",          jp: "すごい、 ラッキー たこ。", outcome:"good",    next:"n4" },
@@ -204,7 +204,7 @@ window.STORY = {
             choices: [
               { en: "That is a useful skill.",       jp: "やくに たつ ぎじゅつ。", outcome:"good",    next:"endWarm" },
               { en: "Eight arms helps you cook?",    jp: "8本あし は りょうり に やくだつ？", outcome:"good", next:"endWarm" },
-              { en: "Please drink it again, smaller.", jp: "また のんで、 ちいさく なって。", outcome:"neutral", next:"endNeutral" },
+              { en: "Please drink it again and become smaller.", jp: "また のんで、 ちいさく なって。", outcome:"neutral", next:"endNeutral" },
             ],
           },
           "endWarm":    { en:"Thank you for listening. Have a free takoyaki.", jp:"きいて くれて ありがとう。 タダ の たこやき どうぞ。", mood:"happy" },
@@ -295,7 +295,7 @@ window.STORY = {
             jp: "うん！ かれ は うるさくて イタリア の。 ぼくたち は ともだち。",
             mood: "happy",
             choices: [
-              { en: "Wow, big monster family.",          jp: "うわ、 おおきい モンスター ファミリー。", outcome:"good", next:"endWarm" },
+              { en: "Wow, what a big monster family.",    jp: "うわ、 おおきい モンスター ファミリー。", outcome:"good", next:"endWarm" },
             ],
           },
           "endWarm":    { en:"You are a smart friend. Come visit anytime.", jp:"あなた は かしこい ともだち。 いつでも きて。", mood:"happy" },
@@ -349,8 +349,8 @@ window.STORY = {
             ],
           },
           "n2c": {
-            en: "BOOM! Just kidding. I disarmed it. Lucky kid.",
-            jp: "ボーン！ じょうだん。 ぶき を はずした。 ラッキー な こ。",
+            en: "BOOM! Just kidding. I disarmed it. You are a lucky kid.",
+            jp: "ボーン！ じょうだん。 ぶき を はずした。 ラッキー な こ だ。",
             mood: "wise",
             choices: [
               { en: "Phew, that was scary.",         jp: "ふぅ、 こわかった。",            outcome:"good",    next:"endNeutral" },
@@ -495,7 +495,7 @@ window.STORY = {
             jp: "だいじょうぶ。 におい は ぼく の ちから。",
             mood: "proud",
             choices: [
-              { en: "Smell power is cool.",            jp: "におい パワー かっこいい。",     outcome:"good",    next:"endWarm" },
+              { en: "Your smell power is cool.",        jp: "におい パワー、 かっこいい。",   outcome:"good",    next:"endWarm" },
             ],
           },
           "n3b": {
@@ -579,16 +579,16 @@ window.STORY = {
             jp: "ポップス？ いとこ の アンパン は ポップス だいすき。",
             mood: "happy",
             choices: [
-              { en: "You have a pop cousin?",           jp: "ポップス の いとこ が いる？",     outcome:"good",    next:"endWarm" },
+              { en: "Your cousin likes pop music?",     jp: "いとこ は ポップス が すき？",       outcome:"good",    next:"endWarm" },
             ],
           },
           "n3c": {
-            en: "Italian is fun! Try with me. 'Bellissimo!'",
-            jp: "イタリアご は たのしい！ いっしょに 『ベリッシモ！』",
+            en: "Italian is fun! Try saying it with me: 'Bellissimo!'",
+            jp: "イタリアご は たのしい！ いっしょ に いって みて：『ベリッシモ！』",
             mood: "happy",
             choices: [
               { en: "Bellissimo!",                       jp: "ベリッシモ！",                       outcome:"good",    next:"endWarm" },
-              { en: "Bell-iss-imo, hard to say.",         jp: "ベリッシモ、 むずかしい。",           outcome:"good",    next:"endWarm" },
+              { en: "Bell-iss-imo — it is hard to say.", jp: "ベリッシモ、 むずかしい。",           outcome:"good",    next:"endWarm" },
             ],
           },
           "endWarm":    { en:"Bellissimo friend! Come hear me again!", jp:"ベリッシモ ともだち！ また ぼく の うた を きいて！", mood:"happy" },
@@ -608,7 +608,7 @@ window.STORY = {
             jp: "ぼく の くつ を みて。 あおい。",
             mood: "proud",
             choices: [
-              { en: "Beautiful shoes.",                jp: "きれい な くつ。",                outcome:"good",    next:"n2a" },
+              { en: "Those are beautiful shoes.",      jp: "きれい な くつ。",                outcome:"good",    next:"n2a" },
               { en: "Why three shoes?",                 jp: "なんで 3足？",                     outcome:"good",    next:"n2b" },
               { en: "I like red shoes more.",            jp: "あかい くつ の ほうが すき。",     outcome:"neutral", next:"n2c" },
             ],
@@ -627,13 +627,13 @@ window.STORY = {
             jp: "ぼく は 3本あし。 1本 ずつ くつ。",
             mood: "wise",
             choices: [
-              { en: "Three legs is strange.",            jp: "3本あし は へん。",                 outcome:"neutral", next:"n3c" },
-              { en: "Lucky! Three legs is cool.",         jp: "ラッキー！ 3本あし は かっこいい。", outcome:"good", next:"endWarm" },
+              { en: "Having three legs is strange.",    jp: "3本あし は へん。",                 outcome:"neutral", next:"n3c" },
+              { en: "Lucky! Having three legs is cool.", jp: "ラッキー！ 3本あし は かっこいい。", outcome:"good", next:"endWarm" },
             ],
           },
           "n2c": {
-            en: "Red? Hmph. Blue is the sea. Better.",
-            jp: "あか？ ふん。 あおい は うみ。 もっと いい。",
+            en: "Red? Hmph. Blue is the sea. Blue is better.",
+            jp: "あか？ ふん。 あおい は うみ の いろ。 あおい の ほうが いい。",
             mood: "angry",
             choices: [
               { en: "OK, blue is good too.",            jp: "わかった、 あおい も いい。",       outcome:"good",    next:"endWarm" },
@@ -641,17 +641,17 @@ window.STORY = {
             ],
           },
           "n3a": {
-            en: "Thirty thousand yen. Each shoe.",
-            jp: "3万円。 1足 ずつ。",
+            en: "Thirty thousand yen per shoe.",
+            jp: "1足 ずつ 3万円。",
             mood: "proud",
             choices: [
-              { en: "Wow, very expensive.",             jp: "うわ、 とても たかい。",             outcome:"good",    next:"endWarm" },
+              { en: "Wow, that is very expensive.",     jp: "うわ、 とても たかい。",             outcome:"good",    next:"endWarm" },
               { en: "That is too much money.",            jp: "おかね が おおすぎ。",                outcome:"neutral", next:"endNeutral" },
             ],
           },
           "n3b": {
-            en: "You can buy them online. But not for fish.",
-            jp: "ネット で かえる。 でも さかな む け では ない。",
+            en: "You can buy them online — but they do not make them for fish.",
+            jp: "ネット で かえる── でも さかな む け の サイズ は ない。",
             mood: "happy",
             choices: [
               { en: "I am not a fish.",                  jp: "ぼく は さかな じゃない。",          outcome:"good",    next:"endWarm" },
@@ -667,7 +667,7 @@ window.STORY = {
           },
           "endWarm":    { en:"You are stylish. We can shop together.", jp:"きみ は おしゃれ。 いっしょに かいもの できる。", mood:"happy" },
           "endNeutral": { en:"Money is heavy. Goodbye.",                jp:"おかね は おもい。 さよなら。",                     mood:"neutral" },
-          "endCool":    { en:"Bad taste. Bye.",                          jp:"わるい センス。 バイ。",                            mood:"angry" },
+          "endCool":    { en:"That is bad taste. Goodbye.",              jp:"わるい センス。 さよなら。",                       mood:"angry" },
         },
       },
     ],
@@ -869,7 +869,7 @@ window.STORY = {
             mood: "happy",
             choices: [
               { en: "Yes! Amazing.",                    jp: "うん！ すごい。",                    outcome:"good",   next:"endWarm" },
-              { en: "Weird but tasty.",                  jp: "へん だけど おいしい。",              outcome:"good",   next:"endWarm" },
+              { en: "It is weird but tasty.",            jp: "へん だけど おいしい。",              outcome:"good",   next:"endWarm" },
             ],
           },
           "n3b": {
@@ -917,7 +917,7 @@ window.STORY = {
             jp: "ぐうぜん サラダバー で ゆうごう した。",
             mood: "wise",
             choices: [
-              { en: "Salad bar fusion?",                jp: "サラダバー で ゆうごう？",          outcome:"good",   next:"n3" },
+              { en: "A salad bar fusion?",              jp: "サラダバー で ゆうごう？",          outcome:"good",   next:"n3" },
             ],
           },
           "n2c": {
@@ -959,8 +959,8 @@ window.STORY = {
         start: "n1",
         nodes: {
           "n1": {
-            en: "Hello kid. I am bread and also a fish.",
-            jp: "やあ、 こども。 ぼく は パン で さかな で もある。",
+            en: "Hello, kid. I am bread, and I am also a fish.",
+            jp: "やあ、 こども。 ぼく は パン、 そして さかな でも ある。",
             mood: "proud",
             choices: [
               { en: "How are you both?",                jp: "どうやって りょうほう？",           outcome:"good",   next:"n2a" },
@@ -987,8 +987,8 @@ window.STORY = {
             ],
           },
           "n2c": {
-            en: "Not a sandwich. A new hero.",
-            jp: "サンドイッチ じゃない。 あたらしい ヒーロー。",
+            en: "I am not a sandwich. I am a new hero.",
+            jp: "ぼく は サンドイッチ じゃない。 ぼく は あたらしい ヒーロー。",
             mood: "proud",
             choices: [
               { en: "Hero of bread and fish?",          jp: "パン と さかな の ヒーロー？",        outcome:"good",   next:"n4" },
@@ -1131,21 +1131,21 @@ window.STORY = {
             jp: "いんせき。 わし の からだ と サル が ひとつ に なった。",
             mood: "wise",
             choices: [
-              { en: "Cool origin story.",                jp: "かっこいい きげん。",                  outcome:"good",   next:"n3c" },
+              { en: "What a cool origin story.",         jp: "かっこいい きげん の はなし。",       outcome:"good",   next:"n3c" },
               { en: "Where is the monkey now?",          jp: "サル は いま どこ？",                  outcome:"good",   next:"n3c" },
             ],
           },
           "n3a": {
-            en: "The Gobi. Cold and empty and beautiful.",
-            jp: "ゴビ。 さむくて あいて て きれい。",
+            en: "It is the Gobi. It is cold, empty, and beautiful.",
+            jp: "ゴビ さばく。 さむくて、 がらんとして、 そして きれい。",
             mood: "wise",
             choices: [
               { en: "I want to visit it.",                jp: "いって みたい。",                     outcome:"good",   next:"endWarm" },
             ],
           },
           "n3b": {
-            en: "Hot dumplings. And no school stress.",
-            jp: "あつい ぎょうざ。 がっこう の ストレス は なし。",
+            en: "I eat hot dumplings. And I have no school stress.",
+            jp: "あつい ぎょうざ を たべる。 がっこう の ストレス も ない。",
             mood: "happy",
             choices: [
               { en: "I want hot dumplings too.",         jp: "あつい ぎょうざ ほしい。",            outcome:"good",   next:"endWarm" },
@@ -1157,7 +1157,7 @@ window.STORY = {
             jp: "わし は いま サル で あり ラクダ。",
             mood: "wise",
             choices: [
-              { en: "Two in one. Cool.",                 jp: "ふたつ で ひとつ。 かっこいい。",      outcome:"good",   next:"endWarm" },
+              { en: "Two in one — that is cool.",        jp: "ふたつ で ひとつ、 かっこいい。",     outcome:"good",   next:"endWarm" },
             ],
           },
           "endWarm":  { en:"Come back when you are also old. We will talk.", jp:"あなた が ふるく なった とき また はなそう。", mood:"happy" },
@@ -1183,8 +1183,8 @@ window.STORY = {
             ],
           },
           "n2a": {
-            en: "Sad. Humps store water for long walks.",
-            jp: "かなしい。 こぶ は ながい さんぽ の みず を ためる。",
+            en: "That is sad. Humps store water for long walks.",
+            jp: "それ は かなしい。 こぶ は ながい さんぽ の ため に みず を ためる。",
             mood: "wise",
             choices: [
               { en: "I drink from a bottle.",            jp: "ぼく は ボトル で のむ。",            outcome:"good",   next:"endWarm" },
@@ -1201,8 +1201,8 @@ window.STORY = {
             ],
           },
           "n2c": {
-            en: "A backpack-hump is smart. Soft kid.",
-            jp: "ランドセル の こぶ は かしこい。 やわらかい こ。",
+            en: "A backpack-hump is smart. You are a clever kid.",
+            jp: "ランドセル の こぶ は かしこい。 きみ は かしこい こ。",
             mood: "happy",
             choices: [
               { en: "Camel-kid, that is me.",            jp: "ラクダ こ、 それ が ぼく。",          outcome:"good",   next:"endWarm" },
@@ -1313,7 +1313,7 @@ window.STORY = {
         start: "n1",
         nodes: {
           "n1": {
-            en: "I keep every emoji of the world.",
+            en: "I keep every emoji in the world.",
             jp: "せかい の えもじ を ぜんぶ もって いる。",
             mood: "proud",
             choices: [
