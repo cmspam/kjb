@@ -110,9 +110,23 @@
   display: flex; flex-direction: column; align-items: flex-start;
   gap: 4px;
 }
+.conv-list .cl-row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .conv-list .cl-title { font-size: 16px; font-weight: 900; color: var(--accent); }
 .conv-list .cl-intro { font-size: 12px; color: var(--ink-dim); }
 .conv-list .cl-preview-hint { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px; font-style: italic; }
+.cl-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 99px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.cl-badge.bg-meet { background: linear-gradient(90deg, #44eeff, #2a4a8a); color: #fff; }
+.cl-badge.bg-deep { background: linear-gradient(90deg, #aa66ff, #5a1a8a); color: #fff; }
+.cl-badge.bg-help { background: linear-gradient(90deg, #44ff88, #1a8844); color: #002a05; }
+.cl-badge.bg-msg  { background: linear-gradient(90deg, #ffcc44, #ff9533); color: #4a2200; }
 .conv-list button.done { border-color: var(--good); }
 .conv-list button.done::after { content: " ✓"; color: var(--good); }
 

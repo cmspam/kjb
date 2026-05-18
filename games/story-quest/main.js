@@ -238,7 +238,14 @@
     kd.conversations.forEach(conv => {
       const b = document.createElement("button");
       b.className = "btn-cool" + (p[kaijuId] && p[kaijuId][conv.id] ? " done" : "");
-      b.innerHTML = `<div class="cl-title">${conv.title}</div><div class="cl-intro">${conv.intro}</div><div class="cl-preview-hint">🔊 ながおし で プレビュー</div>`;
+      // Conversation category badge based on id prefix:
+      //   deep-* = backstory, help-* = quest, msg-* = message-delivery
+      let badge = "";
+      if (/^deep-/.test(conv.id))       badge = '<span class="cl-badge bg-deep">💎 BACKSTORY</span>';
+      else if (/^help-/.test(conv.id))  badge = '<span class="cl-badge bg-help">🤝 HELP QUEST</span>';
+      else if (/^msg-/.test(conv.id))   badge = '<span class="cl-badge bg-msg">💌 MESSAGE</span>';
+      else                              badge = '<span class="cl-badge bg-meet">👋 MEET</span>';
+      b.innerHTML = `<div class="cl-row1">${badge}<div class="cl-title">${conv.title}</div></div><div class="cl-intro">${conv.intro}</div><div class="cl-preview-hint">🔊 ながおし で プレビュー</div>`;
       let pressTimer = null;
       let suppressClick = false;
       b.addEventListener("pointerdown", () => {
