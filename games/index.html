@@ -171,6 +171,15 @@
     <div class="mastery-hint">カイジュウ を タップ して くわしい じょうほう を みる</div>
   </div>
 
+  <!-- Session stats row — pulled from the unified localStorage store
+       so kids see their cumulative achievement across all 3 games. -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-cell"><div class="stat-num" id="stat-sent">0</div><div class="stat-lbl">ぶん クリア</div></div>
+    <div class="stat-cell"><div class="stat-num" id="stat-conv">0</div><div class="stat-lbl">かいわ かんりょう</div></div>
+    <div class="stat-cell"><div class="stat-num" id="stat-inv">0</div><div class="stat-lbl">てき げきは</div></div>
+    <div class="stat-cell"><div class="stat-num" id="stat-mast">0</div><div class="stat-lbl">マスター カイジュウ</div></div>
+  </div>
+
   <!-- Forward-looking teaser for the next stage. Doesn't dilute the
        three-game focus above; sits below as a peek. -->
   <a class="kb2-tease" href="kaiju-battle-2/index.html">
@@ -327,6 +336,41 @@
   }
   render();
   window.addEventListener("focus", render);
+
+  // Session-stats row: cumulative across all 3 games. Number animates
+  // up from 0 to the final value on first paint — feels rewarding.
+  function totalStats() {
+    const m = loadMastery();
+    let sent = 0, conv = 0, inv = 0, mast = 0;
+    KAIJU.forEach(k => {
+      const km = m[k.id];
+      if (!km) return;
+      if (km.flappy) Object.values(km.flappy).forEach(arr => sent += (arr||[]).length);
+      conv += (km.story || []).length;
+      inv += km.castle || 0;
+      const pct = kaijuPct(km);
+      if (pct >= 66) mast++;
+    });
+    return { sent, conv, inv, mast };
+  }
+  function tweenNumber(id, value, dur) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const start = performance.now();
+    const from = 0;
+    function step(now) {
+      const k = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1-k, 3);
+      el.textContent = String(Math.round(from + (value - from) * eased));
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  const stats = totalStats();
+  tweenNumber("stat-sent", stats.sent, 1100);
+  tweenNumber("stat-conv", stats.conv, 1300);
+  tweenNumber("stat-inv",  stats.inv,  1500);
+  tweenNumber("stat-mast", stats.mast, 900);
 })();
 
 /* Scene cycler — loads scenes from story-quest/scenes.js and cycles. */
@@ -399,6 +443,36 @@
   margin-top: 12px;
   opacity: 0.7;
   letter-spacing: 1px;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  max-width: 760px;
+  margin: 18px auto 0;
+}
+.stat-cell {
+  background: rgba(0,0,0,0.35);
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 12px 8px;
+  text-align: center;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.stat-cell:hover { transform: translateY(-2px); border-color: var(--accent); }
+.stat-num {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+.stat-lbl {
+  font-size: 10px;
+  color: var(--ink-dim);
+  letter-spacing: 1px;
+  margin-top: 4px;
 }
 
 /* KB2 teaser link sitting below mastery section */
