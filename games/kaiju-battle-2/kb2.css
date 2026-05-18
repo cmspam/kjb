@@ -209,6 +209,56 @@ body.kb2-theme {
   padding-left: 32px;
 }
 
+.kb2-power {
+  background: rgba(0,0,0,0.6);
+  border: 2px solid rgba(255,228,92,0.5);
+  border-radius: 16px;
+  padding: 14px 22px;
+  margin: 16px 0;
+  text-align: center;
+}
+.kb2-power-title {
+  font-size: 14px;
+  font-weight: 900;
+  color: #ffe45c;
+  letter-spacing: 3px;
+  margin-bottom: 10px;
+}
+.kb2-power-meter {
+  position: relative;
+  height: 28px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 99px;
+  overflow: hidden;
+  margin: 6px 0 10px;
+}
+.kb2-power-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, #44eeff, #ffe45c, #ff3b6b);
+  border-radius: 99px;
+  transition: width 1.2s cubic-bezier(.18,.89,.32,1.28);
+  box-shadow: 0 0 24px rgba(255,228,92,0.4);
+}
+.kb2-power-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  color: #1a0a3a;
+  letter-spacing: 2px;
+  font-size: 14px;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+}
+.kb2-power-note {
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+  font-style: italic;
+  line-height: 1.5;
+}
+
 .kb2-clone-note {
   margin-top: 12px;
   font-size: 11px;

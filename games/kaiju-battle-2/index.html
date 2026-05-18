@@ -26,6 +26,18 @@
     <div class="kb2-art" id="kb2-art"></div>
   </div>
 
+  <!-- ESL Power panel — shows the player's accumulated mastery across
+       the three games. Even before KB2 mechanics actually use this
+       number, the kid sees the cross-game integration is real. -->
+  <div class="kb2-power" id="kb2-power">
+    <div class="kb2-power-title">⚡ あなた の ESL パワー ⚡</div>
+    <div class="kb2-power-meter">
+      <div class="kb2-power-fill" id="kb2-power-fill" style="width:0%"></div>
+      <div class="kb2-power-label" id="kb2-power-label">0%</div>
+    </div>
+    <div class="kb2-power-note" id="kb2-power-note">じゅく の 3つ の ゲーム を プレイ して、 KB2 の こうげき を つよく しよう。</div>
+  </div>
+
   <div class="kb2-pitch">
     <h3>あたらしい たたかい かた</h3>
     <ul>
@@ -85,6 +97,47 @@
     w.innerHTML = GamesArt.renderSVG(boss);
     slot.appendChild(w);
   });
+})();
+
+(function () {
+  // Compute and display the player's aggregate ESL mastery so the kid
+  // sees their three-game progress as a single "KB2 power" number.
+  // Same gating formula as the landing page mastery rings.
+  const FLAPPY_CEILING = 30, STORY_CEILING = 3, CASTLE_CEILING = 8;
+  let m = {};
+  try { m = JSON.parse(localStorage.getItem("esl_kaiju_mastery") || "{}"); }
+  catch (_) { m = {}; }
+  const kaiju = ["tako","unko","tral","pamp","parfait","anpan","temee","catcherski"];
+  let totalPct = 0;
+  kaiju.forEach(id => {
+    const km = m[id]; if (!km) return;
+    let flappy = 0;
+    if (km.flappy) Object.values(km.flappy).forEach(arr => flappy += (arr||[]).length);
+    const story = (km.story||[]).length;
+    const castle = km.castle || 0;
+    const fp = Math.min(1, flappy/FLAPPY_CEILING);
+    const sp = Math.min(1, story/STORY_CEILING);
+    const cp = Math.min(1, castle/CASTLE_CEILING);
+    const touched = (fp>0?1:0)+(sp>0?1:0)+(cp>0?1:0);
+    const raw = (fp+sp+cp)/3;
+    const ceil = touched === 3 ? 1.0 : 0.66;
+    totalPct += Math.min(raw, ceil);
+  });
+  const avgPct = Math.round((totalPct / kaiju.length) * 100);
+  const fill = document.getElementById("kb2-power-fill");
+  const label = document.getElementById("kb2-power-label");
+  const note = document.getElementById("kb2-power-note");
+  if (fill && label) {
+    fill.style.width = avgPct + "%";
+    label.textContent = avgPct + "%";
+  }
+  if (note) {
+    if (avgPct === 0)        note.textContent = "じゅく の 3つ の ゲーム を プレイ して、 KB2 の こうげき を つよく しよう。";
+    else if (avgPct < 20)    note.textContent = "スタート しました！ もっと プレイ する と パワー UP。";
+    else if (avgPct < 50)    note.textContent = "ちゃんと そだって いる。 つづけて。";
+    else if (avgPct < 80)    note.textContent = "つよい トレーナー。 KB2 で の こうげき が おおきい。";
+    else                      note.textContent = "マスター！ KB2 で の こうげき は さいきょう。";
+  }
 })();
 
 (function () {
