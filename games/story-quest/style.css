@@ -114,12 +114,13 @@
 .vn-scene svg { width: 100%; height: 100%; display: block; }
 .scene-layer {
   position: absolute; inset: 0;
-  opacity: 1;
+  opacity: 0;
   transition: opacity 0.9s ease-in-out;
   z-index: 1;
 }
-.scene-layer.fade-in   { opacity: 0; }
+.scene-layer.fade-in     { opacity: 0; }
 .scene-layer.fade-active { opacity: 1; }
+.scene-layer.fade-out    { opacity: 0; }
 .scene-layer svg { width: 100%; height: 100%; display: block; }
 /* Subtle vignette over scene art so dialogue bubble stays readable */
 .vn-scene::after {

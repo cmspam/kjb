@@ -261,21 +261,27 @@
       html = Stages.render(State.kaijuId);
     }
     if (instant) {
-      slot.innerHTML = `<div class="scene-layer">${html}</div>`;
+      slot.innerHTML = `<div class="scene-layer fade-active">${html}</div>`;
       return;
     }
-    // Crossfade: append new layer, fade in, drop old when done
+    // Crossfade: new layer fades in while previous layer fades out.
+    const oldLayers = slot.querySelectorAll(".scene-layer");
     const next = document.createElement("div");
     next.className = "scene-layer fade-in";
     next.innerHTML = html;
     slot.appendChild(next);
-    // Force reflow then trigger animation
-    requestAnimationFrame(() => { next.classList.remove("fade-in"); next.classList.add("fade-active"); });
+    // Force reflow then trigger animations
+    requestAnimationFrame(() => {
+      next.classList.remove("fade-in");
+      next.classList.add("fade-active");
+      // Fade out old layers simultaneously
+      oldLayers.forEach(l => { l.classList.remove("fade-active"); l.classList.add("fade-out"); });
+    });
     setTimeout(() => {
       // Drop all but the latest
       const layers = slot.querySelectorAll(".scene-layer");
       for (let i = 0; i < layers.length - 1; i++) layers[i].remove();
-    }, 900);
+    }, 1000);
   }
   $("vn-quit").addEventListener("click", () => { SND.sfxPop(); show("title"); renderMetShelf(); });
 
