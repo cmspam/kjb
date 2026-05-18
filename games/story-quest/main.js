@@ -238,8 +238,24 @@
     kd.conversations.forEach(conv => {
       const b = document.createElement("button");
       b.className = "btn-cool" + (p[kaijuId] && p[kaijuId][conv.id] ? " done" : "");
-      b.innerHTML = `<div class="cl-title">${conv.title}</div><div class="cl-intro">${conv.intro}</div>`;
-      b.addEventListener("click", () => { SND.sfxConfirm(); startConversation(conv); });
+      b.innerHTML = `<div class="cl-title">${conv.title}</div><div class="cl-intro">${conv.intro}</div><div class="cl-preview-hint">🔊 ながおし で プレビュー</div>`;
+      let pressTimer = null;
+      let suppressClick = false;
+      b.addEventListener("pointerdown", () => {
+        pressTimer = setTimeout(() => {
+          suppressClick = true;
+          // Preview the conversation by speaking the intro line in the kaiju's voice
+          SND.speakAsKaiju(kaijuId, conv.intro);
+        }, 500);
+      });
+      b.addEventListener("pointerup",   () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+      b.addEventListener("pointerleave",() => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+      b.addEventListener("contextmenu", (e) => { e.preventDefault(); suppressClick = true; SND.speakAsKaiju(kaijuId, conv.intro); });
+      b.addEventListener("click", () => {
+        if (suppressClick) { suppressClick = false; return; }
+        SND.sfxConfirm();
+        startConversation(conv);
+      });
       list.appendChild(b);
     });
     show("conv-pick");

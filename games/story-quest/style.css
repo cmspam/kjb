@@ -112,6 +112,7 @@
 }
 .conv-list .cl-title { font-size: 16px; font-weight: 900; color: var(--accent); }
 .conv-list .cl-intro { font-size: 12px; color: var(--ink-dim); }
+.conv-list .cl-preview-hint { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px; font-style: italic; }
 .conv-list button.done { border-color: var(--good); }
 .conv-list button.done::after { content: " ✓"; color: var(--good); }
 
