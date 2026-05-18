@@ -69,11 +69,13 @@
     boss: null,
     sentence: "",
     tokens: [],       // FULL tokenization of the sentence ("I", "am", "an", "octopus.")
-    blanks: [],       // ascending indices into `tokens` the kid must collect.
-                      // L0: every index (collect the whole sentence in order).
-                      // L1: ~30% of indices (blanks shown as ___ in HUD; kid fills from JP).
-                      // L2: ~50% of indices.
-    progress: 0,      // index into `blanks` (how many blanks the kid has filled so far)
+    blanks: [],       // ascending indices into `tokens` that are HIDDEN in the HUD
+                      // (shown as ___). The kid still collects EVERY word in the
+                      // sentence in order — blanks are a display concern only.
+                      // L0: [] (everything visible).
+                      // L1: ~30% of indices hidden, min 1, max 2.
+                      // L2: ~50% of indices hidden.
+    progress: 0,      // index into `tokens` — how many words collected so far
     parts: [],
     coreHits: 0,
     pickupsCorrect: 0,
@@ -84,22 +86,25 @@
   };
 
   // The word the kid currently needs to grab. Returns null when the
-  // round is complete. Single source of truth used by spawn, pickup,
-  // and HUD render.
+  // sentence is complete. Kid collects EVERY word in `tokens` in
+  // order — blanks only control HUD display.
   function currentTargetWord() {
-    if (State.progress >= State.blanks.length) return null;
-    return State.tokens[State.blanks[State.progress]];
+    if (State.progress >= State.tokens.length) return null;
+    return State.tokens[State.progress];
   }
 
-  // Decide which token indices are "blanked" (kid must figure out
-  // from JP and collect). Level drives the count:
-  //   L0: all indices — kid sees the full sentence and collects in order
-  //   L1: ~30% — kid sees most of the sentence, fills 1-2 holes
-  //   L2: ~50% — kid sees half, fills the rest
-  // Returned indices are sorted ascending so collection follows reading order.
+  // Decide which token indices are visually HIDDEN in the HUD (shown
+  // as ___ until the kid collects them). Every token still has to be
+  // collected; blanks just make the HUD stop telling the kid what
+  // word to grab at those positions — they have to figure it out
+  // from the JP gloss. Level drives the count:
+  //   L0: [] (nothing hidden)
+  //   L1: ~30% — 1-2 words hidden
+  //   L2: ~50% — half the sentence hidden
+  // Returned indices are sorted ascending (display order).
   function pickBlanks(tokens, level) {
     const total = tokens.length;
-    if (total <= 1 || level === 0) return tokens.map((_, i) => i);
+    if (total <= 1 || level === 0) return [];
     let count;
     if (level === 1) {
       count = Math.min(2, Math.max(1, Math.ceil(total * 0.3)));
@@ -333,34 +338,28 @@
     }
     const en = $("hud-en"); en.innerHTML = "";
     const blanksSet = new Set(State.blanks);
-    const currentBlankIdx = State.blanks[State.progress];
-    const collected = new Set(State.blanks.slice(0, State.progress));
-    // Slots only RENDER as ___ at L1+. At L0 the whole sentence is
-    // visible — the kid sees what to grab next, just like a normal
-    // sentence builder. (Previous bug: L0 also hid every word because
-    // L0 marks every index as a "blank" for collection purposes.)
     const hideBlanks = State.level >= 1;
+    // Slots: every token is collected in order. Display rule:
+    //   - i < progress: already collected, show the word (done style)
+    //   - i === progress: current target, show word OR ___ if blanked
+    //   - i > progress: future, show word OR ___ if blanked
+    // At L0 nothing is blanked, so the whole sentence is always visible.
+    // At L1+ blanked positions show ___ until the kid collects them
+    // (after which they show the word, like filling in the blank).
     State.tokens.forEach((tok, i) => {
       const sp = document.createElement("span");
       sp.className = "slot";
-      const isTarget = blanksSet.has(i);
-      const isCollected = collected.has(i);
-      const isCurrent = i === currentBlankIdx;
-      const wantBlankGlyph = hideBlanks && isTarget && !isCollected;
-      if (!isTarget) {
-        // Pure context word — visible always (only happens at L1+).
-        sp.classList.add("context");
-        sp.textContent = tok;
-      } else if (isCollected) {
+      const isHidden = hideBlanks && blanksSet.has(i) && i >= State.progress;
+      if (i < State.progress) {
         sp.classList.add("done");
         sp.textContent = tok;
-      } else if (isCurrent) {
+      } else if (i === State.progress) {
         sp.classList.add("next");
-        if (wantBlankGlyph) { sp.classList.add("blank"); sp.textContent = "___"; }
-        else                { sp.textContent = tok; }
+        if (isHidden) { sp.classList.add("blank"); sp.textContent = "___"; }
+        else          { sp.textContent = tok; }
       } else {
-        if (wantBlankGlyph) { sp.classList.add("blank"); sp.textContent = "___"; }
-        else                { sp.textContent = tok; }
+        if (isHidden) { sp.classList.add("blank"); sp.textContent = "___"; }
+        else          { sp.textContent = tok; }
       }
       en.appendChild(sp);
     });
@@ -727,7 +726,7 @@
         comboTextT = 800;
       }
       renderHUD();
-      if (State.progress >= State.blanks.length) {
+      if (State.progress >= State.tokens.length) {
         setTimeout(winSequence, 700);
       }
     } else {
