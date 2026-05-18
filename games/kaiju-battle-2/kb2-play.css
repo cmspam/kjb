@@ -1,0 +1,56 @@
+/* KB2-specific overlay for the play screen. Sits ON TOP of the
+   parent KJB stylesheet — only override what visually distinguishes
+   KB2. Right now: title bar tint, watermark widget, and a faint
+   "KB2" badge that hovers in the top-left of the title screen so
+   players know which version they're in. */
+
+body.kb2-play {
+  /* Subtle red-tinted background distinct from KB1's purple */
+  background: linear-gradient(180deg, #1a0010 0%, #2a0010 100%);
+}
+
+body.kb2-play #app {
+  position: relative;
+}
+
+/* Floating KB2 watermark — sits in corner, links back to the
+   preview/teaser page so players can read the design notes. */
+.kb2-watermark {
+  position: fixed;
+  top: 6px;
+  right: 6px;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(90deg, #ff3b6b, #ffcc44);
+  color: #1a0a3a;
+  text-decoration: none;
+  font-weight: 900;
+  letter-spacing: 1px;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(255,90,80,0.4);
+  transition: transform 0.12s ease;
+}
+.kb2-watermark:hover { transform: scale(1.06); }
+.kb2-wm-emoji { font-size: 13px; }
+.kb2-wm-text { font-weight: 900; }
+
+/* Tint the title screen slightly to signal "this is KB2" */
+body.kb2-play #screen-title::before {
+  content: "★ KB2 (KAIJU BRAWL 2) ★";
+  display: block;
+  position: absolute;
+  top: 4px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #ff3b6b;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.5);
+  z-index: 99;
+  pointer-events: none;
+}

@@ -208,3 +208,15 @@ body.kb2-theme {
   margin-left: -28px;
   padding-left: 32px;
 }
+
+.kb2-clone-note {
+  margin-top: 12px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  font-style: italic;
+  letter-spacing: 1px;
+  text-align: center;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}

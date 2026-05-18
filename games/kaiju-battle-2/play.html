@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>カイジュウバトル 2 — Kaiju Brawl 2</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%94%A5%3C/text%3E%3C/svg%3E">
+<!-- Reuse parent KJB css, then layer kb2 theme over it -->
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="kb2-play.css">
+</head>
+<body class="kb2-play">
+
+<!-- Same screen scaffold as KJB1 so the same engine runs unchanged.
+     This is a TRUE fork: KB2 starts as a clone of KB1, and new mechanics
+     (party system, type affinity, signature moves) will be developed
+     here without touching the original eslgame/index.html. The parent
+     KJB game stays intact at eslgame/index.html. -->
+<div id="app">
+  <div id="screen-title" class="screen"></div>
+  <div id="screen-setup" class="screen hidden"></div>
+  <div id="screen-pass" class="screen hidden"></div>
+  <div id="screen-role" class="screen hidden"></div>
+  <div id="screen-wager" class="screen hidden"></div>
+  <div id="screen-question" class="screen hidden"></div>
+  <div id="screen-result" class="screen hidden"></div>
+  <div id="screen-action" class="screen hidden"></div>
+  <div id="screen-boss" class="screen hidden"></div>
+  <div id="screen-victory" class="screen hidden"></div>
+  <div id="screen-defeat" class="screen hidden"></div>
+  <div id="screen-vote" class="screen hidden"></div>
+  <div id="toast"></div>
+  <button id="exit-btn" class="hidden" title="バトルを やめる">✕</button>
+</div>
+
+<!-- KB2 watermark / back-to-preview tab -->
+<a class="kb2-watermark" href="index.html" title="KB2 preview に もどる">
+  <span class="kb2-wm-emoji">🔥</span>
+  <span class="kb2-wm-text">KB2</span>
+</a>
+
+<!-- Question banks (shared with parent) -->
+<script src="../../data/questions_level0.js"></script>
+<script src="../../data/questions_level1.js"></script>
+<script src="../../data/questions_level2.js"></script>
+<script src="../../data/questions_level3.js"></script>
+<script src="../../data/questions_level4.js"></script>
+
+<!-- I18N system, then locale dictionaries -->
+<script src="../../js/i18n.js"></script>
+<script src="../../js/locale/ja.js"></script>
+<script src="../../js/locale/ja_shiny.js"></script>
+
+<!-- Engine (shared) -->
+<script src="../../js/audio.js"></script>
+<script src="../../js/progress.js"></script>
+<script src="../../js/cards.js"></script>
+<script src="../../js/monsters.js"></script>
+<script src="../../js/stages.js"></script>
+<script src="../../js/endings.js"></script>
+<script src="../../js/questions.js"></script>
+<script src="../../js/lessons.js"></script>
+<script src="../../js/ui.js"></script>
+<script src="../../js/game.js"></script>
+<script src="../../js/main.js"></script>
+
+<!-- KB2-specific augmentations will go here as new mechanics are
+     developed. For now nothing is overridden — KB2 behaves identically
+     to KB1, but it's its own folder/branch ready for divergence. -->
+<script src="kb2-overrides.js"></script>
+</body>
+</html>
