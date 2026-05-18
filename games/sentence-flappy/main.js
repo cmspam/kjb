@@ -60,7 +60,7 @@
   };
 
   const $ = (id) => document.getElementById(id);
-  const screens = ["title", "pick", "game", "win", "lose"];
+  const screens = ["title", "pick", "prep", "game", "win", "lose"];
   function show(id) { screens.forEach(s => $("screen-" + s).classList.toggle("hidden", s !== id)); }
 
   const State = {
@@ -149,6 +149,11 @@
     });
   });
   $("pick-back").addEventListener("click", () => { SND.sfxPop(); show("title"); });
+  // Prep-screen buttons — kid taps START to enter gameplay or BACK
+  // to pick a different kaiju (or have a different sentence rolled).
+  $("prep-go").addEventListener("click", () => { SND.sfxConfirm(); startGameplay(); });
+  $("prep-back").addEventListener("click", () => { SND.sfxPop(); buildPickGrid(); show("pick"); });
+  $("prep-replay-en").addEventListener("click", () => { SND.sfxPop(); SND.speakEn(State.sentence); });
 
   function buildPickGrid() {
     const grid = $("pick-grid"); grid.innerHTML = "";
@@ -221,9 +226,63 @@
     State.parts = buildBodyParts(State.boss);
     State.coreHits = 0;
     State.sessionStartT = performance.now();
+    // Show the prep screen first so the kid can read the sentence and
+    // think about the missing words before the canvas starts moving.
+    buildPrepScreen();
+    show("prep");
+  }
+
+  // Renders the pre-game preview: kaiju portrait + sentence (with
+  // blanks at L1+) + full JP gloss + a START button. Kid taps when
+  // ready — only then does the canvas spin up.
+  function buildPrepScreen() {
+    const portrait = $("prep-kaiju");
+    if (portrait) portrait.innerHTML = ART.renderSVG(State.boss);
+    const nameEl = $("prep-kaiju-name");
+    if (nameEl) nameEl.textContent = State.boss.name_jp || State.bossId;
+    // JP gloss (always full).
+    const jp = $("prep-jp");
+    if (jp) jp.textContent = State.sentenceJp || "—";
+    // English line, with blanks for L1+ targets.
+    const en = $("prep-en"); if (en) {
+      en.innerHTML = "";
+      const blanksSet = new Set(State.blanks);
+      const hideBlanks = State.level >= 1;
+      State.tokens.forEach((tok, i) => {
+        const sp = document.createElement("span");
+        sp.className = "prep-slot";
+        if (hideBlanks && blanksSet.has(i)) {
+          sp.classList.add("blank");
+          sp.textContent = "___";
+        } else {
+          sp.textContent = tok;
+        }
+        en.appendChild(sp);
+      });
+    }
+    const hint = $("prep-hint");
+    if (hint) {
+      const blanks = State.blanks.length;
+      const totalBlanks = State.level >= 1 ? blanks : 0;
+      if (State.level === 0) {
+        hint.textContent = "ぶん を よんで、 じゅんばん に ことば を あつめよう！";
+      } else {
+        hint.textContent = `えいご に ${totalBlanks} ご ぬけています。 にほんご を ヒント に かんがえよう。 じゅんびできたら スタート！`;
+      }
+    }
+    // Speak the full English sentence on prep, so kids hear it once
+    // before being asked to identify pieces of it. At L1+ this is a
+    // big help; at L0 it's just nice flavor.
+    setTimeout(() => SND.speakEn(State.sentence), 350);
+  }
+
+  // The actual gameplay entry — called when the kid taps the START
+  // button on the prep screen. This is what used to live at the
+  // bottom of startGame(): render the HUD, show the canvas, set up,
+  // run.
+  function startGameplay() {
     renderHUD();
     show("game");
-
     let hinted = false;
     function killHint() { if (!hinted) { hinted = true; $("tap-hint").style.display = "none"; } }
     document.addEventListener("pointerdown", killHint, { once: true });
@@ -276,22 +335,32 @@
     const blanksSet = new Set(State.blanks);
     const currentBlankIdx = State.blanks[State.progress];
     const collected = new Set(State.blanks.slice(0, State.progress));
+    // Slots only RENDER as ___ at L1+. At L0 the whole sentence is
+    // visible — the kid sees what to grab next, just like a normal
+    // sentence builder. (Previous bug: L0 also hid every word because
+    // L0 marks every index as a "blank" for collection purposes.)
+    const hideBlanks = State.level >= 1;
     State.tokens.forEach((tok, i) => {
       const sp = document.createElement("span");
       sp.className = "slot";
-      if (!blanksSet.has(i)) {
-        // Visible context word — not a target, just displayed for reading.
+      const isTarget = blanksSet.has(i);
+      const isCollected = collected.has(i);
+      const isCurrent = i === currentBlankIdx;
+      const wantBlankGlyph = hideBlanks && isTarget && !isCollected;
+      if (!isTarget) {
+        // Pure context word — visible always (only happens at L1+).
         sp.classList.add("context");
         sp.textContent = tok;
-      } else if (collected.has(i)) {
+      } else if (isCollected) {
         sp.classList.add("done");
         sp.textContent = tok;
-      } else if (i === currentBlankIdx) {
-        sp.classList.add("next", "blank");
-        sp.textContent = "___";
+      } else if (isCurrent) {
+        sp.classList.add("next");
+        if (wantBlankGlyph) { sp.classList.add("blank"); sp.textContent = "___"; }
+        else                { sp.textContent = tok; }
       } else {
-        sp.classList.add("blank");
-        sp.textContent = "___";
+        if (wantBlankGlyph) { sp.classList.add("blank"); sp.textContent = "___"; }
+        else                { sp.textContent = tok; }
       }
       en.appendChild(sp);
     });

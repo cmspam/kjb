@@ -69,6 +69,107 @@
   margin-top: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* ----- Prep / pre-game preview screen ----- */
+.prep-title {
+  color: var(--accent);
+  letter-spacing: 4px;
+  font-size: 22px;
+  margin: 12px 0 6px;
+  text-align: center;
+}
+.prep-kaiju-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.prep-kaiju {
+  width: 140px; height: 110px;
+  background: rgba(0,0,0,0.3);
+  border: 3px solid rgba(255,228,92,0.4);
+  border-radius: 14px;
+  padding: 6px;
+}
+.prep-kaiju svg { width: 100%; height: 100%; }
+.prep-kaiju-name {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+.prep-card {
+  background: rgba(0,0,0,0.5);
+  border: 2px solid rgba(255,228,92,0.4);
+  border-radius: 16px;
+  padding: 14px 18px;
+  max-width: 88vw;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+}
+.prep-lbl {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  display: flex; align-items: center; gap: 6px;
+}
+.prep-replay {
+  padding: 2px 8px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,228,92,0.4);
+  border-radius: 99px;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.prep-jp {
+  font-size: 18px;
+  color: #aaccdd;
+  font-weight: 600;
+  letter-spacing: 1px;
+  line-height: 1.5;
+}
+.prep-en {
+  font-size: 22px;
+  color: var(--accent);
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 1.7;
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.prep-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,228,92,0.4), transparent);
+  margin: 12px 0;
+}
+.prep-slot {
+  display: inline-block;
+  padding: 1px 3px;
+}
+.prep-slot.blank {
+  color: #888;
+  background: rgba(255,228,92,0.08);
+  border-bottom: 2px solid rgba(255,228,92,0.5);
+  border-radius: 2px;
+  padding: 1px 8px;
+}
+.prep-hint {
+  max-width: 88vw;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-dim);
+  font-style: italic;
+  margin: 14px auto 0;
+  padding: 0 14px;
+  line-height: 1.5;
+  letter-spacing: 1px;
+}
+
 .hud-en .slot         { opacity: 0.32; padding: 0 3px; }
 /* Context word — not a target, just visible for reading */
 .hud-en .slot.context { opacity: 0.78; color: #ccddff; }
