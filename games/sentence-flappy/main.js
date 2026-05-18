@@ -509,6 +509,7 @@
     $("lose-banner").textContent = kind === "floor" ? "GROUND HIT!" : "PIPE CRASH!";
     $("lose-jp").textContent = State.boss.name_jp;
     $("lose-progress").innerHTML = `「${State.tokens.slice(0, State.progress).join(" ") || "..."}」 ... まで かんせい!<br>あと: <span style="color:#ffe45c">${State.tokens.slice(State.progress).join(" ") || "(なし)"}</span><br>さいだい コンボ: <span style="color:#ffe45c">${State.comboMax}</span>`;
+    renderLoseExtras(kind);
     show("lose");
   }
 
@@ -972,7 +973,42 @@
     $("lose-banner").textContent = "CORE BROKEN!";
     $("lose-jp").textContent = State.boss.name_jp;
     $("lose-progress").innerHTML = `「${State.tokens.slice(0, State.progress).join(" ") || "..."}」 ... まで かんせい!<br>あと: <span style="color:#ffe45c">${State.tokens.slice(State.progress).join(" ")}</span><br>さいだい コンボ: <span style="color:#ffe45c">${State.comboMax}</span>`;
+    renderLoseExtras("core");
     show("lose");
+  }
+
+  // Per-kaiju in-character consolation lines for the lose screen.
+  const CONSOLATION_LINES = {
+    tako:       { en: "Eight arms, still not enough. Try again.",                    jp: "8本あし でも たりない。 もう いちど。" },
+    unko:       { en: "Even brown kings fall. Brooklyn baby, brush off and go.",     jp: "ちゃいろ の おう も おちる。 ブルックリン ベイビー、 また やる。" },
+    tral:       { en: "INCORRRRRECTO! ...try again, sweetie.",                       jp: "インコレット！ また やって ね。" },
+    pamp:       { en: "Soft things bounce back. Like my stuffing. Like you.",         jp: "やわらかい もの は もどる。 ぼく の なかみ みたい。 きみ みたい。" },
+    parfait:    { en: "The cherry fades, but the laughter melts new ice. Again?",    jp: "さくらんぼ は きえる、 でも わらい が あたらしい こおり を とかす。 また？" },
+    anpan:      { en: "I cannot help. I am bread. Also fish. Try once more.",        jp: "たすけられない。 ぼく は パン。 さかな も。 もう いちど。" },
+    temee:      { en: "In my village... we also failed. It is tradition. Sit. Try.", jp: "むら で… しっぱい も した。 でんとう。 すわって。 やる。" },
+    catcherski: { en: "I have stolen your loss. It was free. Try again, kind kid.",  jp: "まけ を ぬすんだ。 タダ。 また やって、 やさしい こ。" },
+    brainrot:   { en: "The cosmos has observed your spelling. The cosmos is disappointed but not surprised.", jp: "うちゅう は きみ の つづり を みた。 がっかり、 でも きが つかなかった わけ じゃない。" },
+  };
+  function renderLoseExtras(kind) {
+    // Damaged kaiju art + consolation line
+    let art = document.getElementById("lose-art");
+    if (!art) {
+      art = document.createElement("div");
+      art.id = "lose-art";
+      art.style.cssText = "width:200px;height:150px;margin:14px auto 6px;background:rgba(0,0,0,0.4);border:2px dashed rgba(255,90,80,0.7);border-radius:14px;padding:10px;";
+      $("lose-jp").parentNode.insertBefore(art, $("lose-jp").nextSibling);
+    }
+    art.innerHTML = ART.renderSVG(State.boss);
+    let cons = document.getElementById("lose-consolation");
+    if (!cons) {
+      cons = document.createElement("div");
+      cons.id = "lose-consolation";
+      cons.style.cssText = "max-width:88vw;text-align:center;font-size:14px;color:#aaccff;font-style:italic;margin:8px auto;letter-spacing:0.5px;padding:0 14px;line-height:1.5;";
+      $("lose-progress").parentNode.insertBefore(cons, $("lose-progress"));
+    }
+    const cline = CONSOLATION_LINES[State.bossId] || { en: "Try again, brave kid.", jp: "また やって、 ゆうかん な こ。" };
+    cons.innerHTML = `「${cline.en}」<br><span style="font-size:11px;color:var(--ink-dim);">${cline.jp}</span>`;
+    setTimeout(() => SND.speakAsKaiju(State.bossId, cline.en), 500);
   }
 
   $("win-again").addEventListener("click", () => { SND.sfxConfirm(); startGame(State.bossId); });
