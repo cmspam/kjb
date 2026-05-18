@@ -224,6 +224,15 @@
     State.kaijuId = kaijuId;
     const kd = STORY[kaijuId];
     $("conv-pick-title").textContent = kd.name + " — かいわ を えらぶ";
+    // Portrait + intro line above the conversation list — gives the
+    // picker a sense of "you're meeting this kaiju" instead of just a
+    // bare title.
+    const portrait = $("conv-pick-portrait");
+    if (portrait) {
+      const boss = ART.get(kaijuId);
+      portrait.innerHTML = boss ? ART.renderSVG(boss) : ART.emoji(kaijuId);
+      portrait.classList.remove("speak"); void portrait.offsetWidth; portrait.classList.add("speak");
+    }
     const list = $("conv-list"); list.innerHTML = "";
     const p = getProgress();
     kd.conversations.forEach(conv => {
