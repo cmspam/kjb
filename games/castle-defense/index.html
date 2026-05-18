@@ -13,6 +13,17 @@
 <div class="screen" id="screen-title">
   <h1 class="h1-card">カイジュウ じょう ぼうえい</h1>
   <div class="hint-jp">CASTLE DEFENSE · カイジュウ の おねがい を きいて、 ただしい えもじ を タップ！</div>
+
+  <!-- Mini siege diorama: a castle on the right, a kaiju walking toward
+       it from the left, looping. Sets the tone immediately. -->
+  <div class="title-diorama" id="title-diorama">
+    <div class="td-stage">
+      <div class="td-invader" id="td-invader"></div>
+      <div class="td-castle">🏰</div>
+    </div>
+    <div class="td-cannon" id="td-cannon"></div>
+  </div>
+
   <div class="level-pick">
     <button class="btn-cool huge" data-lv="0">⭐ ふつう (たんご)</button>
     <button class="btn-hot huge" data-lv="1">🔥 むずかしい (ぶん を つくる)</button>
@@ -75,6 +86,32 @@
 <script src="../shared/boss-art.js"></script>
 <script src="extras.js"></script>
 <script src="main.js"></script>
+
+<script>
+// Title-screen diorama: a kaiju approaches the castle, gets repelled,
+// next kaiju walks in. Loops. Subtle but signals what the game IS.
+(function () {
+  const slot = document.getElementById("td-invader");
+  if (!slot || !window.GamesArt) return;
+  const ids = ["tako","unko","tral","pamp","parfait","anpan","temee","catcherski"];
+  let i = 0;
+  function nextWave() {
+    const boss = GamesArt.get(ids[i % ids.length], true);
+    i++;
+    if (!boss) return;
+    slot.innerHTML = GamesArt.renderSVG(boss);
+    slot.classList.remove("td-walk","td-flee");
+    void slot.offsetWidth;
+    slot.classList.add("td-walk");
+    setTimeout(() => {
+      slot.classList.remove("td-walk");
+      slot.classList.add("td-flee");
+    }, 3200);
+    setTimeout(nextWave, 4400);
+  }
+  nextWave();
+})();
+</script>
 
 <div class="event-banner hidden" id="event-banner"></div>
 <div class="event-veil hidden" id="event-veil"></div>
