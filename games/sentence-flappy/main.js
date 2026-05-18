@@ -872,15 +872,59 @@
     }
   }
 
+  // Per-kaiju in-character victory lines for the win screen.
+  // Pulled from the comedian persona's 8 lines + new ones in the
+  // same key. Each line is { en, jp }.
+  const VICTORY_LINES = {
+    tako:       { en: "BINGO. BONGO. BUNGO. ...the third one is my brother.", jp: "ビンゴ。 ボンゴ。 ブンゴ。 …3 ばんめ は きょうだい。" },
+    unko:       { en: "I detonated. With LOVE.",                                jp: "あい を こめて、 ばくは した。" },
+    tral:       { en: "BELLISSIMO! You sing better than my mother thought.",   jp: "ベリッシモ！ はは の よそう より うた が じょうず。" },
+    pamp:       { en: "You are now my real friend. Forever and fluffy.",       jp: "あなた は ほんとう の ともだち。 ずっと、 ふわふわ。" },
+    parfait:    { en: "Ohonhonhon, you are now SLIGHTLY less of a sardine.",   jp: "オホンホンホン、 あなた は ほんの すこし いわし じゃない。" },
+    anpan:      { en: "I cannot help you. I am bread. Also fish. You won.",     jp: "たすけられない。 ぼく は パン。 さかな も。 きみ の かち。" },
+    temee:      { en: "In my village... we also won. It is tradition.",        jp: "むら で… かった こと も ある。 でんとう。" },
+    catcherski: { en: "I have stolen your answer. It was correct. I keep it.", jp: "こたえ を ぬすんだ。 せいかい。 もって おく。" },
+    brainrot:   { en: "The cosmos has observed your spelling. The cosmos is impressed.", jp: "うちゅう は きみ の つづり を みた。 かんしん した。" },
+  };
+
   // ---- WIN / LOSE ----
   function winSequence() {
     stopGame();
     SND.sfxLevel();
     SND.speakEn(State.sentence);
     recordSentenceCleared(State.bossId, State.level, State.sentence);
-    $("win-en").textContent = State.sentence;
+    // Animated word-by-word reveal of the cleared sentence.
+    const winEn = $("win-en"); winEn.innerHTML = "";
+    State.tokens.forEach((tok, i) => {
+      const sp = document.createElement("span");
+      sp.textContent = tok + (i < State.tokens.length - 1 ? " " : "");
+      sp.style.cssText = "display:inline-block;opacity:0;transform:translateY(8px) scale(0.7);transition:opacity 0.3s ease, transform 0.3s ease;";
+      winEn.appendChild(sp);
+      setTimeout(() => { sp.style.opacity = "1"; sp.style.transform = "translateY(0) scale(1)"; }, 120 + i * 140);
+    });
     $("win-jp").textContent = State.sentenceJp || State.boss.name_jp;
     $("win-art").innerHTML = ART.renderSVG(State.boss);
+    // Boss bounce on art
+    const artEl = $("win-art").firstElementChild;
+    if (artEl) {
+      artEl.animate(
+        [{ transform: "scale(0)" }, { transform: "scale(1.15)", offset: 0.7 }, { transform: "scale(1)" }],
+        { duration: 600, easing: "cubic-bezier(.18,.89,.32,1.28)", fill: "forwards" }
+      );
+    }
+    // Per-kaiju victory line, spoken in that kaiju's voice
+    const vline = VICTORY_LINES[State.bossId];
+    if (vline) {
+      let vEl = document.getElementById("win-victory-line");
+      if (!vEl) {
+        vEl = document.createElement("div");
+        vEl.id = "win-victory-line";
+        vEl.style.cssText = "max-width:88vw;text-align:center;font-size:14px;color:#aaccff;font-style:italic;margin:10px 0 4px;letter-spacing:0.5px;padding:0 14px;line-height:1.5;";
+        $("win-jp").parentNode.insertBefore(vEl, $("win-stats"));
+      }
+      vEl.innerHTML = `「${vline.en}」<br><span style="font-size:11px;color:var(--ink-dim);">${vline.jp}</span>`;
+      setTimeout(() => SND.speakAsKaiju(State.bossId, vline.en), 1400 + State.tokens.length * 140);
+    }
     const sec = Math.floor((performance.now() - State.sessionStartT) / 1000);
     const accuracy = State.pickupsCorrect + State.pickupsWrong === 0 ? 100 :
       Math.round(100 * State.pickupsCorrect / (State.pickupsCorrect + State.pickupsWrong));

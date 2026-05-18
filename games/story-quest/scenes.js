@@ -696,6 +696,215 @@ window.Scenes = (function () {
       </g>
     </svg>`;
 
+  // =========================================================
+  // VARIANT SCENES — additional moods/times-of-day for variety.
+  // These either expand the rotating landing-page backdrop or get
+  // used by future conversations that want a different vibe than
+  // the base location.
+  // =========================================================
+
+  const tako_osaka_dawn = () => `
+    <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+      ${sky("#ffa888", "#ffcc77", "#aacccc")}
+      <circle cx="640" cy="380" r="44" fill="#fff0aa"/>
+      <circle cx="640" cy="380" r="68" fill="#ffcc66" opacity="0.4"/>
+      <!-- distant buildings, paler -->
+      <g opacity="0.6">
+        <rect x="0" y="280" width="120" height="320" fill="#3a2244"/>
+        <rect x="120" y="240" width="80" height="360" fill="#2a1233"/>
+        <rect x="200" y="290" width="70" height="310" fill="#3a2244"/>
+        <rect x="540" y="260" width="90" height="340" fill="#2a1233"/>
+        <rect x="630" y="220" width="60" height="380" fill="#3a2244"/>
+        <rect x="690" y="280" width="110" height="320" fill="#2a1233"/>
+      </g>
+      <rect x="0" y="480" width="800" height="120" fill="#1a0a30"/>
+      <!-- shutters half-open over the stall -->
+      <g transform="translate(280,360)">
+        <rect x="0" y="0" width="240" height="140" fill="#5a2a1a" stroke="#3a1a0a" stroke-width="3"/>
+        <rect x="-10" y="-12" width="260" height="20" fill="#882222"/>
+        <text x="120" y="2" text-anchor="middle" font-size="14" fill="#fff" font-weight="900">closed</text>
+        <rect x="20" y="20" width="200" height="40" fill="#1a0a0a"/>
+      </g>
+      <!-- early bird, single seagull -->
+      <g fill="none" stroke="#fff" stroke-width="2.5">
+        <path d="M280,160 Q288,153 296,160 Q304,153 312,160"/>
+      </g>
+    </svg>`;
+
+  const unko_dawn_empty = () => `
+    <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+      ${sky("#5a4a66", "#aa8866", "#ddaa77")}
+      <!-- dawn over the abandoned empire -->
+      <circle cx="500" cy="380" r="50" fill="#fff0aa" opacity="0.95"/>
+      <g stroke="#1a0a0a" stroke-width="3" fill="none" opacity="0.8">
+        <path d="M100,400 L100,260 M100,310 L80,290 M100,330 L120,310"/>
+        <path d="M700,420 L700,250 M700,300 L680,270 M700,320 L720,300"/>
+        <path d="M250,410 L250,280 M250,330 L235,310"/>
+        <path d="M550,415 L550,290 M550,340 L535,320"/>
+      </g>
+      <rect x="0" y="380" width="800" height="220" fill="#3a3a2a"/>
+      <g>
+        <ellipse cx="180" cy="480" rx="32" ry="8" fill="#5a6a4a"/>
+        <ellipse cx="380" cy="510" rx="40" ry="10" fill="#4a5a3a"/>
+        <ellipse cx="620" cy="500" rx="30" ry="7" fill="#5a6a4a"/>
+      </g>
+      <!-- empty toilets, now overgrown with vines -->
+      <g transform="translate(140,360)">
+        <ellipse cx="40" cy="80" rx="46" ry="14" fill="#0a0a0a" opacity="0.4"/>
+        <rect x="10" y="20" width="60" height="40" rx="6" fill="#bbaa99" stroke="#666" stroke-width="2"/>
+        <ellipse cx="40" cy="22" rx="32" ry="9" fill="#666"/>
+        <path d="M10,60 Q20,68 30,60 Q40,68 50,60" stroke="#1a5a1a" stroke-width="3" fill="none"/>
+      </g>
+      <g transform="translate(560,330)">
+        <ellipse cx="40" cy="100" rx="50" ry="16" fill="#0a0a0a" opacity="0.4"/>
+        <rect x="10" y="30" width="60" height="50" rx="6" fill="#bbaa99" stroke="#666" stroke-width="2"/>
+        <path d="M10,80 Q20,88 30,80 Q40,88 50,80" stroke="#1a5a1a" stroke-width="3" fill="none"/>
+      </g>
+    </svg>`;
+
+  const temee_mountain_pass = () => `
+    <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+      ${sky("#88aadd", "#aaccdd", "#ddeeff")}
+      <!-- snowy mountains layered -->
+      <g fill="#445566" opacity="0.9"><polygon points="0,350 100,180 220,280 340,160 460,260 580,200 720,300 800,240 800,420 0,420"/></g>
+      <g fill="#fff" opacity="0.9"><polygon points="0,360 100,200 110,210 220,290 230,300 340,180 350,190 460,270 580,220 590,230 720,310 730,320 800,260 800,365 0,365"/></g>
+      <g fill="#223344" opacity="0.85"><polygon points="0,440 80,330 180,400 280,300 380,400 480,330 600,420 720,360 800,440 800,520 0,520"/></g>
+      <!-- ground -->
+      <rect x="0" y="440" width="800" height="160" fill="#7a6a44"/>
+      <!-- footprints leading away -->
+      <g fill="#5a4a2a" opacity="0.55">
+        ${[100,160,220,280,340,400,460,520,580,640].map((x,i)=>`<ellipse cx="${x}" cy="${480+(i%2)*8}" rx="9" ry="5"/>`).join("")}
+      </g>
+      <!-- a single eagle -->
+      <g transform="translate(380,200)" fill="#2a1a0a">
+        <path d="M0,0 Q-30,-8 -45,2 Q-30,4 0,0 Q30,4 45,2 Q30,-8 0,0">
+          <animateTransform attributeName="transform" type="translate" values="0,0;-180,30;0,0;180,30;0,0" dur="22s" repeatCount="indefinite"/>
+        </path>
+      </g>
+    </svg>`;
+
+  const catcherski_dark_arcade = () => `
+    <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+      <rect width="800" height="600" fill="#030010"/>
+      <!-- floor grid faded -->
+      <g stroke="#220044" stroke-width="1" opacity="0.4">
+        ${[...Array(12)].map((_,i)=>`<line x1="0" y1="${450+i*15}" x2="800" y2="${450+i*15}"/>`).join("")}
+      </g>
+      <!-- single working machine, others off -->
+      ${[80,220,360,500,640].map((x,i)=>`<g transform="translate(${x},180)">
+        <rect x="-50" y="0" width="100" height="260" fill="${i===2?"#1a0530":"#0a0210"}" stroke="${i===2?"#ff00aa":"#221033"}" stroke-width="${i===2?2:1}"/>
+        <rect x="-40" y="20" width="80" height="80" fill="${i===2?"#220944":"#080010"}"/>
+        ${i===2?`<text x="0" y="50" text-anchor="middle" font-size="18" fill="#88ccff" font-weight="900"><animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>★</text>`:""}
+      </g>`).join("")}
+      <!-- single sad lantern -->
+      ${lantern(120, 100, "#88aaff")}
+    </svg>`;
+
+  const pamp_toy_shop_night = () => `
+    <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+      <rect width="800" height="600" fill="#1a0a2a"/>
+      <g fill="#ffaadd" stroke="#cc66aa" stroke-width="3" opacity="0.85">
+        <rect x="40" y="60" width="720" height="500" rx="20"/>
+        <rect x="60" y="80" width="700" height="460" rx="12" fill="#3a1a4a"/>
+      </g>
+      <!-- shelves dim -->
+      <g stroke="#5a2a55" stroke-width="3" opacity="0.6">
+        <line x1="60" y1="240" x2="760" y2="240"/>
+        <line x1="60" y1="400" x2="760" y2="400"/>
+      </g>
+      <!-- single plushy spotlight -->
+      <g transform="translate(420,300)">
+        <circle cx="0" cy="0" r="120" fill="#fff" opacity="0.08"/>
+        <circle cx="0" cy="0" r="40" fill="#ffaadd"/>
+        <circle cx="-13" cy="-5" r="4" fill="#000"/>
+        <circle cx="13" cy="-5" r="4" fill="#000"/>
+        <path d="M-7,7 Q0,12 7,7" stroke="#000" stroke-width="2" fill="none"/>
+        <polygon points="-26,-32 -10,-38 -18,-22" fill="#ffaadd"/>
+        <polygon points="26,-32 10,-38 18,-22" fill="#ffaadd"/>
+      </g>
+      <!-- stars through the window -->
+      ${[...Array(15)].map(()=>star(80+Math.random()*640, 80+Math.random()*100, 0.5+Math.random()*1, "#fff")).join("")}
+    </svg>`;
+
+  const parfait_cafe_night = () => `
+    <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+      <defs>
+        <radialGradient id="cafe-night" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#445566"/><stop offset="1" stop-color="#0a1122"/></radialGradient>
+      </defs>
+      <rect width="800" height="600" fill="url(#cafe-night)"/>
+      <!-- god rays from above -->
+      <g opacity="0.18">
+        <polygon points="200,0 280,0 350,600 200,600" fill="#ffcc88"/>
+        <polygon points="500,0 580,0 620,600 470,600" fill="#ffcc88"/>
+      </g>
+      <!-- counter -->
+      <rect x="0" y="440" width="800" height="160" fill="#3a1a55"/>
+      <rect x="0" y="436" width="800" height="6" fill="#ffcc66"/>
+      <!-- ANNIVERSARY parfait — taller, with sparkles -->
+      <g transform="translate(400,440)">
+        <path d="M-30,0 L-22,-100 L22,-100 L30,0 Z" fill="#fff" opacity="0.7" stroke="#ddd" stroke-width="2"/>
+        <rect x="-22" y="-92" width="44" height="20" fill="#ff5566"/>
+        <rect x="-22" y="-72" width="44" height="16" fill="#ffd07a"/>
+        <rect x="-22" y="-56" width="44" height="18" fill="#fff"/>
+        <rect x="-22" y="-38" width="44" height="18" fill="#cc88ff"/>
+        <circle cx="0" cy="-104" r="10" fill="#cc1144"/>
+        <path d="M0,-114 Q-5,-126 0,-138 Q5,-126 0,-114" stroke="#1a8844" stroke-width="2" fill="none"/>
+        <!-- big "10TH" banner -->
+        <text x="0" y="20" text-anchor="middle" font-size="20" fill="#ffe45c" font-weight="900">10TH</text>
+      </g>
+      <!-- sparkles -->
+      ${[...Array(40)].map(()=>`<text x="${Math.random()*800}" y="${Math.random()*600}" font-size="${8+Math.random()*10}" fill="#ffe45c" opacity="0.85">✨<animate attributeName="opacity" values="0;1;0" dur="${1+Math.random()*2}s" begin="${Math.random()*3}s" repeatCount="indefinite"/></text>`).join("")}
+    </svg>`;
+
+  const anpan_bakery_morning = () => `
+    <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+      ${sky("#ffeecc", "#ffccaa", "#ddaa77")}
+      <!-- bright bakery interior -->
+      <rect x="0" y="200" width="800" height="400" fill="#eeccaa"/>
+      <rect x="0" y="200" width="800" height="6" fill="#cc9966"/>
+      <g>
+        <rect x="40" y="240" width="720" height="14" fill="#5a3322"/>
+        <rect x="40" y="380" width="720" height="14" fill="#5a3322"/>
+        <rect x="40" y="520" width="720" height="14" fill="#5a3322"/>
+      </g>
+      <g>
+        ${[...Array(8)].map((_,i)=>`<g transform="translate(${90+i*85},230)"><ellipse cx="0" cy="0" rx="32" ry="14" fill="#cc8855"/><ellipse cx="0" cy="-5" rx="28" ry="12" fill="#eecc99"/><circle cx="-8" cy="-5" r="2" fill="#5a3322"/><circle cx="8" cy="-5" r="2" fill="#5a3322"/><!-- steam --><ellipse cx="0" cy="-22" rx="6" ry="3" fill="#fff" opacity="0.6"><animate attributeName="cy" values="-22;-50" dur="3s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.6;0" dur="3s" repeatCount="indefinite"/></ellipse></g>`).join("")}
+        ${[...Array(7)].map((_,i)=>`<g transform="translate(${90+i*95},370)"><rect x="-32" y="-15" width="64" height="15" rx="6" fill="#cc7744"/><rect x="-32" y="-15" width="64" height="6" rx="3" fill="#eecc99"/></g>`).join("")}
+        ${[...Array(8)].map((_,i)=>`<g transform="translate(${90+i*85},510)"><circle cx="0" cy="0" r="22" fill="#aa3322"/><ellipse cx="-5" cy="-6" rx="6" ry="3" fill="#cc4422"/></g>`).join("")}
+      </g>
+      <!-- "OPEN" sign -->
+      <g transform="translate(400,160)">
+        <rect x="-50" y="-22" width="100" height="44" rx="10" fill="#1a8844" stroke="#fff" stroke-width="3"/>
+        <text x="0" y="6" text-anchor="middle" font-size="22" fill="#fff" font-weight="900">OPEN</text>
+      </g>
+    </svg>`;
+
+  const tral_curtain_fall = () => `
+    <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+      ${sky("#1a0808", "#3a1010", "#000")}
+      <!-- closed dark red curtains (fallen) -->
+      <g fill="#660808">
+        <rect x="0" y="0" width="800" height="600"/>
+      </g>
+      <g fill="#990a0a">
+        ${[...Array(16)].map((_,i)=>`<rect x="${i*50+4}" y="0" width="42" height="600" rx="20"/>`).join("")}
+      </g>
+      <g fill="#330404" opacity="0.5">
+        ${[...Array(16)].map((_,i)=>`<rect x="${i*50+22}" y="0" width="6" height="600"/>`).join("")}
+      </g>
+      <!-- single rose dropped on stage -->
+      <g transform="translate(400,560)">
+        <circle cx="0" cy="0" r="14" fill="#cc1144"/>
+        <circle cx="-6" cy="-4" r="6" fill="#aa0033"/>
+        <circle cx="6" cy="-4" r="6" fill="#aa0033"/>
+        <line x1="0" y1="14" x2="60" y2="40" stroke="#226622" stroke-width="3"/>
+        <ellipse cx="40" cy="32" rx="14" ry="6" fill="#226622"/>
+      </g>
+      <!-- spotlight ring fading -->
+      <circle cx="400" cy="560" r="80" fill="#ffe45c" opacity="0.06"/>
+      <circle cx="400" cy="560" r="40" fill="#ffe45c" opacity="0.10"/>
+    </svg>`;
+
   // ---------- registry ----------
   const SCENES = {
     "tako-osaka-stall":      tako_osaka_stall,
@@ -716,6 +925,14 @@ window.Scenes = (function () {
     "catcherski-arcade":     catcherski_arcade,
     "catcherski-hacked":     catcherski_hacked,
     "brainrot-blackhole":    brainrot_blackhole,
+    "tako-osaka-dawn":       tako_osaka_dawn,
+    "unko-dawn-empty":       unko_dawn_empty,
+    "temee-mountain-pass":   temee_mountain_pass,
+    "catcherski-dark-arcade":catcherski_dark_arcade,
+    "pamp-toy-shop-night":   pamp_toy_shop_night,
+    "parfait-cafe-night":    parfait_cafe_night,
+    "anpan-bakery-morning":  anpan_bakery_morning,
+    "tral-curtain-fall":     tral_curtain_fall,
   };
 
   return {
