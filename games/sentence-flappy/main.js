@@ -60,8 +60,111 @@
   };
 
   const $ = (id) => document.getElementById(id);
-  const screens = ["title", "pick", "prep", "game", "win", "lose"];
+  const screens = ["title", "pick", "profile", "prep", "game", "win", "lose"];
   function show(id) { screens.forEach(s => $("screen-" + s).classList.toggle("hidden", s !== id)); }
+
+  // Funny per-kaiju profiles for the armed-selection screen. Each is
+  // intentionally absurd — gives the cast more personality. Fields
+  // are JP-localized to match the rest of the suite.
+  const PROFILES = {
+    tako: {
+      name_en: "TAKO TAKO SAHUR",
+      from: "おおさか の よる の とおり",
+      age: "437 さい (タコ ねんれい)",
+      bday: "8月8日 (8本あし の ひ)",
+      likes: "たこやき、 ちいさい きょうだい 7にん、 ふかい うみ",
+      dislikes: "フォーク、 ライバル の イカ、 きれいごと",
+      ambition: "せかい じゅう の たべもの を たこやき に かえる",
+    },
+    unko: {
+      name_en: "BOMBARDIRO UNKODILO",
+      from: "ブルックリン の ちゃいろい しっち",
+      age: "12 (ロボット ねんれい)",
+      bday: "6月66日 (うそ つき)",
+      likes: "ちゃいろ、 ばくだん、 しょうじき な におい",
+      dislikes: "きれい な タオル、 シャワー、 きれい な みず",
+      ambition: "ちゃいろい ていこく を ふっかつ させる",
+    },
+    tral: {
+      name_en: "TRALALERO PAKUPAKU",
+      from: "シチリア の オペラ ハウス",
+      age: "73 (ハイ シー の ねんれい)",
+      bday: "3月17日 (シチリア の しゅくじつ)",
+      likes: "ハイ シー、 あおい くつ 3つ、 はは から の てがみ",
+      dislikes: "しずか な カフェ、 ハト、 ティーン エイジャー",
+      ambition: "コンサート ホール を こども で うめる",
+    },
+    pamp: {
+      name_en: "BRR BRR PAMPAMU",
+      from: "ピンク クラウド ファクトリー",
+      age: "5 (ぬいぐるみ ねんれい)",
+      bday: "2月14日 (バレンタイン)",
+      likes: "リボン、 ハグ、 やわらかい もの ぜんぶ",
+      dislikes: "はさみ、 あめ の ひ、 わすれられる こと",
+      ambition: "ぜんいん に ハグ を おくる",
+    },
+    parfait: {
+      name_en: "PARFAIT IWASHI",
+      from: "うみそこ の パフェ カフェ",
+      age: "12 (10ねん こおっていた)",
+      bday: "6月14日 (パフェ の ひ)",
+      likes: "あまい うた、 さくらんぼ、 こども の わらい",
+      dislikes: "みじかい じかん、 からい もの、 きれい な みず",
+      ambition: "ぜんいん に パフェ を ある",
+    },
+    anpan: {
+      name_en: "ANPAN MAGURO",
+      from: "パンや と うみ の あいだ",
+      age: "9 (パンさかな ねんれい)",
+      bday: "4月1日 (うそ つき の ひ)",
+      likes: "あんこ、 やいて くれる ひと、 「りょうほう」 と いう こたえ",
+      dislikes: "「パン？ さかな？」 の しつもん、 シンプル を ようきゅう する ひと",
+      ambition: "アンパンマン より おおきく なる",
+    },
+    temee: {
+      name_en: "TEMEE SARMAGCHIN",
+      from: "モンゴル の ひろい ステップ",
+      age: "300 (しろい け の カウント)",
+      bday: "わすれた",
+      likes: "しろい ひげ、 おそい なみだ、 ふるい うた",
+      dislikes: "いそぐ こと、 きれい な あしあと、 タオル",
+      ambition: "うしなった むれ を おぼえている こと",
+    },
+    catcherski: {
+      name_en: "CATCHERSKI KRANOV",
+      from: "ハッキング された アーケード",
+      age: "4ねん (リブート から)",
+      bday: "12月31日 (Y2K の しっぱい)",
+      likes: "ゆるい ケーブル、 やさしい こども、 タダ の えもじ",
+      dislikes: "100% の せいかい、 シャットダウン、 きずな",
+      ambition: "ぜんいん の こたえ を ぬすむ (でも やさしく)",
+    },
+  };
+
+  // Armed-selection profile screen. Replaces a direct kaiju-pick →
+  // start jump with an intermediate: portrait + funny stats + theme
+  // music. Kid confirms before the round starts. The actual shiny
+  // roll happens inside startGame() so each round can re-roll —
+  // here the portrait just uses the clean default art.
+  function showProfile(bossId) {
+    State.bossId = bossId;
+    const fresh = ART.get(bossId, true);  // clean (non-shiny) for the profile
+    const port = $("prof-portrait");
+    if (port) port.innerHTML = ART.renderSVG(fresh);
+    const nameEl = $("prof-name");
+    if (nameEl) nameEl.textContent = (fresh && fresh.name_jp) || bossId;
+    const p = PROFILES[bossId] || {};
+    $("prof-name-en").textContent = p.name_en || "";
+    $("prof-from").textContent     = p.from     || "—";
+    $("prof-age").textContent      = p.age      || "—";
+    $("prof-bday").textContent     = p.bday     || "—";
+    $("prof-likes").textContent    = p.likes    || "—";
+    $("prof-dislikes").textContent = p.dislikes || "—";
+    $("prof-ambition").textContent = p.ambition || "—";
+    // Start theme music (random JP / shiny variant).
+    playTheme(bossId);
+    show("profile");
+  }
 
   const State = {
     level: 0,
@@ -216,6 +319,10 @@
     });
   });
   $("pick-back").addEventListener("click", () => { SND.sfxPop(); show("title"); });
+  // Profile-screen buttons — kid arms the kaiju (theme music plays)
+  // and confirms, or backs out to pick a different one.
+  $("profile-go").addEventListener("click", () => { SND.sfxConfirm(); startGame(State.bossId); });
+  $("profile-back").addEventListener("click", () => { SND.sfxPop(); stopTheme(); buildPickGrid(); show("pick"); });
   // Prep-screen buttons — kid taps START to enter gameplay or BACK
   // to pick a different kaiju (or have a different sentence rolled).
   $("prep-go").addEventListener("click", () => { SND.sfxConfirm(); startGameplay(); });
@@ -241,7 +348,7 @@
         <div class="name">${boss.name_jp || id}</div>
         <div style="font-size:11px;color:var(--ink-dim);margin-top:2px;">${done}/${total} (${pct}%)</div>
       `;
-      div.addEventListener("click", () => startGame(id));
+      div.addEventListener("click", () => { SND.sfxConfirm(); showProfile(id); });
       grid.appendChild(div);
     });
   }
