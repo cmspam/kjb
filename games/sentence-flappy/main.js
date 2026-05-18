@@ -85,6 +85,68 @@
     sessionStartT: 0,
   };
 
+  // ===== KAIJU VOICE + THEME =====
+  // Pull random JP voice lines from the locale taunt pools so each
+  // run feels alive — characters react when you flap, miss, combo,
+  // win, lose. Audio comes from assets/voices/<bossId>/<hash>.opus
+  // and is played via SND.playBossLine (which falls back silent if
+  // the file is missing — no console errors). Cooldown gating
+  // prevents voice spam.
+  function _bossLines(bossId, cat) {
+    const bosses = (window.JP && window.JP.bosses) || {};
+    const taunts = bosses[bossId] && bosses[bossId].taunts;
+    if (!taunts) return null;
+    return taunts[cat] || null;
+  }
+  let _lastVoiceAt = 0;
+  function playKaijuLine(category, minGapMs) {
+    if (!State.bossId) return;
+    const now = performance.now();
+    if (now - _lastVoiceAt < (minGapMs ?? 2200)) return;
+    // Try the requested category, then fall back to common ones so
+    // we always get SOMETHING — kaiju who don't have specific
+    // categories filled in still feel reactive.
+    const tryCats = [category, "healthy", "slingshot", "hurt"];
+    for (const c of tryCats) {
+      const pool = _bossLines(State.bossId, c);
+      if (pool && pool.length) {
+        const line = pool[(Math.random() * pool.length) | 0];
+        // Random preference: ~25% chance to use the shiny voice if
+        // the kaiju is shiny this run.
+        const useShiny = !!State.isShiny;
+        const audio = SND.playBossLine(State.bossId, line, { shiny: useShiny, volume: 0.85 });
+        _lastVoiceAt = now;
+        return audio;
+      }
+    }
+  }
+
+  // Theme song — plays after a successful round (and stops on screen
+  // change). Randomly picks the JP theme or the shiny / foreign
+  // version since each kaiju has both.
+  let _themeAudio = null;
+  function playTheme(bossId) {
+    stopTheme();
+    if (!bossId) return;
+    const useShiny = Math.random() < 0.5;
+    const suffix = useShiny ? "_shiny" : "";
+    const url = `../../assets/themes/${encodeURIComponent(bossId + suffix)}.mp3`;
+    try {
+      const a = new Audio(url);
+      a.volume = 0.45;
+      a.loop = false;
+      const p = a.play();
+      if (p && p.catch) p.catch(() => { /* file missing — silent */ });
+      _themeAudio = a;
+    } catch (_) { _themeAudio = null; }
+  }
+  function stopTheme() {
+    if (_themeAudio) {
+      try { _themeAudio.pause(); _themeAudio.currentTime = 0; } catch (_) {}
+      _themeAudio = null;
+    }
+  }
+
   // The word the kid currently needs to grab. Returns null when the
   // sentence is complete. Kid collects EVERY word in `tokens` in
   // order — blanks only control HUD display.
@@ -409,6 +471,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  let _nextAmbientAt = 0;
   function runGame() {
     running = true;
     kaijuY = H * 0.5;
@@ -424,8 +487,12 @@
     comboTextT = 0;
     nextPipeAt = performance.now() + 1100;
     nextTokenAt = performance.now() + 600;
+    _nextAmbientAt = performance.now() + 4500;  // first kaiju ambient line ~4.5s in
+    _lastVoiceAt = 0;
     lastT = performance.now();
     scrollX = 0;
+    // Stop any theme that might still be playing from a previous win.
+    stopTheme();
     prepareKaijuSprite().then(() => {
       raf = requestAnimationFrame(loop);
     });
@@ -439,7 +506,7 @@
     document.removeEventListener("keydown", onKey);
     if (bossSpriteWrap) { try { bossSpriteWrap.remove(); } catch (_) {} bossSpriteWrap = null; }
   }
-  $("hud-quit").addEventListener("click", () => { stopGame(); show("title"); });
+  $("hud-quit").addEventListener("click", () => { stopGame(); stopTheme(); show("title"); });
   $("hud-peek").addEventListener("click", () => {
     const line = $("hud-jp-line"); const btn = $("hud-peek");
     line.classList.toggle("peek");
@@ -655,6 +722,14 @@
     } else { shake.x = 0; shake.y = 0; }
 
     if (comboTextT > 0) comboTextT -= dt;
+    // Ambient kaiju chatter: every 7-15 seconds the kaiju mutters
+    // something from their healthy/slingshot taunt pool. Skipped if
+    // we already played a voice line recently (rate-limited inside
+    // playKaijuLine via _lastVoiceAt).
+    if (t > _nextAmbientAt) {
+      playKaijuLine("healthy", 1800);
+      _nextAmbientAt = t + 7000 + Math.random() * 8000;
+    }
 
     const step = tun.speed * dts;
     pipes.forEach(p => p.x -= step);
@@ -691,9 +766,16 @@
     });
 
     // Pipe collisions — instant death (no cooldown forgiveness).
+    // Hit rect is narrowed by the kaiju's obstacle inset so the
+    // visual shape (tentacles, breadsticks, etc.) drives where the
+    // solid region actually is.
     if (crashCool < 99000) {
+      const insetX = obstacleInsetH();
       pipes.forEach(p => {
-        if (kx + 22 < p.x || kx - 22 > p.x + p.w) return;
+        const insetPx = p.w * insetX;
+        const px0 = p.x + insetPx;
+        const px1 = p.x + p.w - insetPx;
+        if (kx + 22 < px0 || kx - 22 > px1) return;
         if (ky - 22 < p.topH || ky + 22 > p.topH + p.gap) hitObstacle("pipe");
       });
     }
@@ -725,6 +807,10 @@
         comboTextVal = State.combo;
         comboTextT = 800;
       }
+      // Combo voice — every 3-correct streak the kaiju panics a bit.
+      if (State.combo >= 3 && State.combo % 3 === 0) {
+        playKaijuLine("high_combo", 2500);
+      }
       renderHUD();
       if (State.progress >= State.tokens.length) {
         setTimeout(winSequence, 700);
@@ -733,6 +819,8 @@
       State.pickupsWrong++;
       State.combo = 0;
       SND.sfxWrong();
+      // ~35% chance the kaiju jeers when the kid grabs the wrong word.
+      if (Math.random() < 0.35) playKaijuLine("slingshot", 2200);
       flash(tk.x, tk.y, "✕", "#ff3b6b");
       // Feather/smoke burst at impact
       burstFeathers(tk.x, tk.y, 14);
@@ -761,6 +849,8 @@
   function crashSequence(kind) {
     stopGame();
     SND.sfxFail();
+    // The kaiju gloats — they survived; you crashed.
+    playKaijuLine("raged", 0);
     $("lose-banner").textContent = kind === "floor" ? "GROUND HIT!" : "PIPE CRASH!";
     $("lose-jp").textContent = State.boss.name_jp;
     $("lose-progress").innerHTML = `「${State.tokens.slice(0, State.progress).join(" ") || "..."}」 ... まで かんせい!<br>あと: <span style="color:#ffe45c">${State.tokens.slice(State.progress).join(" ") || "(なし)"}</span><br>さいだい コンボ: <span style="color:#ffe45c">${State.comboMax}</span>`;
@@ -931,15 +1021,13 @@
     });
     ctx.globalAlpha = 1;
 
-    // Pipes
+    // Obstacles — character-specific shapes (tentacles for Tako,
+    // chocolate cones for Unko, breadsticks for Tral, etc.). Falls
+    // back to the green pipe if no character drawer is registered.
     pipes.forEach(p => {
-      if (p.style === "cloud") {
-        drawCloud(p.x, 0, p.w, p.topH);
-        drawCloud(p.x, p.topH + p.gap, p.w, H - (p.topH + p.gap));
-      } else {
-        drawPipe(p.x, 0, p.w, p.topH);
-        drawPipe(p.x, p.topH + p.gap, p.w, H - (p.topH + p.gap));
-      }
+      const drawer = OBSTACLE_DRAWERS[State.bossId] || drawPipe;
+      drawer(p.x, 0, p.w, p.topH, "top");
+      drawer(p.x, p.topH + p.gap, p.w, H - (p.topH + p.gap), "bottom");
     });
 
     // Tokens — all tokens render identically. No halo or tint on the
@@ -1096,7 +1184,9 @@
     ctx.closePath();
   }
 
-  function drawPipe(x, y, w, h) {
+  function drawPipe(x, y, w, h, side) {
+    // Generic green pipe — fallback for any kaiju without a custom
+    // obstacle drawer. (Original Flappy-style pipe.)
     const g = ctx.createLinearGradient(x, 0, x + w, 0);
     g.addColorStop(0, "#2a8a44");
     g.addColorStop(0.5, "#5acc66");
@@ -1107,16 +1197,282 @@
     ctx.lineWidth = 3;
     ctx.strokeRect(x, y, w, h);
     const capH = 22;
-    if (y === 0) ctx.fillRect(x - 4, y + h - capH, w + 8, capH);
-    else         ctx.fillRect(x - 4, y, w + 8, capH);
-    if (y === 0) ctx.strokeRect(x - 4, y + h - capH, w + 8, capH);
-    else         ctx.strokeRect(x - 4, y, w + 8, capH);
-    // moss highlights
+    if (side === "top") ctx.fillRect(x - 4, y + h - capH, w + 8, capH);
+    else                ctx.fillRect(x - 4, y, w + 8, capH);
+    if (side === "top") ctx.strokeRect(x - 4, y + h - capH, w + 8, capH);
+    else                ctx.strokeRect(x - 4, y, w + 8, capH);
     ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fillRect(x + 4, y, 4, h);
     ctx.fillStyle = "rgba(255,255,255,0.18)";
     ctx.fillRect(x + w - 8, y, 4, h);
   }
+
+  // ===== PER-CHARACTER OBSTACLE DRAWERS =====
+  // Each takes (x, y, w, h, side) where side is "top" or "bottom".
+  // The bounding box [x, y, w, h] is the pipe's full rect; the drawer
+  // is free to render any silhouette within it. Hit collision uses
+  // hitInsetH() to narrow the rect to the visually-solid region.
+
+  // Tako: two purple tentacles with rows of pink suckers, bulb at the
+  // gap-facing tip.
+  function drawTentacle(x, y, w, h, side) {
+    const cx = x + w/2, tw = w * 0.55;
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, "#5a1a7a"); g.addColorStop(0.5, "#aa3aee"); g.addColorStop(1, "#5a1a7a");
+    ctx.fillStyle = g; ctx.strokeStyle = "#2a0540"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.rect(cx - tw/2, y, tw, h);
+    ctx.fill(); ctx.stroke();
+    // bulb at the gap-facing end
+    ctx.fillStyle = "#aa3aee";
+    ctx.beginPath();
+    ctx.arc(cx, side === "top" ? y + h : y, tw * 0.65, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    // suckers
+    ctx.fillStyle = "#ffccdd";
+    const sCount = Math.floor(h / 45);
+    for (let i = 0; i < sCount; i++) {
+      const sy = y + 25 + i * 45;
+      ctx.beginPath(); ctx.arc(cx - 6, sy, 3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 6, sy, 3, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // Unko: a stack of chocolate ice-cream cones. Brown cones with
+  // soft-serve cream tip at the gap-facing end (where the bomb
+  // would be). Drippy.
+  function drawChocCone(x, y, w, h, side) {
+    const cx = x + w/2;
+    // Cone column (waffle texture)
+    ctx.fillStyle = "#8a5520"; ctx.strokeStyle = "#3a2010"; ctx.lineWidth = 2;
+    ctx.fillRect(x + 3, y, w - 6, h);
+    ctx.strokeRect(x + 3, y, w - 6, h);
+    // waffle cross-hatching
+    ctx.strokeStyle = "rgba(60,30,10,0.5)"; ctx.lineWidth = 1;
+    for (let i = 0; i < h; i += 14) {
+      ctx.beginPath(); ctx.moveTo(x + 3, y + i); ctx.lineTo(x + w - 3, y + i + 14); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + w - 3, y + i); ctx.lineTo(x + 3, y + i + 14); ctx.stroke();
+    }
+    // soft-serve tip at gap-facing end
+    const tipY = side === "top" ? y + h : y;
+    const dir = side === "top" ? 1 : -1;
+    ctx.fillStyle = "#5a2a0a"; ctx.strokeStyle = "#2a1005"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      ctx.arc(cx - w*0.2 + i * w*0.2, tipY + dir * (4 + i * 6), w*0.32, 0, Math.PI*2);
+    }
+    ctx.fill(); ctx.stroke();
+    // drips
+    ctx.fillStyle = "#5a2a0a";
+    ctx.beginPath();
+    ctx.arc(x + w*0.3, tipY + dir * 18, 4, 0, Math.PI*2);
+    ctx.arc(x + w*0.7, tipY + dir * 22, 3, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Tral: breadstick with Italian-flag ribbon wrapped. Tan with
+  // sesame seeds.
+  function drawBreadstick(x, y, w, h, side) {
+    const cx = x + w/2, bw = w * 0.55;
+    ctx.fillStyle = "#dcaa66"; ctx.strokeStyle = "#7a4a20"; ctx.lineWidth = 2;
+    ctx.fillRect(cx - bw/2, y, bw, h);
+    ctx.strokeRect(cx - bw/2, y, bw, h);
+    // sesame seeds
+    ctx.fillStyle = "#5a3a10";
+    for (let i = 0; i < Math.floor(h / 22); i++) {
+      const sy = y + 12 + i * 22 + Math.random()*4;
+      ctx.beginPath(); ctx.ellipse(cx - 6 + (i%3)*5, sy, 2, 1.2, 0, 0, Math.PI*2); ctx.fill();
+    }
+    // Italian flag ribbon — wraps about 25% from the gap-facing end
+    const ribY = side === "top" ? y + h - 50 : y + 30;
+    ctx.fillStyle = "#1a8844"; ctx.fillRect(cx - bw/2 - 4, ribY,      bw + 8, 8);
+    ctx.fillStyle = "#fff";    ctx.fillRect(cx - bw/2 - 4, ribY + 8,  bw + 8, 8);
+    ctx.fillStyle = "#cc1144"; ctx.fillRect(cx - bw/2 - 4, ribY + 16, bw + 8, 8);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 1;
+    ctx.strokeRect(cx - bw/2 - 4, ribY, bw + 8, 24);
+  }
+
+  // Pamp: a column of soft teddy bear silhouettes stacked. Pink.
+  function drawTeddyStack(x, y, w, h, side) {
+    const cx = x + w/2;
+    const bearH = Math.min(64, Math.max(40, w * 1.1));
+    const count = Math.max(1, Math.floor(h / bearH));
+    ctx.fillStyle = "#ffaadd"; ctx.strokeStyle = "#aa4488"; ctx.lineWidth = 2;
+    for (let i = 0; i < count; i++) {
+      const cy = y + (i + 0.5) * (h / count);
+      ctx.beginPath(); ctx.arc(cx, cy, w * 0.46, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      // ears
+      ctx.beginPath(); ctx.arc(cx - w*0.32, cy - w*0.32, w*0.18, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + w*0.32, cy - w*0.32, w*0.18, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      // eyes + nose
+      ctx.fillStyle = "#2a0820";
+      ctx.beginPath(); ctx.arc(cx - 7, cy - 4, 2.2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 7, cy - 4, 2.2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy + 4, 2, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#ffaadd";
+    }
+  }
+
+  // Parfait: a tall parfait glass with cream / cherry / cone layers,
+  // cherry at the gap-facing tip.
+  function drawParfaitGlass(x, y, w, h, side) {
+    const cx = x + w/2, gw = w * 0.7;
+    // glass body
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.strokeStyle = "#ddeeff"; ctx.lineWidth = 2;
+    ctx.fillRect(cx - gw/2, y, gw, h);
+    ctx.strokeRect(cx - gw/2, y, gw, h);
+    // layered fillings — alternate stripes
+    const colors = ["#cc1144", "#ffd07a", "#fff5cc", "#88ccff"];
+    const layerH = 24;
+    let cy = side === "top" ? y + h - layerH : y;
+    let dir = side === "top" ? -1 : 1;
+    for (let i = 0; i < Math.floor(h / layerH); i++) {
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fillRect(cx - gw/2 + 2, cy + dir * i * layerH, gw - 4, layerH - 2);
+    }
+    // cherry on gap-side tip
+    const tipY = side === "top" ? y + h - 6 : y + 6;
+    ctx.fillStyle = "#cc1144"; ctx.strokeStyle = "#5a0815"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, tipY, 8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    // stem
+    ctx.beginPath();
+    ctx.moveTo(cx, tipY); ctx.lineTo(cx + 6, tipY + (side === "top" ? -14 : 14));
+    ctx.strokeStyle = "#1a8844"; ctx.lineWidth = 2; ctx.stroke();
+  }
+
+  // Anpan: a stack of red-bean buns with the X-mark on top.
+  function drawBunStack(x, y, w, h, side) {
+    const cx = x + w/2;
+    const bH = Math.min(60, Math.max(40, w));
+    const count = Math.max(1, Math.floor(h / bH));
+    ctx.fillStyle = "#cc6644"; ctx.strokeStyle = "#5a2a14"; ctx.lineWidth = 2;
+    for (let i = 0; i < count; i++) {
+      const cy = y + (i + 0.5) * (h / count);
+      ctx.beginPath(); ctx.arc(cx, cy, w * 0.46, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      // highlight
+      ctx.fillStyle = "rgba(255,200,150,0.45)";
+      ctx.beginPath(); ctx.ellipse(cx - 6, cy - 6, w*0.18, w*0.10, 0, 0, Math.PI*2); ctx.fill();
+      // X mark on the gap-side most bun
+      const isGapSide = (side === "top" && i === count - 1) || (side === "bottom" && i === 0);
+      if (isGapSide) {
+        ctx.strokeStyle = "#3a1505"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, cy - 8); ctx.lineTo(cx + 8, cy + 8);
+        ctx.moveTo(cx + 8, cy - 8); ctx.lineTo(cx - 8, cy + 8);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#cc6644";
+      ctx.strokeStyle = "#5a2a14";
+    }
+  }
+
+  // Temee: weathered wooden yurt posts with sheep-knuckle bones (shagai)
+  // / skull at the gap-facing end.
+  function drawShagaiPost(x, y, w, h, side) {
+    const cx = x + w/2, pw = w * 0.5;
+    ctx.fillStyle = "#5a3a20"; ctx.strokeStyle = "#2a1a08"; ctx.lineWidth = 2;
+    ctx.fillRect(cx - pw/2, y, pw, h);
+    ctx.strokeRect(cx - pw/2, y, pw, h);
+    // wood grain
+    ctx.strokeStyle = "rgba(20,10,5,0.4)"; ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(cx - pw/2 + i*pw/4, y);
+      ctx.lineTo(cx - pw/2 + i*pw/4, y + h);
+      ctx.stroke();
+    }
+    // sheep skull on gap-side tip
+    const tipY = side === "top" ? y + h - 18 : y + 18;
+    ctx.fillStyle = "#ddccaa"; ctx.strokeStyle = "#5a3a20"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(cx, tipY, 18, 14, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    // horns curl
+    ctx.strokeStyle = "#3a2010"; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - 14, tipY - 4);
+    ctx.quadraticCurveTo(cx - 24, tipY + 6, cx - 18, tipY + 14);
+    ctx.moveTo(cx + 14, tipY - 4);
+    ctx.quadraticCurveTo(cx + 24, tipY + 6, cx + 18, tipY + 14);
+    ctx.stroke();
+    // eye sockets
+    ctx.fillStyle = "#1a0a05";
+    ctx.beginPath(); ctx.arc(cx - 6, tipY - 1, 2.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 6, tipY - 1, 2.2, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Catcherski: a metal claw arm — silver telescoping segments with a
+  // red glitching claw at the gap-facing tip.
+  function drawClawPole(x, y, w, h, side) {
+    const cx = x + w/2, pw = w * 0.4;
+    // telescoping segments
+    const segCount = Math.max(2, Math.floor(h / 50));
+    for (let i = 0; i < segCount; i++) {
+      const sy = y + i * (h / segCount);
+      const sh = (h / segCount) - 4;
+      const segW = pw * (1 - i * 0.04);
+      const g = ctx.createLinearGradient(cx - segW/2, 0, cx + segW/2, 0);
+      g.addColorStop(0, "#666"); g.addColorStop(0.5, "#ccc"); g.addColorStop(1, "#666");
+      ctx.fillStyle = g; ctx.strokeStyle = "#222"; ctx.lineWidth = 1.5;
+      ctx.fillRect(cx - segW/2, sy, segW, sh);
+      ctx.strokeRect(cx - segW/2, sy, segW, sh);
+    }
+    // claw at gap-facing tip
+    const tipY = side === "top" ? y + h : y;
+    const dir = side === "top" ? 1 : -1;
+    ctx.fillStyle = "#666"; ctx.strokeStyle = "#222"; ctx.lineWidth = 2;
+    // claw fingers (3)
+    [-1, 0, 1].forEach(off => {
+      ctx.beginPath();
+      ctx.moveTo(cx + off * 8, tipY);
+      ctx.lineTo(cx + off * 16, tipY + dir * 22);
+      ctx.lineTo(cx + off * 8 + 4, tipY + dir * 22);
+      ctx.lineTo(cx + off * 6, tipY);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    });
+    // glitch light on tip
+    const flicker = (performance.now() / 100) % 2 < 1;
+    ctx.fillStyle = flicker ? "#ff00aa" : "#ff4400";
+    ctx.beginPath(); ctx.arc(cx, tipY + dir * 8, 4, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Brainrot: cosmic beam — purple-blue gradient with floating stars.
+  function drawCosmicBeam(x, y, w, h, side) {
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, "#1a0540"); g.addColorStop(0.5, "#aa44ff"); g.addColorStop(1, "#1a0540");
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = "#88ccff"; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+    // glow halo
+    ctx.fillStyle = "rgba(170,68,255,0.18)";
+    ctx.fillRect(x - 8, y, 8, h);
+    ctx.fillRect(x + w, y, 8, h);
+    // floating stars
+    ctx.fillStyle = "#fff";
+    for (let i = 0; i < Math.floor(h / 28); i++) {
+      const sx = x + 6 + (i * 13) % (w - 12);
+      const sy = y + 12 + i * 28;
+      ctx.beginPath(); ctx.arc(sx, sy, 1.5 + (i%2), 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  const OBSTACLE_DRAWERS = {
+    tako: drawTentacle, unko: drawChocCone, tral: drawBreadstick,
+    pamp: drawTeddyStack, parfait: drawParfaitGlass, anpan: drawBunStack,
+    temee: drawShagaiPost, catcherski: drawClawPole, brainrot: drawCosmicBeam,
+  };
+
+  // Horizontal hit-inset per kaiju (fraction of pipe width that's
+  // purely visual flourish, not solid). Tentacles/breadsticks/posts
+  // are narrow → high inset; teddy bears / bun stacks are full
+  // width → low inset. Makes each character genuinely play different.
+  const OBSTACLE_INSET_H = {
+    tako: 0.42, unko: 0.10, tral: 0.32, pamp: 0.04,
+    parfait: 0.20, anpan: 0.04, temee: 0.35,
+    catcherski: 0.28, brainrot: 0.10,
+  };
+  function obstacleInsetH() { return OBSTACLE_INSET_H[State.bossId] ?? 0.10; }
+
   function drawCloud(x, y, w, h) {
     ctx.fillStyle = "rgba(255,255,255,0.88)";
     ctx.strokeStyle = "rgba(180,200,255,0.6)";
@@ -1149,6 +1505,11 @@
   function winSequence() {
     stopGame();
     SND.sfxLevel();
+    // Defeated kaiju lets out a "desperate" line, then their theme
+    // song plays — randomly the JP version or the foreign/shiny
+    // version since each kaiju has both.
+    playKaijuLine("desperate", 0);
+    setTimeout(() => playTheme(State.bossId), 1400);
     SND.speakEn(State.sentence);
     recordSentenceCleared(State.bossId, State.level, State.sentence);
     // Animated word-by-word reveal of the cleared sentence.
@@ -1218,6 +1579,8 @@
   function loseSequence() {
     stopGame();
     SND.sfxFail();
+    // Even the desperate kaiju jeers when the kid runs out of parts.
+    playKaijuLine("raged", 0);
     $("lose-banner").textContent = "CORE BROKEN!";
     $("lose-jp").textContent = State.boss.name_jp;
     $("lose-progress").innerHTML = `「${State.tokens.slice(0, State.progress).join(" ") || "..."}」 ... まで かんせい!<br>あと: <span style="color:#ffe45c">${State.tokens.slice(State.progress).join(" ")}</span><br>さいだい コンボ: <span style="color:#ffe45c">${State.comboMax}</span>`;
@@ -1259,11 +1622,11 @@
     setTimeout(() => SND.speakAsKaiju(State.bossId, cline.en), 500);
   }
 
-  $("win-again").addEventListener("click", () => { SND.sfxConfirm(); startGame(State.bossId); });
-  $("win-menu").addEventListener("click",  () => { SND.sfxConfirm(); buildPickGrid(); show("pick"); });
-  $("win-home").addEventListener("click",  () => { SND.sfxConfirm(); show("title"); });
-  $("lose-retry").addEventListener("click", () => { SND.sfxConfirm(); startGame(State.bossId); });
-  $("lose-home").addEventListener("click",  () => { SND.sfxConfirm(); show("title"); });
+  $("win-again").addEventListener("click", () => { SND.sfxConfirm(); stopTheme(); startGame(State.bossId); });
+  $("win-menu").addEventListener("click",  () => { SND.sfxConfirm(); stopTheme(); buildPickGrid(); show("pick"); });
+  $("win-home").addEventListener("click",  () => { SND.sfxConfirm(); stopTheme(); show("title"); });
+  $("lose-retry").addEventListener("click", () => { SND.sfxConfirm(); stopTheme(); startGame(State.bossId); });
+  $("lose-home").addEventListener("click",  () => { SND.sfxConfirm(); stopTheme(); show("title"); });
 
   function spawnConfetti(n) {
     const layer = document.createElement("div");
