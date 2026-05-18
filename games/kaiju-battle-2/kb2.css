@@ -1,0 +1,210 @@
+/* KB2 preview theme — sits on top of the parent KJB CSS. Establishes
+   the visual identity for the upcoming Kaiju Brawl 2 mode without
+   touching the original game's stylesheet. */
+
+body.kb2-theme {
+  background: #0a0530;
+  color: #fff;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow-y: auto;
+  position: relative;
+  padding: 0;
+}
+
+.scene-cycler {
+  position: fixed; inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.scene-cycler .sc-layer {
+  position: absolute; inset: 0;
+  opacity: 0;
+  transition: opacity 1.4s ease-in-out;
+}
+.scene-cycler .sc-layer.active { opacity: 0.18; }
+.scene-cycler .sc-layer svg { width: 100%; height: 100%; display: block; }
+
+.kb2-wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+  text-align: center;
+}
+
+.kb2-logo {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: #ffe45c;
+  text-shadow: 0 4px 0 rgba(0,0,0,0.5), 0 0 24px rgba(255,228,92,0.5),
+               0 0 48px rgba(255, 90, 80, 0.4);
+  margin-top: 18px;
+}
+.kb2-subtitle {
+  font-size: 16px;
+  letter-spacing: 6px;
+  color: #ff66aa;
+  margin: 6px 0 4px;
+  font-weight: 900;
+}
+.kb2-status {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 3px;
+  background: linear-gradient(90deg, #ff3b6b, #ffcc44);
+  color: #1a0a3a;
+  padding: 4px 14px;
+  border-radius: 99px;
+  font-weight: 900;
+  margin-bottom: 24px;
+}
+
+.kb2-banner {
+  background: rgba(0,0,0,0.4);
+  border: 3px solid rgba(255, 228, 92, 0.5);
+  border-radius: 18px;
+  padding: 18px;
+  margin: 18px 0;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+}
+.kb2-art {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 6px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.kb2-art-cell {
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 4px;
+  aspect-ratio: 1/1;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.16s ease, border-color 0.12s ease;
+}
+.kb2-art-cell:hover {
+  transform: translateY(-3px);
+  border-color: #ffe45c;
+}
+.kb2-art-cell svg { width: 100%; height: 100%; }
+
+.kb2-pitch {
+  background: rgba(0,0,0,0.55);
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 16px 22px;
+  text-align: left;
+  margin: 18px 0;
+}
+.kb2-pitch h3 {
+  margin: 0 0 8px 0;
+  color: #ff66aa;
+  letter-spacing: 2px;
+  font-size: 14px;
+}
+.kb2-pitch ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.kb2-pitch ul li {
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(255,255,255,0.08);
+  font-size: 13px;
+  line-height: 1.6;
+  position: relative;
+  padding-left: 18px;
+}
+.kb2-pitch ul li:last-child { border-bottom: none; }
+.kb2-pitch ul li:before {
+  content: "★";
+  position: absolute;
+  left: 0;
+  color: #ffe45c;
+}
+.kb2-soon {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.85);
+  margin: 0;
+}
+.kb2-soon a {
+  color: #ffe45c;
+  font-weight: 900;
+  text-decoration: none;
+}
+.kb2-soon a:hover { text-decoration: underline; }
+
+.kb2-cta-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.kb2-cta-primary, .kb2-cta-secondary {
+  text-decoration: none;
+  font-weight: 900;
+  letter-spacing: 2px;
+  padding: 14px 22px;
+  border-radius: 99px;
+  font-size: 15px;
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid transparent;
+}
+.kb2-cta-primary {
+  background: linear-gradient(90deg, #ff3b6b, #ffcc44);
+  color: #1a0a3a;
+  box-shadow: 0 6px 20px rgba(255,90,80,0.4);
+}
+.kb2-cta-secondary {
+  background: rgba(0,0,0,0.4);
+  color: #ffe45c;
+  border-color: rgba(255,228,92,0.6);
+}
+
+.kb2-roadmap {
+  background: rgba(0,0,0,0.55);
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 16px 22px;
+  text-align: left;
+  margin-top: 18px;
+}
+.kb2-roadmap h4 {
+  margin: 0 0 12px;
+  color: #44eeff;
+  letter-spacing: 3px;
+  font-size: 13px;
+}
+.kb2-roadmap ol {
+  padding-left: 22px;
+  margin: 0;
+}
+.kb2-roadmap li {
+  padding: 4px 0;
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+}
+.kb2-roadmap li.done {
+  color: rgba(180,255,180,0.7);
+  text-decoration: line-through;
+}
+.kb2-roadmap li.now {
+  color: #ffe45c;
+  font-weight: 900;
+  background: rgba(255,228,92,0.08);
+  padding: 4px 8px;
+  border-radius: 6px;
+  list-style-position: inside;
+  margin-left: -28px;
+  padding-left: 32px;
+}

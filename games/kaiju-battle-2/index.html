@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>カイジュウバトル 2 — Kaiju Brawl 2 (Preview)</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%94%A5%3C/text%3E%3C/svg%3E">
+<!-- Reuse parent KJB CSS, then override with KB2 theme -->
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="kb2.css">
+</head>
+<body class="kb2-theme">
+
+<!-- KB2 preview screen — explains what KB2 is and lets the player jump
+     into a "try the new combat preview" mini-mode. The full fork lives
+     in this folder when KB2 is fully built; for now the parent KJB game
+     stays untouched at eslgame/index.html. -->
+<div class="kb2-wrap">
+  <div class="kb2-logo">カイジュウ バトル 2</div>
+  <div class="kb2-subtitle">★ KAIJU BRAWL 2 ★</div>
+  <div class="kb2-status">PREVIEW · さきどり</div>
+
+  <div class="kb2-banner">
+    <div class="kb2-art" id="kb2-art"></div>
+  </div>
+
+  <div class="kb2-pitch">
+    <h3>あたらしい たたかい かた</h3>
+    <ul>
+      <li>パーティー せい： カイジュウ 3 たい パーティー で たたかう</li>
+      <li>あい しょう： カイジュウ どうし に そうせい / じゃくてん が ある</li>
+      <li>めいわざ システム： せいかい する と とくべつ こうげき が はつどう</li>
+      <li>クロス ゲーム: ESL ゲーム で あつめた マスタリー が とくべつ こうげき を つよくする</li>
+      <li>シャイニー チェイン： つづけて せいかい する と シャイニー モード が こうしん</li>
+    </ul>
+    <h3 style="margin-top:14px;">いつ あそべる の？</h3>
+    <p class="kb2-soon">げんざい かいはつ ちゅう。 げんざい あそべる は <a href="../../index.html">カイジュウ バトル 1</a> です。</p>
+  </div>
+
+  <div class="kb2-cta-row">
+    <a class="kb2-cta-primary" href="../../index.html">▶ カイジュウ バトル 1 を あそぶ</a>
+    <a class="kb2-cta-secondary" href="../index.html">← じゅく に もどる</a>
+  </div>
+
+  <div class="kb2-roadmap">
+    <h4>ロードマップ</h4>
+    <ol>
+      <li class="done">3 ゲーム を ふかく する (ESL じゅく)</li>
+      <li class="done">カイジュウ シェア リング システム</li>
+      <li class="done">プレ・レンダー オーディオ パック</li>
+      <li class="now">カイジュウ バトル 2 プレビュー (いま ここ)</li>
+      <li>パーティー せい バトル の プロトタイプ</li>
+      <li>あいしょう シート (カイジュウ × カイジュウ × あいしょう)</li>
+      <li>めいわざ システム + ESL マスタリー × ダメージ</li>
+      <li>かいはつ じょう こうかい</li>
+    </ol>
+  </div>
+</div>
+
+<!-- Background scene cycler reusing the story-quest scene library so
+     KB2 preview screen feels cinematic too. -->
+<div class="scene-cycler" id="kb2-scene-cycler" aria-hidden="true"></div>
+
+<script src="../../js/i18n.js"></script>
+<script src="../../js/locale/ja.js"></script>
+<script src="../../js/locale/ja_shiny.js"></script>
+<script src="../../js/monsters.js"></script>
+<script src="../story-quest/scenes.js"></script>
+<script src="../shared/boss-art.js"></script>
+<script>
+(function () {
+  // Render a montage of the full kaiju roster in the banner art slot.
+  const slot = document.getElementById("kb2-art");
+  if (!slot || !window.GamesArt) return;
+  const ids = ["tako","unko","tral","pamp","parfait","anpan","temee","catcherski","brainrot"];
+  ids.forEach(id => {
+    const boss = GamesArt.get(id, true);
+    if (!boss) return;
+    const w = document.createElement("div");
+    w.className = "kb2-art-cell";
+    w.innerHTML = GamesArt.renderSVG(boss);
+    slot.appendChild(w);
+  });
+})();
+
+(function () {
+  // Background scene cycler — same pattern as games/index.html.
+  if (!window.Scenes) return;
+  const layer = document.getElementById("kb2-scene-cycler");
+  if (!layer) return;
+  const ids = Scenes.list();
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  let i = 0;
+  let active = null;
+  function tick() {
+    const id = ids[i % ids.length];
+    const next = document.createElement("div");
+    next.className = "sc-layer";
+    next.innerHTML = Scenes.render(id);
+    layer.appendChild(next);
+    requestAnimationFrame(() => next.classList.add("active"));
+    if (active) {
+      active.classList.remove("active");
+      const old = active;
+      setTimeout(() => { try { old.remove(); } catch (_) {} }, 1500);
+    }
+    active = next;
+    i++;
+  }
+  tick();
+  setInterval(tick, 10000);
+})();
+</script>
+</body>
+</html>
