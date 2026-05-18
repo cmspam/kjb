@@ -410,6 +410,9 @@
   // blanks at L1+) + full JP gloss + a START button. Kid taps when
   // ready — only then does the canvas spin up.
   function buildPrepScreen() {
+    // Per user feedback: the theme music plays on the profile screen
+    // but stops here so the kid can read the sentence quietly.
+    stopTheme();
     const portrait = $("prep-kaiju");
     if (portrait) portrait.innerHTML = ART.renderSVG(State.boss);
     const nameEl = $("prep-kaiju-name");
@@ -445,9 +448,12 @@
       }
     }
     // Speak the full English sentence on prep, so kids hear it once
-    // before being asked to identify pieces of it. At L1+ this is a
-    // big help; at L0 it's just nice flavor.
-    setTimeout(() => SND.speakEn(State.sentence), 350);
+    // before being asked to identify pieces of it. We call this
+    // SYNCHRONOUSLY (no setTimeout) because mobile browsers only let
+    // audio play within a user-gesture token, and the click on the
+    // profile-go button is what got us here. Previous 350ms timeout
+    // silently dropped the audio on iOS / mobile Safari.
+    try { SND.speakEn(State.sentence); } catch (_) {}
   }
 
   // The actual gameplay entry — called when the kid taps the START
