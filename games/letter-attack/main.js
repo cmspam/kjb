@@ -42,22 +42,43 @@
     SND.tryOpus(`../../assets/audio/phonics/${encodeURIComponent(letter)}.opus`, p.say,
                 { lang: "en-US", rate: 0.85, volume: 1.0 });
   }
+  // English audio is intentionally a CLEAR en-US voice (the generic
+  // AnaNeural pack) rather than the per-kaiju voices. Several of those
+  // (the *Multilingual* voices — Andrew/Ava/Emma) render English with a
+  // foreign accent ("I wear a hat" -> "EE veer a hot"), which is wrong for
+  // a pronunciation-teaching game. The kaiju still get their Japanese
+  // character voice for spawn taunts (playBossLine) — that's a JP line.
   function speakWord(word) { SND.speakEn(word, { volume: 1.0 }); }
-  function speakKaiju(bossId, text) { SND.playKaijuEn(bossId, text, { volume: 0.98 }); }
+  function speakEnglish(text) { SND.speakEn(text, { volume: 1.0 }); }
 
-  let _themeAudio = null;
+  // Theme song: a brief low STING when a kaiju pops in, then it fades out
+  // — NOT constant background (that buried the English words/sounds). The
+  // mp3s are full songs, so we explicitly fade + stop after a few seconds.
+  let _themeAudio = null, _themeStopT = 0, _themeFadeIv = 0;
   function playTheme(bossId) {
     stopTheme();
     if (!bossId) return;
     const suffix = Math.random() < 0.5 ? "_shiny" : "";
     try {
       const a = new Audio(`../../assets/themes/${encodeURIComponent(bossId + suffix)}.mp3`);
-      a.volume = 0.32; a.loop = false;
+      a.volume = 0.16; a.loop = false;
       const p = a.play(); if (p && p.catch) p.catch(() => {});
       _themeAudio = a;
+      _themeStopT = setTimeout(fadeTheme, 2600);   // play a couple seconds, then fade
     } catch (_) { _themeAudio = null; }
   }
+  function fadeTheme() {
+    const a = _themeAudio;
+    if (!a) return;
+    _themeFadeIv = setInterval(() => {
+      if (!_themeAudio) { clearInterval(_themeFadeIv); _themeFadeIv = 0; return; }
+      a.volume = Math.max(0, a.volume - 0.02);
+      if (a.volume <= 0.001) stopTheme();
+    }, 55);
+  }
   function stopTheme() {
+    if (_themeStopT) { clearTimeout(_themeStopT); _themeStopT = 0; }
+    if (_themeFadeIv) { clearInterval(_themeFadeIv); _themeFadeIv = 0; }
     if (_themeAudio) { try { _themeAudio.pause(); _themeAudio.currentTime = 0; } catch (_) {} _themeAudio = null; }
   }
   let _lastVoiceAt = 0;
@@ -313,11 +334,11 @@
       bannerSpawn();
       playTheme(State.bossId);
       playKaijuLine(State.bossId, ["healthy", "slingshot"], 0);
-      // model the target audio
+      // model the target audio a beat AFTER the spawn taunt so they don't clash
       if (State.mode === "spell") {
-        setTimeout(() => speakWord(State.word), 420);
+        setTimeout(() => speakWord(State.word), 950);
       } else if (State.level === 1) {
-        setTimeout(() => speakKaiju(State.bossId, State.sentEn), 420);
+        setTimeout(() => speakEnglish(State.sentEn), 950);
       }
     });
   }
@@ -430,7 +451,7 @@
         // TAP (barely moved) — read it aloud, snap back home
         el.style.transform = "";
         if (el.dataset.kind === "letter") speakPhonics(el.dataset.value);
-        else speakKaiju(State.bossId, el.dataset.value.replace(/[.,!?;:]+$/, ""));
+        else speakEnglish(el.dataset.value.replace(/[.,!?;:]+$/, ""));
       } else {
         // FLICK — throw from wherever the finger released
         throwTile(el);
@@ -702,7 +723,7 @@
     $("btn-quit").addEventListener("click", () => { SND.sfxPop && SND.sfxPop(); quitToMenu(); });
     $("btn-hear").addEventListener("click", () => {
       if (State.mode === "spell") speakWord(State.word);
-      else speakKaiju(State.bossId, State.sentEn);
+      else speakEnglish(State.sentEn);
     });
     $("over-again").addEventListener("click", () => { SND.sfxConfirm && SND.sfxConfirm(); startRun(State.mode, State.level); });
     $("over-menu").addEventListener("click", () => { SND.sfxPop && SND.sfxPop(); show("title"); });
