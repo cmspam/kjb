@@ -34,9 +34,10 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 VOICE = "en-US-AriaNeural"   # clear STANDARD adult voice (not the baby voice)
 RATE = "-10%"        # slow it down a touch — phonics needs to be clear
 CONCURRENCY = 6
-# (Synthesis attempt was abandoned — z/n etc. sounded like beeps. words.js
-# PHONICS `say` is now the single source; we render all 26 here. Edit the
-# `say` value to change a letter's sound and re-run.)
+# Phonics opus are NORMALLY the real human recordings split out of the
+# Yellow Door source by split_phonics.py — this script only fills in
+# letters whose opus is missing (e.g., after deleting one to A/B test a
+# TTS variant). It will NOT overwrite the human recordings.
 SYNTH = set()
 
 # ---- parse LA_PHONICS `say` values out of words.js ----
@@ -52,14 +53,12 @@ for ch in "abcdefghijklmnopqrstuvwxyz":
 
 print(f"phonics letters parsed: {len(phon)}")
 
-# Render every NON-synthesized letter (overwrite, so a voice change takes
-# effect); the synthesized continuants are left to synth_phonics.py.
 missing = [(ltr, say, OUT_DIR / f"{ltr}.opus")
            for ltr, say in sorted(phon.items())
-           if ltr not in SYNTH]
-print(f"to render (standard voice, non-synth): {len(missing)}")
+           if ltr not in SYNTH and not (OUT_DIR / f"{ltr}.opus").exists()]
+print(f"missing (will render as TTS fallback): {len(missing)}")
 if not missing:
-    print("nothing to render")
+    print("nothing to render — phonics pack is complete")
     sys.exit(0)
 
 
