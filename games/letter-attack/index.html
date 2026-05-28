@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>もじ アタック — Letter Attack</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%94%A4%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../shared/style.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- TITLE / MODE PICK -->
+<div class="screen" id="screen-title">
+  <h1 class="h1-card">もじ アタック</h1>
+  <div class="la-sub">
+    LETTER ATTACK · もじ や ことば を なげて カイジュウ を やっつけろ！<br>
+    タップ＝よみあげ ／ フリック＝こうげき
+  </div>
+  <div class="la-cast" id="la-cast"></div>
+
+  <div class="mode-pick">
+    <button class="btn-cool" data-mode="spell" data-lv="0">
+      <span class="mp-jp">🐣 ナーサリー</span>
+      <span class="mp-en">SPELL · 3もじ の ことば （フォニックス）</span>
+    </button>
+    <button class="btn-hot" data-mode="sentence" data-lv="1">
+      <span class="mp-jp">⭐ やさしい ぶん</span>
+      <span class="mp-en">EASY SENTENCES · ことば を ならべる</span>
+    </button>
+    <button class="btn-hot" data-mode="sentence" data-lv="2">
+      <span class="mp-jp">🔥 ふつう ぶん</span>
+      <span class="mp-en">MEDIUM SENTENCES</span>
+    </button>
+    <button class="btn-hot" data-mode="sentence" data-lv="3">
+      <span class="mp-jp">💀 むずかしい ぶん</span>
+      <span class="mp-en">HARD SENTENCES</span>
+    </button>
+  </div>
+
+  <div style="margin-top: 22px;">
+    <a class="btn-ghost" href="../index.html" style="text-decoration:none;display:inline-block;">← もどる</a>
+  </div>
+</div>
+
+<!-- GAMEPLAY -->
+<div class="screen hidden" id="screen-game">
+  <canvas id="cv"></canvas>
+  <div id="crack"></div>
+
+  <div class="la-hud">
+    <div class="la-prompt">
+      <div class="la-prompt-lbl" id="prompt-lbl">スペル しよう</div>
+      <!-- spelling -->
+      <div class="la-word" id="word-slots"></div>
+      <!-- sentence -->
+      <div class="la-jp" id="sent-jp" style="display:none;"></div>
+      <div class="la-built" id="sent-built" style="display:none;"></div>
+      <button class="la-hear" id="btn-hear" style="display:none;">🔊 きく</button>
+    </div>
+    <div class="la-side">
+      <button class="btn-ghost la-quit" id="btn-quit">×</button>
+      <div class="la-cracks" id="cracks"></div>
+      <div class="la-score" id="score">たおした: 0</div>
+    </div>
+  </div>
+
+  <div class="la-tip" id="la-tip">タップ＝きく ／ なげる＝こうげき</div>
+  <div class="la-tray" id="tray"></div>
+</div>
+
+<!-- GAME OVER -->
+<div class="screen hidden" id="screen-over">
+  <div class="over-banner">GAME OVER</div>
+  <div class="over-score-lbl">たおした カイジュウ</div>
+  <div class="over-score" id="over-score">0</div>
+  <div class="over-art" id="over-art"></div>
+  <div class="over-best" id="over-best"></div>
+  <div class="row" style="gap:10px; margin-top:14px; display:flex; flex-wrap:wrap; justify-content:center;">
+    <button class="btn-hot huge" id="over-again">もう 1 かい</button>
+    <button class="btn-cool" id="over-menu">モード せんたく</button>
+    <button class="btn-ghost" id="over-home">ホーム</button>
+  </div>
+</div>
+
+<script src="../../js/i18n.js"></script>
+<script src="../../js/locale/ja.js"></script>
+<script src="../../js/locale/ja_shiny.js"></script>
+<script src="../../js/monsters.js"></script>
+<script src="../shared/audio.js"></script>
+<script src="../shared/boss-art.js"></script>
+<!-- Reuse the sentence-flappy sentence bank (300+ JP-mapped sentences,
+     per-kaiju audio already rendered). These files append to window.SENTENCES. -->
+<script src="../sentence-flappy/sentences.js"></script>
+<script src="../sentence-flappy/sentences-extra.js"></script>
+<script src="../sentence-flappy/sentences-real.js"></script>
+<script src="words.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
