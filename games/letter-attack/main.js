@@ -120,6 +120,11 @@
     // run:
     cracks: 0,
     score: 0,
+    // Sentence mode: "listens" is an earnable resource. Each press of the
+    // 🔊 button consumes one; defeating 3 enemies earns +1. At 0 the button
+    // disappears until you earn more. Starts at 5 so the kid has a buffer
+    // but has to budget. (Spell mode ignores this — word audio is always on.)
+    listens: 5,
     busy: false,
     over: false,
   };
@@ -302,7 +307,7 @@
   // ---- RUN FLOW ----
   function startRun(mode, level) {
     State.mode = mode; State.level = level;
-    State.cracks = 0; State.score = 0; State.over = false; State.busy = false;
+    State.cracks = 0; State.score = 0; State.listens = 5; State.over = false; State.busy = false;
     particles.length = 0; lastT = 0;
     show("game");
     renderCracks(); renderScore();
@@ -351,6 +356,9 @@
         buildChoices();
         State.busy = false;
         if (State.mode === "spell") speakWord(State.word);
+        // Easy-level auto-pronunciation of the target is FREE scaffolding —
+        // it's involuntary so it doesn't consume a listen. Only button
+        // presses (which the kid chooses) consume listens.
         else if (State.level === 1) speakEnglish(State.sentEn);
       }, 2700);
     });
@@ -372,7 +380,7 @@
     $("word-slots").style.display = isSpell ? "flex" : "none";
     $("sent-jp").style.display = isSpell ? "none" : "block";
     $("sent-built").style.display = isSpell ? "none" : "block";
-    $("btn-hear").style.display = "inline-block";
+    updateHearButton();
     if (isSpell) {
       $("prompt-lbl").textContent = "スペル しよう";
       const slots = $("word-slots");
@@ -556,6 +564,13 @@
     stopTheme();
     State.score++;
     renderScore();
+    // Earn one listen per 3 kaiju defeated (sentence mode only) — the kid
+    // budgets, then is rewarded for progress.
+    if (State.mode !== "spell" && State.score % 3 === 0) {
+      State.listens++;
+      updateHearButton();
+      showToast("🔊 ききチケット +1！");
+    }
     $("tray").innerHTML = "";
     setTimeout(() => { if (!State.over) spawnMonster(); State.busy = false; }, 1050);
   }
@@ -670,6 +685,31 @@
   }
   function renderScore() { $("score").textContent = "たおした: " + State.score; }
 
+  // Listens are sentence-mode only. In spell mode the button always reads
+  // the target word (unmetered). In sentence mode the button shows a
+  // remaining count and hides at zero.
+  function updateHearButton() {
+    const btn = $("btn-hear");
+    if (!btn) return;
+    if (State.mode === "spell") {
+      btn.style.display = "inline-block";
+      btn.textContent = "🔊 きく";
+    } else if (State.listens > 0) {
+      btn.style.display = "inline-block";
+      btn.textContent = `🔊 きく ×${State.listens}`;
+    } else {
+      btn.style.display = "none";
+    }
+  }
+  // Small bottom-of-screen toast (uses the shared .toast styles).
+  function showToast(text) {
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = text;
+    document.body.appendChild(t);
+    setTimeout(() => { try { t.remove(); } catch (_) {} }, 2200);
+  }
+
   function showIncoming() {
     hideIncoming();
     const b = State.boss;
@@ -732,8 +772,11 @@
     });
     $("btn-quit").addEventListener("click", () => { SND.sfxPop && SND.sfxPop(); quitToMenu(); });
     $("btn-hear").addEventListener("click", () => {
-      if (State.mode === "spell") speakWord(State.word);
-      else speakEnglish(State.sentEn);
+      if (State.mode === "spell") { speakWord(State.word); return; }
+      if (State.listens <= 0) return;   // safety — should be hidden anyway
+      State.listens--;
+      speakEnglish(State.sentEn);
+      updateHearButton();
     });
     $("over-again").addEventListener("click", () => { SND.sfxConfirm && SND.sfxConfirm(); startRun(State.mode, State.level); });
     $("over-menu").addEventListener("click", () => { SND.sfxPop && SND.sfxPop(); show("title"); });
