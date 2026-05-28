@@ -17,7 +17,9 @@
   const SND = window.GamesAudio;
   const ART = window.GamesArt;
   const $ = (id) => document.getElementById(id);
-  const SENTENCES = window.SENTENCES || {};
+  // Sentence-building uses Eiken-aligned original sentences (level 1/2/3 =
+  // Eiken 5/4/3) — NOT the flappy character-themed bank. See sentences-eiken.js.
+  const EIKEN = window.LA_SENTENCES_EIKEN || {};
   const PHONICS = window.LA_PHONICS || {};
   const WORDS = window.LA_WORDS || { byVowel: {}, all: [] };
 
@@ -354,20 +356,14 @@
     });
   }
 
-  // Sentence pools: easy=level1 pool, medium/hard=level2 pool. Hard biases
-  // to the longest sentences. Falls back gracefully if a pool is thin.
+  // Sentence pools: level 1/2/3 == Eiken 5/4/3 (each pool is already
+  // curated for that grade — no per-boss filtering, no length re-sort).
   function pickSentence(bossId, level) {
-    const pools = SENTENCES[bossId] || {};
-    let pool = (level === 1 ? pools[1] : pools[2]) || pools[1] || pools[0] || [];
-    pool = pool.filter(s => tokenize(typeof s === "string" ? s : s.en).length >= 2);
-    if (!pool.length) return { en: "I am a kaiju.", jp: "わたし は カイジュウ。" };
-    if (level === 3) {
-      // hard — prefer the longer sentences
-      const sorted = [...pool].sort((a,b) => tokenize((b.en||b)).length - tokenize((a.en||a)).length);
-      pool = sorted.slice(0, Math.max(3, Math.ceil(sorted.length * 0.5)));
-    }
-    const s = rand(pool);
-    return typeof s === "string" ? { en: s, jp: "" } : s;
+    const pool = (EIKEN[level] || EIKEN[1] || []).filter(
+      s => tokenize(s.en).length >= 2
+    );
+    if (!pool.length) return { en: "I am a student.", jp: "わたし は がくせい です。" };
+    return rand(pool);
   }
 
   // ---- PROMPT (HUD) ----
@@ -412,11 +408,11 @@
     } else {
       const correct = State.words[State.wordIdx];
       const count = (State.level === 1) ? 3 : 4;
-      // distractor pool: words from this sentence + other sentences for the boss
+      // distractor pool: words from this sentence + every Eiken sentence at
+      // any level. Tempts the kid with plausible English at their grade.
       const bag = new Set();
       State.words.forEach(w => bag.add(w));
-      const pools = SENTENCES[State.bossId] || {};
-      Object.values(pools).forEach(arr => (arr || []).forEach(s => tokenize(s.en || s).forEach(w => bag.add(w))));
+      Object.values(EIKEN).forEach(arr => (arr || []).forEach(s => tokenize(s.en).forEach(w => bag.add(w))));
       const distract = [...bag].filter(w => w !== correct);
       shuffle(distract);
       const chosen = distract.slice(0, count - 1);

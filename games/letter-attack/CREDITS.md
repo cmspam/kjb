@@ -9,6 +9,14 @@ downloadable phonics resource. The recording was split into 26 individual
 clips by `split_phonics.py`. No edits beyond cutting, gentle silence trim,
 and loudness normalization.
 
+## Sentence bank (`sentences-eiken.js`)
+
+180 ORIGINAL sentences (60 per level) written in-house, calibrated to the
+Eiken Foundation's publicly-documented grade specifications: level 1/2/3
+in the game ↔ Eiken Grade 5 / 4 / 3. **Not** copied from any Eiken past
+test — the test content itself is copyrighted by the Eiken Foundation and
+permission would be required for redistribution.
+
 ## Word / sentence pronunciation (`assets/audio/en_std/`)
 
 Rendered via Microsoft Edge TTS (`en-US-AriaNeural`) using the open-source

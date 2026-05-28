@@ -36,18 +36,16 @@ def pure_word(t): return PUNCT.sub('', t)
 
 texts = set()
 
-# flappy sentences (full + tokens) — reused by Letter Attack sentence mode
-for fn in ["sentences.js", "sentences-extra.js", "sentences-real.js"]:
-    f = HERE.parent / "sentence-flappy" / fn
-    if not f.exists(): continue
-    txt = f.read_text(encoding="utf-8")
-    for m in re.finditer(r'en\s*:\s*"((?:[^"\\]|\\.)*)"', txt):
-        try: en = m.group(1).encode().decode("unicode_escape")
-        except Exception: en = m.group(1)
-        texts.add(en)
-        for tok in en.split():
-            w = pure_word(tok)
-            if w: texts.add(w)
+# Eiken-aligned sentences (sentences-eiken.js) — letter-attack's own
+# sentence bank. Collect every `en:"..."` plus tokenized pure words.
+eiken = (HERE / "sentences-eiken.js").read_text(encoding="utf-8")
+for m in re.finditer(r'en\s*:\s*"((?:[^"\\]|\\.)*)"', eiken):
+    try: en = m.group(1).encode().decode("unicode_escape")
+    except Exception: en = m.group(1)
+    texts.add(en)
+    for tok in en.split():
+        w = pure_word(tok)
+        if w: texts.add(w)
 
 # spell words (SPELL block of words.js)
 wjs = (HERE / "words.js").read_text(encoding="utf-8")
