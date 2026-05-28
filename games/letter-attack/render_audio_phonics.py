@@ -34,10 +34,10 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 VOICE = "en-US-AriaNeural"   # clear STANDARD adult voice (not the baby voice)
 RATE = "-10%"        # slow it down a touch — phonics needs to be clear
 CONCURRENCY = 6
-
-# Continuants are SYNTHESIZED (see synth_phonics.py) — TTS spells them out
-# ("ffff" -> "eff eff eff"). Skip them here so we don't overwrite the synth.
-SYNTH = {"s", "f", "z", "v", "m", "n", "l", "r"}
+# (Synthesis attempt was abandoned — z/n etc. sounded like beeps. words.js
+# PHONICS `say` is now the single source; we render all 26 here. Edit the
+# `say` value to change a letter's sound and re-run.)
+SYNTH = set()
 
 # ---- parse LA_PHONICS `say` values out of words.js ----
 words_js = (HERE / "words.js").read_text(encoding="utf-8")
