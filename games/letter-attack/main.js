@@ -355,11 +355,11 @@
         stopTheme();
         buildChoices();
         State.busy = false;
+        // Spell mode: speak the target word on spawn (the word IS the
+        // problem the kid is solving). Sentence mode: NO auto-speak — the
+        // English sentence is only ever heard by spending a listen, so the
+        // listen budget actually matters.
         if (State.mode === "spell") speakWord(State.word);
-        // Easy-level auto-pronunciation of the target is FREE scaffolding —
-        // it's involuntary so it doesn't consume a listen. Only button
-        // presses (which the kid chooses) consume listens.
-        else if (State.level === 1) speakEnglish(State.sentEn);
       }, 2700);
     });
   }
