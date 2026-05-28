@@ -56,7 +56,7 @@
     f: { say: "ffff", desc: "フ" },
     g: { say: "gah",  desc: "グ" },
     h: { say: "huh",  desc: "ハ" },
-    i: { say: "ih",   desc: "イ (igloo)" },
+    i: { say: "ihh",  desc: "イ (igloo)" },
     j: { say: "juh",  desc: "ジュ" },
     k: { say: "kuh",  desc: "ク" },
     l: { say: "llll", desc: "ル" },

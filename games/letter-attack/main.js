@@ -48,28 +48,33 @@
   // foreign accent ("I wear a hat" -> "EE veer a hot"), which is wrong for
   // a pronunciation-teaching game. The kaiju still get their Japanese
   // character voice for spawn taunts (playBossLine) — that's a JP line.
-  function speakWord(word) { SND.speakEn(word, { volume: 1.0 }); }
-  function speakEnglish(text) { SND.speakEn(text, { volume: 1.0 }); }
+  // Word/sentence pronunciation plays from Letter Attack's own STANDARD-voice
+  // pack (en_std, en-US-AriaNeural) — NOT the baby-voiced generic pack. On
+  // older iOS (no Opus) tryOpus falls back to the browser's standard en-US
+  // voice synchronously inside the gesture window.
+  function stdUrl(text) { return `../../assets/audio/en_std/${SND.djb2(SND.cleanForHash(text))}.opus`; }
+  function speakWord(word) { SND.tryOpus(stdUrl(word), word, { lang: "en-US", volume: 1.0 }); }
+  function speakEnglish(text) { SND.tryOpus(stdUrl(text), text, { lang: "en-US", volume: 1.0 }); }
 
-  // Theme song: a brief low STING when a kaiju pops in, then it fades out
-  // — NOT constant background (that buried the English words/sounds). The
-  // mp3s are full songs, so we explicitly fade + stop after a few seconds.
-  let _themeAudio = null, _themeStopT = 0, _themeFadeIv = 0;
-  function playTheme(bossId) {
+  // Theme song plays ONLY during the "ENEMY INCOMING" intro, then fades —
+  // never as constant background (that buried the English words/sounds).
+  // The spawn sequence controls the timing; here we just play/fade/stop.
+  let _themeAudio = null, _themeFadeIv = 0;
+  function playTheme(bossId, vol) {
     stopTheme();
     if (!bossId) return;
     const suffix = Math.random() < 0.5 ? "_shiny" : "";
     try {
       const a = new Audio(`../../assets/themes/${encodeURIComponent(bossId + suffix)}.mp3`);
-      a.volume = 0.16; a.loop = false;
+      a.volume = (vol != null) ? vol : 0.3; a.loop = false;
       const p = a.play(); if (p && p.catch) p.catch(() => {});
       _themeAudio = a;
-      _themeStopT = setTimeout(fadeTheme, 2600);   // play a couple seconds, then fade
     } catch (_) { _themeAudio = null; }
   }
   function fadeTheme() {
     const a = _themeAudio;
     if (!a) return;
+    if (_themeFadeIv) clearInterval(_themeFadeIv);
     _themeFadeIv = setInterval(() => {
       if (!_themeAudio) { clearInterval(_themeFadeIv); _themeFadeIv = 0; return; }
       a.volume = Math.max(0, a.volume - 0.02);
@@ -77,7 +82,6 @@
     }, 55);
   }
   function stopTheme() {
-    if (_themeStopT) { clearTimeout(_themeStopT); _themeStopT = 0; }
     if (_themeFadeIv) { clearInterval(_themeFadeIv); _themeFadeIv = 0; }
     if (_themeAudio) { try { _themeAudio.pause(); _themeAudio.currentTime = 0; } catch (_) {} _themeAudio = null; }
   }
@@ -330,16 +334,23 @@
 
     prepareSprite().then(() => {
       renderPrompt();
-      buildChoices();
-      bannerSpawn();
-      playTheme(State.bossId);
+      $("tray").innerHTML = "";          // tiles appear only after the intro
+      State.busy = true;
+      // ENEMY INCOMING intro: theme plays for ~2s, fades, and ONLY THEN is
+      // the target word/sentence pronounced — so music never covers it.
+      showIncoming();
+      playTheme(State.bossId, 0.32);
       playKaijuLine(State.bossId, ["healthy", "slingshot"], 0);
-      // model the target audio a beat AFTER the spawn taunt so they don't clash
-      if (State.mode === "spell") {
-        setTimeout(() => speakWord(State.word), 950);
-      } else if (State.level === 1) {
-        setTimeout(() => speakEnglish(State.sentEn), 950);
-      }
+      setTimeout(fadeTheme, 1800);
+      setTimeout(() => {
+        if (State.over) return;
+        hideIncoming();
+        stopTheme();
+        buildChoices();
+        State.busy = false;
+        if (State.mode === "spell") speakWord(State.word);
+        else if (State.level === 1) speakEnglish(State.sentEn);
+      }, 2700);
     });
   }
 
@@ -663,16 +674,19 @@
   }
   function renderScore() { $("score").textContent = "たおした: " + State.score; }
 
-  function bannerSpawn() {
-    const old = document.querySelector(".la-spawn");
-    if (old) old.remove();
+  function showIncoming() {
+    hideIncoming();
     const b = State.boss;
     const el = document.createElement("div");
-    el.className = "la-spawn";
-    el.innerHTML = `<div class="sp-jp">${EMOJI[State.bossId] || "👾"} ${(b && b.name_jp) || State.bossId} あらわれた！</div>
-                    <div class="sp-en">${(b && b.name_en) || ""}</div>`;
+    el.className = "la-incoming"; el.id = "incoming";
+    el.innerHTML = `<div class="inc-warn">⚠ ENEMY INCOMING ⚠</div>
+      <div class="inc-name">${EMOJI[State.bossId] || "👾"} ${(b && b.name_jp) || State.bossId}</div>
+      <div class="inc-en">${(b && b.name_en) || ""}</div>`;
     $("screen-game").appendChild(el);
-    setTimeout(() => { try { el.remove(); } catch (_) {} }, 1500);
+  }
+  function hideIncoming() {
+    const e = $("incoming");
+    if (e) { e.classList.add("inc-out"); setTimeout(() => { try { e.remove(); } catch (_) {} }, 320); }
   }
 
   // ---- GAME OVER ----

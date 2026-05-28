@@ -31,9 +31,13 @@ ROOT = HERE.parent.parent
 OUT_DIR = ROOT / "assets" / "audio" / "phonics"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-VOICE = "en-US-AnaNeural"
-RATE = "-12%"        # slow it down a touch — phonics needs to be clear
+VOICE = "en-US-AriaNeural"   # clear STANDARD adult voice (not the baby voice)
+RATE = "-10%"        # slow it down a touch — phonics needs to be clear
 CONCURRENCY = 6
+
+# Continuants are SYNTHESIZED (see synth_phonics.py) — TTS spells them out
+# ("ffff" -> "eff eff eff"). Skip them here so we don't overwrite the synth.
+SYNTH = {"s", "f", "z", "v", "m", "n", "l", "r"}
 
 # ---- parse LA_PHONICS `say` values out of words.js ----
 words_js = (HERE / "words.js").read_text(encoding="utf-8")
@@ -48,12 +52,14 @@ for ch in "abcdefghijklmnopqrstuvwxyz":
 
 print(f"phonics letters parsed: {len(phon)}")
 
+# Render every NON-synthesized letter (overwrite, so a voice change takes
+# effect); the synthesized continuants are left to synth_phonics.py.
 missing = [(ltr, say, OUT_DIR / f"{ltr}.opus")
            for ltr, say in sorted(phon.items())
-           if not (OUT_DIR / f"{ltr}.opus").exists()]
-print(f"missing: {len(missing)}")
+           if ltr not in SYNTH]
+print(f"to render (standard voice, non-synth): {len(missing)}")
 if not missing:
-    print("nothing to render — phonics pack is up to date")
+    print("nothing to render")
     sys.exit(0)
 
 
