@@ -434,6 +434,152 @@ ART.bossImpostor = function () {
   </svg>`;
 };
 
+/* ========== GACHA / BRAINROT NEW CHARACTERS ========== */
+
+/* チンパンジーニ・バナニーニ — monkey peeking out of a banana (★ N) */
+ART.chimp = function () {
+  const ban="#ffd33a", banD="#d9a400", tip="#6e4a1f", face="#caa06a", faceD="#8a6a3f", dark="#3a2a18";
+  return `
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <path d="M28 98 Q12 60 34 24 Q40 12 52 16 Q44 32 48 56 Q52 88 86 98 Q60 110 28 98 Z" fill="${ban}" stroke="${banD}" stroke-width="3"/>
+    <path d="M50 16 l-3 -8 l9 5 Z" fill="${tip}"/>
+    <path d="M86 98 l9 3 l-3 -9 Z" fill="${tip}"/>
+    <path d="M36 30 Q30 60 42 92" stroke="#fff" stroke-width="3" opacity=".4" fill="none"/>
+    <circle cx="40" cy="58" r="8" fill="${face}" stroke="${faceD}" stroke-width="2"/>
+    <circle cx="78" cy="58" r="8" fill="${face}" stroke="${faceD}" stroke-width="2"/>
+    <ellipse cx="58" cy="62" rx="22" ry="20" fill="${face}" stroke="${faceD}" stroke-width="2"/>
+    <ellipse cx="58" cy="70" rx="13" ry="10" fill="#f0d8b0"/>
+    <circle cx="51" cy="56" r="4.5" fill="#fff"/><circle cx="65" cy="56" r="4.5" fill="#fff"/>
+    <circle cx="51" cy="57" r="2.2" fill="#000"/><circle cx="65" cy="57" r="2.2" fill="#000"/>
+    <ellipse cx="55" cy="68" rx="1.6" ry="2.4" fill="${dark}"/><ellipse cx="61" cy="68" rx="1.6" ry="2.4" fill="${dark}"/>
+    <path d="M53 74 Q58 79 63 74" stroke="${faceD}" stroke-width="2" fill="none"/>
+    <path d="M82 80 q12 4 9 17" stroke="${faceD}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <rect x="48" y="98" width="8" height="16" rx="4" fill="${faceD}"/>
+    <rect x="62" y="98" width="8" height="16" rx="4" fill="${faceD}"/>
+  </svg>`;
+};
+
+/* ブルブル・パタピム — forest creature: bark body, long nose, big feet (★★ R) */
+ART.patapim = function () {
+  const bark="#9a6634", barkD="#5f3d1c", nose="#ead2a0", noseD="#b89a66", leaf="#54b34a", leafD="#2e7d32";
+  return `
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="42" cy="113" rx="16" ry="6" fill="${noseD}"/>
+    <ellipse cx="78" cy="113" rx="16" ry="6" fill="${noseD}"/>
+    <rect x="38" y="92" width="12" height="20" rx="5" fill="${barkD}"/>
+    <rect x="70" y="92" width="12" height="20" rx="5" fill="${barkD}"/>
+    <rect x="24" y="50" width="10" height="26" rx="5" fill="${bark}" stroke="${barkD}" stroke-width="2" transform="rotate(-14 29 60)"/>
+    <rect x="86" y="50" width="10" height="26" rx="5" fill="${bark}" stroke="${barkD}" stroke-width="2" transform="rotate(14 91 60)"/>
+    <path d="M34 44 Q34 26 60 26 Q86 26 86 46 L86 94 Q86 100 78 100 L42 100 Q34 100 34 94 Z" fill="${bark}" stroke="${barkD}" stroke-width="3"/>
+    <path d="M44 36 Q40 64 44 92 M60 32 Q56 64 60 96 M76 36 Q80 64 76 92" stroke="${barkD}" stroke-width="2" opacity=".5" fill="none"/>
+    <path d="M52 26 Q44 6 60 12 Q56 22 60 26 Z" fill="${leaf}" stroke="${leafD}" stroke-width="1.5"/>
+    <path d="M68 26 Q78 6 62 12 Q66 22 62 26 Z" fill="${leaf}" stroke="${leafD}" stroke-width="1.5"/>
+    <circle cx="50" cy="40" r="11" fill="#fff" stroke="${barkD}" stroke-width="2"/>
+    <circle cx="70" cy="40" r="11" fill="#fff" stroke="${barkD}" stroke-width="2"/>
+    <circle cx="51" cy="42" r="5" fill="#1a1a1a"/><circle cx="69" cy="42" r="5" fill="#1a1a1a"/>
+    <circle cx="49" cy="40" r="1.6" fill="#fff"/><circle cx="67" cy="40" r="1.6" fill="#fff"/>
+    <path d="M44 56 Q60 52 76 56 Q80 70 60 74 Q40 70 44 56 Z" fill="${nose}" stroke="${noseD}" stroke-width="2.5"/>
+    <ellipse cx="53" cy="64" rx="2" ry="3" fill="${noseD}"/><ellipse cx="67" cy="64" rx="2" ry="3" fill="${noseD}"/>
+  </svg>`;
+};
+
+/* バレリーナ・カプチーナ — ballerina with a cappuccino-cup head (★★ R) */
+ART.ballerina = function () {
+  const cup="#f3e9d6", cupD="#b89b6e", foam="#fff7ea", tutu="#ff9ec4", tutuD="#e06a99", skin="#ffe0c4", leg="#ffd0b0", legD="#caa080";
+  return `
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <path d="M56 84 q-3 18 -6 28 l6 0 q4 -14 6 -26 Z" fill="${leg}" stroke="${legD}" stroke-width="2"/>
+    <path d="M64 84 q5 16 11 26 l-5 3 q-9 -12 -12 -25 Z" fill="${leg}" stroke="${legD}" stroke-width="2"/>
+    <path d="M47 112 l9 0 l-1 5 l-9 0 Z" fill="#ff7ab0"/>
+    <path d="M71 108 l8 4 l-2 5 l-9 -4 Z" fill="#ff7ab0"/>
+    <path d="M40 76 Q60 64 80 76 Q72 92 60 92 Q48 92 40 76 Z" fill="${tutu}" stroke="${tutuD}" stroke-width="2"/>
+    <path d="M44 78 L40 88 M52 80 L50 92 M60 81 L60 93 M68 80 L70 92 M76 78 L80 88" stroke="${tutuD}" stroke-width="1.5"/>
+    <path d="M52 56 Q52 50 60 50 Q68 50 68 56 L66 78 L54 78 Z" fill="${tutu}" stroke="${tutuD}" stroke-width="2"/>
+    <path d="M54 58 Q40 52 34 38" stroke="${skin}" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M66 58 Q80 52 86 38" stroke="${skin}" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M44 30 L76 30 L70 52 L50 52 Z" fill="${cup}" stroke="${cupD}" stroke-width="2.5"/>
+    <path d="M44 30 Q44 16 60 16 Q76 16 76 30 Q60 36 44 30 Z" fill="${foam}" stroke="${cupD}" stroke-width="2"/>
+    <path d="M76 34 q10 2 6 14 q-3 6 -9 4" fill="none" stroke="${cupD}" stroke-width="5"/>
+    <ellipse cx="52" cy="40" rx="3.5" ry="2.4" fill="#3a2a1a"/><ellipse cx="68" cy="40" rx="3.5" ry="2.4" fill="#3a2a1a"/>
+    <path d="M54 46 Q60 50 66 46" stroke="${cupD}" stroke-width="2" fill="none"/>
+    <circle cx="50" cy="44" r="2.4" fill="#ffb0c8" opacity=".7"/><circle cx="70" cy="44" r="2.4" fill="#ffb0c8" opacity=".7"/>
+    <path d="M54 14 q-4 -6 2 -10 M66 14 q4 -6 -2 -10" stroke="#fff" stroke-width="2" fill="none" opacity=".6" stroke-linecap="round"/>
+  </svg>`;
+};
+
+/* リリリ・ラリラ — cactus-elephant in sandals with a clock (★★★ SR) */
+ART.lirili = function () {
+  const cac="#5fae4a", cacD="#357a2b", cacL="#86cf6e", ear="#4f9a3e", tan="#d8c39a", clock="#ffd23f", clockD="#b8860b";
+  return `
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="50" cy="114" rx="12" ry="4" fill="${tan}" stroke="${cacD}" stroke-width="1.5"/>
+    <ellipse cx="74" cy="114" rx="12" ry="4" fill="${tan}" stroke="${cacD}" stroke-width="1.5"/>
+    <rect x="44" y="94" width="12" height="18" rx="5" fill="${cac}" stroke="${cacD}" stroke-width="2"/>
+    <rect x="68" y="94" width="12" height="18" rx="5" fill="${cac}" stroke="${cacD}" stroke-width="2"/>
+    <path d="M30 70 q-8 0 -8 -14 q0 -6 4 -6 q4 0 4 6 l0 14 Z" fill="${cac}" stroke="${cacD}" stroke-width="2"/>
+    <path d="M94 70 q8 0 8 -14 q0 -6 -4 -6 q-4 0 -4 6 l0 14 Z" fill="${cac}" stroke="${cacD}" stroke-width="2"/>
+    <path d="M36 50 Q36 32 60 32 Q84 32 84 50 L84 92 Q84 98 76 98 L44 98 Q36 98 36 92 Z" fill="${cac}" stroke="${cacD}" stroke-width="3"/>
+    <path d="M48 40 Q44 70 48 94 M72 40 Q76 70 72 94" stroke="${cacD}" stroke-width="2" opacity=".4" fill="none"/>
+    <g stroke="${cacL}" stroke-width="1.5"><line x1="42" y1="56" x2="38" y2="54"/><line x1="42" y1="72" x2="38" y2="70"/><line x1="78" y1="56" x2="82" y2="54"/><line x1="78" y1="72" x2="82" y2="70"/></g>
+    <ellipse cx="36" cy="44" rx="9" ry="12" fill="${ear}" stroke="${cacD}" stroke-width="2"/>
+    <ellipse cx="84" cy="44" rx="9" ry="12" fill="${ear}" stroke="${cacD}" stroke-width="2"/>
+    <circle cx="52" cy="46" r="6" fill="#fff" stroke="${cacD}" stroke-width="1.5"/>
+    <circle cx="68" cy="46" r="6" fill="#fff" stroke="${cacD}" stroke-width="1.5"/>
+    <circle cx="53" cy="47" r="2.6" fill="#1a1a1a"/><circle cx="69" cy="47" r="2.6" fill="#1a1a1a"/>
+    <path d="M56 54 Q60 58 64 54 Q66 72 60 86 Q54 80 56 54 Z" fill="${cac}" stroke="${cacD}" stroke-width="2"/>
+    <circle cx="92" cy="84" r="13" fill="${clock}" stroke="${clockD}" stroke-width="3"/>
+    <line x1="92" y1="84" x2="92" y2="76" stroke="${clockD}" stroke-width="2"/>
+    <line x1="92" y1="84" x2="98" y2="86" stroke="${clockD}" stroke-width="2"/>
+    <circle cx="92" cy="84" r="2" fill="${clockD}"/>
+    <rect x="89" y="69" width="6" height="4" rx="2" fill="${clockD}"/>
+  </svg>`;
+};
+
+/* ラ・ヴァカ・サトゥルノ — cosmic Saturn cow (★★★★ UR / legendary) */
+ART.vaca = function () {
+  const body="#f4f4f7", spot="#2b2b33", pink="#ffb0c0", horn="#e8d8b0", hornD="#b8a070", ring="#ffd23f", ringD="#c79a2e", dark="#1a1a22";
+  return `
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <g fill="#fff"><circle cx="16" cy="22" r="2"/><circle cx="104" cy="30" r="2.4"/><circle cx="22" cy="80" r="1.8"/><circle cx="100" cy="92" r="2"/></g>
+    <ellipse cx="60" cy="74" rx="54" ry="16" fill="none" stroke="${ringD}" stroke-width="7" opacity=".5" transform="rotate(-12 60 74)"/>
+    <rect x="44" y="92" width="9" height="20" rx="4" fill="${body}" stroke="${dark}" stroke-width="2"/>
+    <rect x="67" y="92" width="9" height="20" rx="4" fill="${body}" stroke="${dark}" stroke-width="2"/>
+    <rect x="44" y="108" width="9" height="6" fill="${spot}"/><rect x="67" y="108" width="9" height="6" fill="${spot}"/>
+    <ellipse cx="60" cy="72" rx="30" ry="24" fill="${body}" stroke="${dark}" stroke-width="3"/>
+    <path d="M44 64 q8 -6 14 2 q-2 10 -12 8 q-8 -4 -2 -10Z" fill="${spot}"/>
+    <ellipse cx="74" cy="80" rx="9" ry="7" fill="${spot}"/>
+    <path d="M9 79 A54 16 -12 0 0 111 67" fill="none" stroke="${ring}" stroke-width="7" stroke-linecap="round"/>
+    <ellipse cx="60" cy="42" rx="20" ry="17" fill="${body}" stroke="${dark}" stroke-width="3"/>
+    <path d="M44 32 Q36 22 42 18 Q46 24 50 30 Z" fill="${horn}" stroke="${hornD}" stroke-width="1.5"/>
+    <path d="M76 32 Q84 22 78 18 Q74 24 70 30 Z" fill="${horn}" stroke="${hornD}" stroke-width="1.5"/>
+    <ellipse cx="40" cy="42" rx="7" ry="4" fill="${body}" stroke="${dark}" stroke-width="2"/>
+    <ellipse cx="80" cy="42" rx="7" ry="4" fill="${body}" stroke="${dark}" stroke-width="2"/>
+    <circle cx="53" cy="40" r="4.5" fill="#fff" stroke="${dark}" stroke-width="1.5"/>
+    <circle cx="67" cy="40" r="4.5" fill="#fff" stroke="${dark}" stroke-width="1.5"/>
+    <circle cx="53" cy="41" r="2.2" fill="#111"/><circle cx="67" cy="41" r="2.2" fill="#111"/>
+    <ellipse cx="60" cy="52" rx="12" ry="8" fill="${pink}" stroke="${dark}" stroke-width="2"/>
+    <ellipse cx="56" cy="52" rx="1.8" ry="2.6" fill="#a06"/><ellipse cx="64" cy="52" rx="1.8" ry="2.6" fill="#a06"/>
+  </svg>`;
+};
+
+/* gacha capsule machine */
+ART.gachaMachine = function () {
+  return `
+  <svg viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg">
+    <rect x="20" y="86" width="80" height="56" rx="10" fill="#e23b5b" stroke="#7a0a1c" stroke-width="4"/>
+    <rect x="34" y="108" width="52" height="22" rx="6" fill="#2a0a14"/>
+    <rect x="48" y="126" width="24" height="10" rx="4" fill="#ffd23f" stroke="#7a0a1c" stroke-width="2"/>
+    <circle cx="60" cy="100" r="7" fill="#ffd23f" stroke="#7a0a1c" stroke-width="3"/>
+    <rect x="58" y="96" width="4" height="8" fill="#7a0a1c"/>
+    <circle cx="60" cy="50" r="42" fill="rgba(180,230,255,.35)" stroke="#bfe7ff" stroke-width="4"/>
+    <rect x="20" y="78" width="80" height="10" rx="4" fill="#bfe7ff"/>
+    <circle cx="46" cy="44" r="10" fill="#ff5b5b"/><circle cx="70" cy="38" r="10" fill="#5ad17a"/>
+    <circle cx="64" cy="62" r="10" fill="#5aa9e6"/><circle cx="44" cy="64" r="9" fill="#ffd23f"/>
+    <circle cx="78" cy="58" r="8" fill="#c46bff"/>
+    <ellipse cx="50" cy="30" rx="14" ry="8" fill="#fff" opacity=".2"/>
+  </svg>`;
+};
+
 /* small helper: lighten/darken a hex color */
 function shade(hex, pct) {
   const n = parseInt(hex.slice(1), 16);

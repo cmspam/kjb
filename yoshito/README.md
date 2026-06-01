@@ -40,6 +40,16 @@ Charges over time.
 | カプチーノ・アサシン | **EX** | 超こうげき・すばやい・**ゾンビキラー** |
 | ボネカ・アンバラブ | **EX** | **バリアブレイカー**・ふっとばし・タンク |
 
+### 🎰 Gacha (ガチャ)
+Clear the game to earn **ガチャポイント** (1 per win). Spend points to **まわす** (pull):
+- Every pull gives a **character**, picked by **rarity**: ★ノーマル 50% / ★★レア 30% /
+  ★★★スーパーレア 14% / ★★★★レジェンド 6% (shown with color-coded frames).
+- If you **already own** that character, it **converts to XP** (more XP for higher rarity).
+- New surprise brainrot characters in the pool:
+  チンパンジーニ・バナニーニ (★), ブルブル・パタピム (★★),
+  バレリーナ・カプチーナ (★★), リリリ・ラリラ (★★★ タイムストップ),
+  and the legendary **ラ・ヴァカ・サトゥルノ** (★★★★ Saturn cow).
+
 ### Upgrades (きょうか)
 Spend **XP** (earned by winning and defeating enemies) to:
 - **つよくする** — level up a character: stronger stats, **bigger + glowing aura**, and

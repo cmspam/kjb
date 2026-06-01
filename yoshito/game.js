@@ -28,6 +28,7 @@ const AB = {
   crit:          { jp:"クリティカル(メタル)", ic:"⚡" },
   tank:          { jp:"たいりょく おおい",   ic:"🧱" },
   longrange:     { jp:"えんきょり",          ic:"🎯" },
+  slow:          { jp:"タイムストップ",      ic:"⏱️" },
 };
 const strongLabel = t => `${TYPES[t].jp}にめっぽう強い`;
 
@@ -69,8 +70,48 @@ const CHARS = [
     base:{cost:260, hp:520, dmg:40, range:52, atkCd:0.9, speed:46, scale:0.74},
     grow:{hp:0.18, dmg:0.16, cost:0.07}, maxLv:12,
     innate:["barrierBreaker","knockback","tank"], unlocks:[ {lv:5,a:"strong:alien"}, {lv:8,a:"strong:demon"} ] },
+
+  // ----- gacha-only brainrot characters -----
+  { id:"chimp", name:"チンパンジーニ・バナニーニ", gacha:true, rarity:"N", color:"#ffd33a",
+    art:()=>ART.chimp(),
+    base:{cost:70, hp:140, dmg:26, range:46, atkCd:0.6, speed:96, scale:0.62},
+    grow:{hp:0.15, dmg:0.16, cost:0.06}, maxLv:10,
+    innate:["fast"], unlocks:[ {lv:4,a:"strong:red"}, {lv:8,a:"knockback"} ] },
+
+  { id:"patapim", name:"ブルブル・パタピム", gacha:true, rarity:"R", color:"#9a6634",
+    art:()=>ART.patapim(),
+    base:{cost:210, hp:760, dmg:32, range:56, atkCd:1.0, speed:30, scale:0.78},
+    grow:{hp:0.20, dmg:0.15, cost:0.07}, maxLv:10,
+    innate:["area","tank"], unlocks:[ {lv:4,a:"strong:black"}, {lv:8,a:"knockback"} ] },
+
+  { id:"ballerina", name:"バレリーナ・カプチーナ", gacha:true, rarity:"R", color:"#ff9ec4",
+    art:()=>ART.ballerina(),
+    base:{cost:130, hp:220, dmg:34, range:50, atkCd:0.5, speed:104, scale:0.66},
+    grow:{hp:0.15, dmg:0.17, cost:0.06}, maxLv:10,
+    innate:["fast","knockback"], unlocks:[ {lv:4,a:"strong:float"}, {lv:8,a:"barrierBreaker"} ] },
+
+  { id:"lirili", name:"リリリ・ラリラ", gacha:true, rarity:"SR", color:"#5fae4a",
+    art:()=>ART.lirili(),
+    base:{cost:270, hp:460, dmg:52, range:76, atkCd:1.0, speed:34, scale:0.74},
+    grow:{hp:0.17, dmg:0.18, cost:0.07}, maxLv:12,
+    innate:["slow","longrange"], unlocks:[ {lv:5,a:"strong:demon"}, {lv:9,a:"area"} ] },
+
+  { id:"vaca", name:"ラ・ヴァカ・サトゥルノ", gacha:true, rarity:"UR", color:"#ffd23f",
+    art:()=>ART.vaca(),
+    base:{cost:420, hp:1300, dmg:84, range:56, atkCd:0.9, speed:36, scale:0.86},
+    grow:{hp:0.20, dmg:0.18, cost:0.07}, maxLv:15,
+    innate:["area","knockback","barrierBreaker"], unlocks:[ {lv:5,a:"strong:alien"}, {lv:9,a:"strong:demon"}, {lv:13,a:"crit"} ] },
 ];
 const charById = id => CHARS.find(c=>c.id===id);
+
+// ---------------- gacha ----------------
+const RARITY = {
+  N:  { stars:"★",    name:"ノーマル",      color:"#5aa9e6", weight:50, dupeXp:150 },
+  R:  { stars:"★★",   name:"レア",          color:"#5ad17a", weight:30, dupeXp:300 },
+  SR: { stars:"★★★",  name:"スーパーレア",   color:"#c46bff", weight:14, dupeXp:700 },
+  UR: { stars:"★★★★", name:"レジェンド",     color:"#ffd23f", weight:6,  dupeXp:1800, rainbow:true },
+};
+const GACHA = CHARS.filter(c=>c.gacha);
 
 // gather powers active at a given level → {abilities:Set, strong:Set}
 function powersAt(c, lv){
@@ -145,8 +186,14 @@ const REPORT_DMG = 99999;
 const SAVE_KEY = "yoshito_nyanyako_v1";
 let profile = loadProfile();
 function loadProfile(){
-  try{ const p = JSON.parse(localStorage.getItem(SAVE_KEY)); if(p&&p.levels) return p; }catch(e){}
-  return { xp:1500, levels:{ crew:1, trala:1, tung:1, bomb:1, capp:0, bone:0 } };
+  let p; try{ p = JSON.parse(localStorage.getItem(SAVE_KEY)); }catch(e){}
+  if(!p || !p.levels) p = { xp:1500, levels:{} };
+  if(p.xp===undefined) p.xp = 1500;
+  // ensure every character exists; starters owned at Lv1, ex/gacha locked at 0
+  for(const c of CHARS){ if(p.levels[c.id]===undefined) p.levels[c.id] = (c.ex||c.gacha) ? 0 : 1; }
+  // grant starter gacha points the first time (so he can pull right away)
+  if(p.gachaPoints===undefined) p.gachaPoints = 5;
+  return p;
 }
 function saveProfile(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(profile)); }catch(e){} }
 
@@ -192,8 +239,11 @@ function renderShop(){
     const dispLv = owned?lv:1;
     const st = statsAt(c, dispLv);
     const pows = allPowerRows(c, owned?lv:0);
-    const card = el(`<div class="card ${owned?"":"locked"}">
-      <div class="port">${c.ex?`<div class="ex">EX</div>`:""}${c.art()}</div>
+    const R = c.gacha ? RARITY[c.rarity] : null;
+    const badge = c.gacha ? `<div class="ex" style="background:${R.color};color:#1a1a22">${R.stars}</div>`
+                          : (c.ex?`<div class="ex">EX</div>`:"");
+    const card = el(`<div class="card ${owned?"":"locked"}" ${R?`style="border-color:${R.color}"`:""}>
+      <div class="port">${badge}${c.art()}</div>
       <div class="info">
         <div class="nm">${c.name} ${owned?`<span class="lv">Lv${lv}</span>`:""}</div>
         <div class="stats"><span>たいりょく <b>${st.hp}</b></span><span>こうげき <b>${st.dmg}</b></span><span>コスト <b>${st.cost}</b></span></div>
@@ -201,7 +251,10 @@ function renderShop(){
         <button class="upbtn"></button>
       </div></div>`);
     const btn = card.querySelector(".upbtn");
-    if(!owned){
+    if(!owned && c.gacha){
+      btn.disabled = true; btn.textContent = `🎰 ガチャで ゲット (${R.name})`;
+      btn.style.background = R.color; btn.style.color = "#1a1a22"; btn.style.opacity = ".9";
+    } else if(!owned){
       btn.classList.add("unlock");
       btn.textContent = `かいきん  −${c.unlockXp} XP`;
       btn.disabled = profile.xp < c.unlockXp;
@@ -385,6 +438,10 @@ function dealDamage(attacker, target, dmg, isReport){
   if(attacker && attacker.side==="player" && attacker.abilities.has("knockback") && !target.def.boss && Math.random()<0.3){
     target.x=Math.min(enemyBaseX()-target.w, target.x+22); pos(target); target.stun=Math.max(target.stun,0.3);
   }
+  // タイムストップ: freeze the enemy briefly
+  if(attacker && attacker.side==="player" && attacker.abilities.has("slow") && !target.def.boss && Math.random()<0.5){
+    target.stun=Math.max(target.stun,1.0); floatText(target.x+target.w/2,100,"とまれ!","#9df");
+  }
 
   if(target.hp<=0){
     // zombie revive?
@@ -567,9 +624,76 @@ function startBattle(){
 function endGame(win){
   G.over=true; G.running=false;
   const reward = win ? 600 + G.battleXp : Math.round(G.battleXp*0.6);
-  profile.xp += reward; saveProfile();
+  profile.xp += reward;
+  if(win) profile.gachaPoints = (profile.gachaPoints||0) + 1;   // 1 ガチャポイント per clear
+  saveProfile();
   $(win?"#winXp":"#loseXp").textContent = reward;
   setTimeout(()=>$(win?"#winOverlay":"#loseOverlay").classList.add("show"), 500);
+}
+
+// ====================================================
+//  GACHA
+// ====================================================
+function updateChips(){
+  if($("#titleXp")) $("#titleXp").textContent = profile.xp;
+  if($("#titlePt")) $("#titlePt").textContent = profile.gachaPoints;
+}
+function openGacha(){ renderGacha(); show("screen-gacha"); }
+function renderGacha(){
+  $("#gachaPt").textContent = profile.gachaPoints;
+  updateChips();
+  const pool=$("#gachaPool"); pool.innerHTML="";
+  GACHA.forEach(c=>{
+    const owned=(profile.levels[c.id]||0)>=1;
+    const R=RARITY[c.rarity];
+    pool.appendChild(el(`<div class="poolitem ${owned?"":"unowned"}" style="border-color:${R.color}">
+      ${c.art()}<div class="rb" style="color:${R.color}">${R.stars}</div>
+      <div class="nm2">${owned?c.name:"？？？"}</div></div>`));
+  });
+  $("#pullBtn").disabled = profile.gachaPoints < 1;
+}
+function rollRarity(){
+  const total=Object.values(RARITY).reduce((s,r)=>s+r.weight,0);
+  let x=Math.random()*total;
+  for(const k in RARITY){ x-=RARITY[k].weight; if(x<0) return k; }
+  return "N";
+}
+function pull(){
+  if(profile.gachaPoints<1) return;
+  profile.gachaPoints--;
+  const r=rollRarity();
+  const poolR=GACHA.filter(c=>c.rarity===r);
+  const c=poolR[Math.floor(Math.random()*poolR.length)];
+  const owned=(profile.levels[c.id]||0)>=1;
+  const res={ char:c, rarity:r, dupe:owned };
+  if(owned){ res.xp=RARITY[r].dupeXp; profile.xp+=res.xp; }
+  else { profile.levels[c.id]=1; }
+  saveProfile();
+  showReveal(res);
+}
+function showReveal(res){
+  const R=RARITY[res.rarity], ov=$("#gachaReveal");
+  ov.style.setProperty("--rc", R.color);
+  ov.classList.toggle("ur", res.rarity==="UR");
+  $("#revStars").textContent=R.stars; $("#revStars").style.color=R.color;
+  $("#revName").textContent=res.char.name;
+  $("#revPrizeArt").innerHTML=res.char.art();
+  const tag=$("#revTag");
+  if(res.dupe){ tag.className="ptag dup"; tag.textContent=`だぶり！ ＋${res.xp} XP`; }
+  else { tag.className="ptag new"; tag.textContent=`NEW!! ${R.name} を ゲット！`; }
+  ov.classList.remove("burst");
+  const cap=ov.querySelector(".capsule"); cap.classList.add("shake");
+  ov.classList.add("show");
+  setTimeout(()=>{ cap.classList.remove("shake"); ov.classList.add("burst"); spawnConfetti(ov,R.color,res.rarity==="UR"); }, 1000);
+  $("#revAgain").disabled = profile.gachaPoints<1;
+}
+function closeReveal(){ $("#gachaReveal").classList.remove("show","burst"); renderGacha(); }
+function spawnConfetti(ov,color,rainbow){
+  const cols = rainbow ? ["#ff5b5b","#ffd23f","#5ad17a","#5aa9e6","#c46bff"] : [color,"#fff",color];
+  for(let i=0;i<26;i++){ const c=el(`<div class="confetti"></div>`);
+    c.style.left=(Math.random()*100)+"%"; c.style.background=cols[i%cols.length];
+    c.style.animationDelay=(Math.random()*0.3)+"s"; c.style.transform=`rotate(${Math.random()*180}deg)`;
+    ov.appendChild(c); setTimeout(()=>c.remove(),1500); }
 }
 
 // ====================================================
@@ -598,16 +722,22 @@ window.addEventListener("DOMContentLoaded",()=>{
     s.style.width=s.style.height=sz+"px"; s.style.left=(Math.random()*100)+"%"; s.style.top=(Math.random()*100)+"%";
     s.style.animationDelay=(Math.random()*2.5)+"s"; t.appendChild(s); }
   buildTitleRow(); buildHelpLegend();
-  $("#titleXp").textContent=profile.xp;
+  if($("#machineArt")) $("#machineArt").innerHTML = ART.gachaMachine();
+  updateChips();
 
   $("#toBattle").onclick=startBattle;
   $("#toShop").onclick=()=>{ renderShop(); show("screen-shop"); };
-  $("#shopBack").onclick=()=>{ $("#titleXp").textContent=profile.xp; show("screen-title"); };
+  $("#toGacha").onclick=openGacha;
+  $("#shopBack").onclick=()=>{ updateChips(); show("screen-title"); };
+  $("#gachaBack").onclick=()=>{ updateChips(); show("screen-title"); };
+  $("#pullBtn").onclick=pull;
+  $("#revAgain").onclick=()=>pull();
+  $("#revClose").onclick=closeReveal;
   $("#helpLink").onclick=()=>$("#helpOverlay").classList.add("show");
   $("#helpClose").onclick=()=>$("#helpOverlay").classList.remove("show");
-  $("#quitBtn").onclick=()=>{ G.running=false; $("#titleXp").textContent=profile.xp; show("screen-title"); };
-  $("#winBtn").onclick=()=>{ $("#winOverlay").classList.remove("show"); $("#titleXp").textContent=profile.xp; show("screen-title"); };
-  $("#loseBtn").onclick=()=>{ $("#loseOverlay").classList.remove("show"); $("#titleXp").textContent=profile.xp; show("screen-title"); };
+  $("#quitBtn").onclick=()=>{ G.running=false; updateChips(); show("screen-title"); };
+  $("#winBtn").onclick=()=>{ $("#winOverlay").classList.remove("show"); updateChips(); show("screen-title"); };
+  $("#loseBtn").onclick=()=>{ $("#loseOverlay").classList.remove("show"); updateChips(); show("screen-title"); };
 
   // keyboard: 1..N deploy owned, W wallet, R report
   window.addEventListener("keydown",e=>{

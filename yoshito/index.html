@@ -149,6 +149,51 @@
   .legend .li svg{width:54px;height:54px;} .legend .li span{font-size:11px;margin-top:2px;}
   .helpbox{max-width:620px;text-align:left;font-size:14px;line-height:1.7;background:#1a1430;border:2px solid var(--line);border-radius:14px;padding:16px;}
   .helpbox b{color:var(--accent);} .helpbox .r{color:var(--danger);}
+
+  /* ===================== GACHA ===================== */
+  .ptchip{position:absolute;top:14px;left:16px;background:#000;border:2px solid #ff8af0;border-radius:20px;padding:6px 14px;font-weight:bold;color:#ff8af0;z-index:3;}
+  #screen-gacha{background:radial-gradient(circle at 50% 28%,#34206e,#120a26 70%);}
+  .gachahead-pt{margin-left:auto;background:#000;border:2px solid #ff8af0;border-radius:20px;padding:6px 14px;font-weight:bold;color:#ff8af0;}
+  .gacha-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:10px;}
+  .machine{width:180px;height:226px;}
+  .machine svg{width:100%;height:100%;filter:drop-shadow(0 8px 6px #0007);animation:bob 2s infinite ease-in-out;}
+  #pullBtn{font-size:24px;}
+  .gacha-pool{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:700px;}
+  .poolitem{width:78px;background:#1c1633;border:3px solid #444;border-radius:12px;padding:6px 4px;text-align:center;}
+  .poolitem svg{width:54px;height:54px;}
+  .poolitem .rb{font-size:11px;font-weight:bold;}
+  .poolitem .nm2{font-size:9px;line-height:1.05;height:22px;display:flex;align-items:center;justify-content:center;}
+  .poolitem.unowned svg{filter:brightness(0) opacity(.45);}
+  .poolitem.unowned .nm2{color:#888;}
+
+  /* reveal overlay */
+  .gacha-reveal{position:absolute;inset:0;z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(4,2,12,.95);overflow:hidden;}
+  .gacha-reveal.show{display:flex;}
+  .beams{position:absolute;width:160vmax;height:160vmax;border-radius:50%;opacity:0;
+    background:conic-gradient(from 0deg,transparent 0 16deg,var(--rc) 16deg 20deg,transparent 20deg 38deg,var(--rc) 38deg 42deg,transparent 42deg 60deg,var(--rc) 60deg 64deg,transparent 64deg);}
+  .gacha-reveal.burst .beams{opacity:.22;animation:spin 9s linear infinite;}
+  .gacha-reveal.ur.burst .beams{background:conic-gradient(from 0deg,#ff5b5b,#ffd23f,#5ad17a,#5aa9e6,#c46bff,#ff5b5b);opacity:.3;animation:spin 6s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .capsule{position:relative;width:140px;height:140px;}
+  .capsule .half{position:absolute;left:0;width:140px;height:70px;box-shadow:inset 0 0 14px rgba(0,0,0,.25);}
+  .capsule .top{top:0;border-radius:70px 70px 0 0;background:linear-gradient(#ffffff,#dcdce4);}
+  .capsule .bot{bottom:0;border-radius:0 0 70px 70px;background:var(--rc);}
+  .capsule.shake{animation:capShake .1s infinite;}
+  @keyframes capShake{0%,100%{transform:translateX(-5px) rotate(-5deg);}50%{transform:translateX(5px) rotate(5deg);}}
+  .gacha-reveal.burst .capsule{display:none;}
+  .prize{position:relative;z-index:2;display:none;flex-direction:column;align-items:center;text-align:center;}
+  .gacha-reveal.burst .prize{display:flex;animation:prizePop .5s ease-out;}
+  @keyframes prizePop{0%{transform:scale(0) rotate(-20deg);opacity:0;}60%{transform:scale(1.2);}100%{transform:scale(1);opacity:1;}}
+  .prize svg{width:150px;height:150px;filter:drop-shadow(0 0 18px var(--rc));}
+  .gacha-reveal.ur .prize svg{animation:hue 2.5s linear infinite;}
+  @keyframes hue{to{filter:hue-rotate(360deg) drop-shadow(0 0 18px #ffd23f);}}
+  .prize .stars{font-size:30px;text-shadow:0 0 10px var(--rc);}
+  .prize .pname{font-size:22px;font-weight:bold;margin:4px 0;}
+  .prize .ptag{font-size:18px;font-weight:bold;}
+  .prize .ptag.new{color:#ffd23f;} .prize .ptag.dup{color:var(--xp);}
+  .revbtns{display:flex;gap:12px;margin-top:14px;}
+  .confetti{position:absolute;width:9px;height:15px;top:-20px;z-index:1;animation:fall 1.3s linear forwards;}
+  @keyframes fall{to{transform:translateY(95vh) rotate(540deg);opacity:.15;}}
 </style>
 </head>
 <body>
@@ -157,12 +202,14 @@
   <!-- ===== TITLE ===== -->
   <section class="screen active" id="screen-title">
     <div class="xpchip">XP: <span id="titleXp">0</span></div>
+    <div class="ptchip">🎰 <span id="titlePt">0</span></div>
     <h1>ニャーニャコ<br>大戦争</h1>
     <div class="sub">〜 インポスター × ブレインロッド 〜</div>
     <div class="titlerow" id="titleRow"></div>
     <div class="titlebtns">
       <button class="bigbtn green" id="toBattle">▶ たたかう</button>
       <button class="bigbtn" id="toShop">⬆ きょうか</button>
+      <button class="bigbtn pink" id="toGacha">🎰 ガチャ</button>
     </div>
     <span class="helplink" id="helpLink">？ あそびかた</span>
   </section>
@@ -175,6 +222,35 @@
       <div class="xp">XP: <span id="shopXp">0</span></div>
     </div>
     <div id="shopList"></div>
+  </section>
+
+  <!-- ===== GACHA ===== -->
+  <section class="screen" id="screen-gacha">
+    <div class="shophead">
+      <button class="backbtn" id="gachaBack">← もどる</button>
+      <h2>🎰 ガチャ</h2>
+      <div class="gachahead-pt">🎰 ポイント: <span id="gachaPt">0</span></div>
+    </div>
+    <div class="gacha-main">
+      <div class="machine" id="machineArt"></div>
+      <button class="bigbtn pink" id="pullBtn">まわす！（1ポイント）</button>
+      <div class="gacha-pool" id="gachaPool"></div>
+    </div>
+    <!-- reveal animation -->
+    <div class="gacha-reveal" id="gachaReveal">
+      <div class="beams"></div>
+      <div class="capsule"><div class="half top"></div><div class="half bot"></div></div>
+      <div class="prize">
+        <div class="stars" id="revStars"></div>
+        <div id="revPrizeArt"></div>
+        <div class="pname" id="revName"></div>
+        <div class="ptag" id="revTag"></div>
+        <div class="revbtns">
+          <button class="bigbtn green" id="revAgain">もう1かい 🎰</button>
+          <button class="bigbtn" id="revClose">とじる</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ===== BATTLE ===== -->
@@ -202,6 +278,7 @@
     <h1>かんぜん しょうり！🎉</h1>
     <p>てきのタワーを はかいした！クルーは ぶじ、ブレインロッドぐんだんの しょうり！🦈👟</p>
     <div class="reward">＋<span id="winXp">0</span> XP げっと！</div>
+    <div class="reward" style="color:#ff8af0">🎰 ＋1 ガチャポイント！</div>
     <button class="bigbtn green" id="winBtn">タイトルへ ↻</button>
   </div>
   <div class="overlay lose" id="loseOverlay">
