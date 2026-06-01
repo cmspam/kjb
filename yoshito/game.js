@@ -1,0 +1,620 @@
+/* ============================================================
+   ニャーニャコ大戦争  —  game.js
+   Battle-Cats-style engine: money + wallet upgrade, XP character
+   upgrades (stronger look + new powers), EX unlocks, type system
+   (1.5x めっぽう強い), zombies + Zombie Killer, barriers + Barrier
+   Breaker, warping/knockback boss, dust particles, tower HP.
+   ============================================================ */
+
+// ---------------- types (属性) ----------------
+const TYPES = {
+  red:   { jp:"赤",       color:"#e23b3b" },
+  float: { jp:"浮遊",     color:"#7fc7ff" },
+  black: { jp:"黒",       color:"#9aa0b0" },
+  zombie:{ jp:"ゾンビ",   color:"#8ab84f" },
+  alien: { jp:"エイリアン",color:"#46d6b8" },
+  demon: { jp:"悪魔",     color:"#c46bff" },
+  metal: { jp:"メタル",   color:"#b8c0cc" },
+  star:  { jp:"星",       color:"#ffd23f" },
+};
+
+// ability display
+const AB = {
+  fast:          { jp:"すばやい",            ic:"💨" },
+  area:          { jp:"範囲こうげき",        ic:"💥" },
+  knockback:     { jp:"ふっとばし",          ic:"👊" },
+  zombieKiller:  { jp:"ゾンビキラー",        ic:"☠️" },
+  barrierBreaker:{ jp:"バリアブレイカー",    ic:"🛡️" },
+  crit:          { jp:"クリティカル(メタル)", ic:"⚡" },
+  tank:          { jp:"たいりょく おおい",   ic:"🧱" },
+  longrange:     { jp:"えんきょり",          ic:"🎯" },
+};
+const strongLabel = t => `${TYPES[t].jp}にめっぽう強い`;
+
+// ---------------- player characters ----------------
+// base = level-1 stats. grow = +fraction per level. unlocks = powers gained by level.
+const CHARS = [
+  { id:"crew", name:"クルーメイト", ex:false, color:"#3fa9f5",
+    art:()=>ART.crewmate("#3fa9f5"),
+    base:{cost:45, hp:120, dmg:18, range:46, atkCd:0.7, speed:48, scale:0.60},
+    grow:{hp:0.16, dmg:0.16, cost:0.06}, maxLv:10,
+    innate:[], unlocks:[ {lv:3,a:"strong:red"}, {lv:7,a:"knockback"} ] },
+
+  { id:"trala", name:"トラレロ・トラララ", ex:false, color:"#5aa9e6",
+    art:()=>ART.tralalero(),
+    base:{cost:90, hp:150, dmg:24, range:50, atkCd:0.55, speed:92, scale:0.66},
+    grow:{hp:0.15, dmg:0.16, cost:0.06}, maxLv:10,
+    innate:["fast"], unlocks:[ {lv:4,a:"strong:float"}, {lv:8,a:"barrierBreaker"} ] },
+
+  { id:"tung", name:"トゥントゥンサフール", ex:false, color:"#a9743f",
+    art:()=>ART.tung(),
+    base:{cost:150, hp:240, dmg:48, range:60, atkCd:1.1, speed:42, scale:0.72},
+    grow:{hp:0.17, dmg:0.18, cost:0.07}, maxLv:10,
+    innate:["area","knockback"], unlocks:[ {lv:5,a:"strong:black"}, {lv:9,a:"crit"} ] },
+
+  { id:"bomb", name:"ボンバルディーロ", ex:false, color:"#6b7a52",
+    art:()=>ART.bombardiro(),
+    base:{cost:220, hp:620, dmg:34, range:54, atkCd:1.0, speed:30, scale:0.80},
+    grow:{hp:0.20, dmg:0.15, cost:0.07}, maxLv:10,
+    innate:["area","tank"], unlocks:[ {lv:4,a:"strong:alien"}, {lv:8,a:"strong:demon"} ] },
+
+  { id:"capp", name:"カプチーノ・アサシン", ex:true, color:"#f3e9d6", unlockXp:1200,
+    art:()=>ART.cappuccino(),
+    base:{cost:180, hp:160, dmg:90, range:48, atkCd:0.5, speed:120, scale:0.66},
+    grow:{hp:0.14, dmg:0.18, cost:0.06}, maxLv:12,
+    innate:["fast","zombieKiller"], unlocks:[ {lv:5,a:"strong:zombie"}, {lv:8,a:"crit"} ] },
+
+  { id:"bone", name:"ボネカ・アンバラブ", ex:true, color:"#74b84a", unlockXp:1600,
+    art:()=>ART.boneca(),
+    base:{cost:260, hp:520, dmg:40, range:52, atkCd:0.9, speed:46, scale:0.74},
+    grow:{hp:0.18, dmg:0.16, cost:0.07}, maxLv:12,
+    innate:["barrierBreaker","knockback","tank"], unlocks:[ {lv:5,a:"strong:alien"}, {lv:8,a:"strong:demon"} ] },
+];
+const charById = id => CHARS.find(c=>c.id===id);
+
+// gather powers active at a given level → {abilities:Set, strong:Set}
+function powersAt(c, lv){
+  const abilities = new Set(c.innate), strong = new Set();
+  for(const u of c.unlocks){ if(lv>=u.lv){
+    if(u.a.startsWith("strong:")) strong.add(u.a.split(":")[1]);
+    else abilities.add(u.a);
+  }}
+  return {abilities, strong};
+}
+// every power (for shop display) with locked flag
+function allPowerRows(c, lv){
+  const rows = c.innate.map(a=>({label:AB[a].ic+" "+AB[a].jp, locked:false, type:false}));
+  for(const u of c.unlocks){
+    const isT = u.a.startsWith("strong:");
+    const label = isT ? "🔥 "+strongLabel(u.a.split(":")[1]) : (AB[u.a].ic+" "+AB[u.a].jp);
+    rows.push({label:`Lv${u.lv} ${label}`, locked:lv<u.lv, type:isT});
+  }
+  return rows;
+}
+// stats at level
+function statsAt(c, lv){
+  const k = lv-1;
+  return {
+    cost: Math.round(c.base.cost*(1+c.grow.cost*k)),
+    hp:   Math.round(c.base.hp*(1+c.grow.hp*k)),
+    dmg:  Math.round(c.base.dmg*(1+c.grow.dmg*k)),
+    range:c.base.range, atkCd:c.base.atkCd, speed:c.base.speed,
+    scale:c.base.scale*(1+0.025*k),
+  };
+}
+const upgradeCost = lv => 200*lv;            // XP to go lv→lv+1
+
+// ---------------- enemies ----------------
+const ENEMY = {
+  redImp:   { name:"赤インポスター",       art:()=>ART.imp("red"),    type:["red"],   hp:130, dmg:16, range:46, atkCd:0.8, speed:40, scale:0.58, reward:30, xp:6 },
+  floatImp: { name:"浮遊インポスター",     art:()=>ART.imp("float"),  type:["float"], hp:150, dmg:18, range:46, atkCd:0.8, speed:52, scale:0.56, reward:34, xp:7 },
+  blackImp: { name:"黒インポスター",       art:()=>ART.imp("black"),  type:["black"], hp:260, dmg:30, range:46, atkCd:0.9, speed:34, scale:0.62, reward:45, xp:9 },
+  zombieImp:{ name:"ゾンビインポスター",   art:()=>ART.imp("zombie"), type:["zombie"],hp:180, dmg:20, range:46, atkCd:0.8, speed:46, scale:0.60, reward:40, xp:9, revive:1 },
+  alienImp: { name:"エイリアンインポスター",art:()=>ART.imp("alien"), type:["alien"], hp:200, dmg:22, range:48, atkCd:0.9, speed:38, scale:0.62, reward:50, xp:11, barrier:260 },
+  demonImp: { name:"悪魔インポスター",     art:()=>ART.imp("demon"),  type:["demon"], hp:320, dmg:34, range:50, atkCd:1.0, speed:30, scale:0.66, reward:70, xp:14, barrier:420, demon:true },
+  metalImp: { name:"メタルインポスター",   art:()=>ART.imp("metal"),  type:["metal"], hp:900, dmg:24, range:46, atkCd:0.9, speed:24, scale:0.62, reward:90, xp:18, metal:true },
+  boss:     { name:"ギガ・インポスター",   art:()=>ART.bossImpostor(),type:["star","alien"], hp:2400, dmg:70, range:64, atkCd:1.4, speed:18, scale:1.5, reward:400, xp:250, barrier:600, boss:true, warp:true, knockback:true },
+};
+
+// ---------------- sample level ----------------
+const LEVEL = {
+  playerTowerHP:1500, enemyTowerHP:1500,
+  coinRate:8,                  // base coins/sec at wallet Lv1 (per-level adds)
+  walletMaxLv:8,
+  spawns:[
+    {t:2,e:"redImp"},{t:6,e:"redImp"},{t:9,e:"floatImp"},{t:13,e:"redImp"},
+    {t:16,e:"zombieImp"},{t:20,e:"floatImp"},{t:23,e:"redImp"},
+    {t:27,e:"alienImp"},{t:31,e:"zombieImp"},{t:34,e:"blackImp"},
+    {t:39,e:"demonImp"},{t:43,e:"redImp"},{t:46,e:"alienImp"},
+    {t:50,e:"metalImp"},{t:54,e:"zombieImp"},{t:58,e:"demonImp"},
+    {t:62,e:"boss"},
+    {t:66,e:"redImp"},{t:70,e:"floatImp"},{t:74,e:"zombieImp"},{t:80,e:"alienImp"},
+  ],
+};
+
+// wallet helpers
+const walletMax  = lv => 150 + (lv-1)*130;
+const walletRate = lv => LEVEL.coinRate + (lv-1)*4.5;
+const walletUpCost = lv => Math.round(80 * Math.pow(1.7, lv-1));
+
+// report ability
+const REPORT_CHARGE = 16;     // seconds to charge
+const REPORT_DMG = 99999;
+
+// ---------------- profile (persisted) ----------------
+const SAVE_KEY = "yoshito_nyanyako_v1";
+let profile = loadProfile();
+function loadProfile(){
+  try{ const p = JSON.parse(localStorage.getItem(SAVE_KEY)); if(p&&p.levels) return p; }catch(e){}
+  return { xp:1500, levels:{ crew:1, trala:1, tung:1, bomb:1, capp:0, bone:0 } };
+}
+function saveProfile(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(profile)); }catch(e){} }
+
+// ---------------- DOM helpers ----------------
+const $ = s => document.querySelector(s);
+const FIELD = () => $("#field");
+const W = () => FIELD().clientWidth;
+function el(html){ const t=document.createElement("template"); t.innerHTML=html.trim(); return t.content.firstChild; }
+function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active")); $("#"+id).classList.add("active"); }
+
+function floatText(x,y,txt,color){
+  const f=el(`<div class="float-txt" style="left:${x}px;bottom:${y}px;color:${color||"#fff"}">${txt}</div>`);
+  FIELD().appendChild(f); setTimeout(()=>f.remove(),1000);
+}
+function dust(x,y,color){
+  for(let i=0;i<4;i++){
+    const sz=4+Math.random()*7;
+    const d=el(`<div class="dust"></div>`);
+    d.style.left=x+"px"; d.style.bottom=y+"px";
+    d.style.width=d.style.height=sz+"px"; d.style.background=color||"#e8e0cf";
+    d.style.setProperty("--dx",(Math.random()*44-22)+"px");
+    d.style.setProperty("--dy",(Math.random()*30+6)+"px");
+    FIELD().appendChild(d); setTimeout(()=>d.remove(),520);
+  }
+}
+function shock(x,y,size,color){
+  const s=el(`<div class="shock"></div>`);
+  s.style.left=(x-size/2)+"px"; s.style.bottom=(y-size/2)+"px";
+  s.style.width=s.style.height=size+"px"; s.style.borderColor=color||"#fff";
+  FIELD().appendChild(s); setTimeout(()=>s.remove(),520);
+}
+
+// ====================================================
+//  SHOP
+// ====================================================
+function renderShop(){
+  $("#shopXp").textContent = profile.xp;
+  $("#titleXp").textContent = profile.xp;
+  const list = $("#shopList"); list.innerHTML="";
+  for(const c of CHARS){
+    const lv = profile.levels[c.id] || 0;
+    const owned = lv>=1;
+    const dispLv = owned?lv:1;
+    const st = statsAt(c, dispLv);
+    const pows = allPowerRows(c, owned?lv:0);
+    const card = el(`<div class="card ${owned?"":"locked"}">
+      <div class="port">${c.ex?`<div class="ex">EX</div>`:""}${c.art()}</div>
+      <div class="info">
+        <div class="nm">${c.name} ${owned?`<span class="lv">Lv${lv}</span>`:""}</div>
+        <div class="stats"><span>たいりょく <b>${st.hp}</b></span><span>こうげき <b>${st.dmg}</b></span><span>コスト <b>${st.cost}</b></span></div>
+        <div class="pows">${pows.map(p=>`<span class="pow ${p.locked?"locked":""} ${p.type?"t":""}">${p.label}</span>`).join("")}</div>
+        <button class="upbtn"></button>
+      </div></div>`);
+    const btn = card.querySelector(".upbtn");
+    if(!owned){
+      btn.classList.add("unlock");
+      btn.textContent = `かいきん  −${c.unlockXp} XP`;
+      btn.disabled = profile.xp < c.unlockXp;
+      btn.onclick = ()=>{ if(profile.xp>=c.unlockXp){ profile.xp-=c.unlockXp; profile.levels[c.id]=1; saveProfile(); renderShop(); } };
+    } else if(lv>=c.maxLv){
+      btn.classList.add("maxed"); btn.textContent="さいだいレベル！⭐"; btn.disabled=true;
+    } else {
+      const cost = upgradeCost(lv);
+      btn.textContent = `つよくする Lv${lv}→${lv+1}  −${cost} XP`;
+      btn.disabled = profile.xp < cost;
+      btn.onclick = ()=>{ if(profile.xp>=cost){ profile.xp-=cost; profile.levels[c.id]=lv+1; saveProfile(); renderShop(); } };
+    }
+    list.appendChild(card);
+  }
+}
+
+// ====================================================
+//  BATTLE
+// ====================================================
+let G=null;
+function freshGame(){
+  return { running:false, over:false, last:0, time:0,
+    coins:80, coinAcc:0, walletLv:1,
+    units:[], enemies:[], nextId:1,
+    pHP:LEVEL.playerTowerHP, eHP:LEVEL.enemyTowerHP,
+    spawnIdx:0, cooldowns:{}, report:0, battleXp:0, bossSpawned:false };
+}
+
+const SPAWN_X = 64;
+function playerBaseX(){ return SPAWN_X+12; }
+function enemyBaseX(){ return W()-SPAWN_X-12; }
+
+function buildBar(){
+  const bar=$("#bar"); bar.innerHTML="";
+  // wallet upgrade button
+  const wb=el(`<div class="unitbtn wallet" id="walletBtn">
+      <div class="icon"><svg viewBox="0 0 120 120"><rect x="20" y="40" width="80" height="56" rx="12" fill="#2bb3ff" stroke="#0a4a7a" stroke-width="4"/><rect x="20" y="40" width="80" height="16" rx="8" fill="#1a7ec0"/><circle cx="86" cy="70" r="9" fill="#ffd23f" stroke="#0a4a7a" stroke-width="3"/><text x="60" y="34" font-size="34" text-anchor="middle">⬆</text></svg></div>
+      <div class="nm">お財布Lv↑</div><div class="cost" id="walletCost">80</div></div>`);
+  wb.onclick=upgradeWallet; bar.appendChild(wb);
+  // owned characters
+  for(const c of CHARS){
+    const lv = profile.levels[c.id]||0; if(lv<1) continue;
+    const st = statsAt(c,lv);
+    const b=el(`<div class="unitbtn" data-id="${c.id}">
+        <div class="lvtag">Lv${lv}</div>
+        <div class="icon">${c.art()}</div>
+        <div class="nm">${c.name}</div>
+        <div class="cost"><svg viewBox="0 0 24 24" width="13" height="13"><circle cx="12" cy="12" r="11" fill="#ffd23f" stroke="#b8860b" stroke-width="2"/></svg>${st.cost}</div>
+        <div class="cd" style="display:none"><i style="height:0%"></i></div></div>`);
+    b.onclick=()=>trySpawn(c.id);
+    bar.appendChild(b);
+  }
+  // report
+  const rep=el(`<div class="unitbtn report" data-id="__report">
+      <div class="icon"><svg viewBox="0 0 120 120"><rect x="20" y="34" width="80" height="56" rx="10" fill="#ff3b5c" stroke="#7a0a1c" stroke-width="4"/><rect x="54" y="44" width="12" height="28" rx="6" fill="#fff"/><circle cx="60" cy="80" r="6" fill="#fff"/><path d="M30 34 L40 18 L80 18 L90 34 Z" fill="#ff8a00" stroke="#7a0a1c" stroke-width="3"/></svg></div>
+      <div class="nm">レポート!</div><div class="cost" style="color:#ff8a8a">しょうしゅう</div>
+      <div class="cd" style="display:none"><i style="height:0%"></i></div></div>`);
+  rep.onclick=doReport; bar.appendChild(rep);
+}
+
+function upgradeWallet(){
+  if(!G.running||G.over) return;
+  if(G.walletLv>=LEVEL.walletMaxLv) return;
+  const cost=walletUpCost(G.walletLv);
+  if(G.coins<cost) return;
+  G.coins-=cost; G.walletLv++;
+  $("#walletLv").textContent=G.walletLv;
+  floatText(120,140,"お財布レベルアップ!","#6cf");
+  syncHud();
+}
+
+function makeActor(def, side, charLevel){
+  const id=G.nextId++;
+  const wrap=el(`<div class="actor ${side==="enemy"?"enemy":""}" data-aid="${id}"></div>`);
+  wrap.innerHTML = def.art() + `<div class="mini-hp"><i style="width:100%"></i></div>`;
+  const svg=wrap.querySelector("svg");
+  const px=Math.round(120*def.scale);
+  svg.setAttribute("width",px); svg.setAttribute("height",px);
+  if(side==="enemy") wrap.style.transform="scaleX(-1)";
+
+  const a={ id, def, side, hp:def.hp, maxhp:def.hp, w:px,
+    x: side==="player"? playerBaseX() : enemyBaseX()-px,
+    atkTimer:0, stun:0, dead:false, down:false, reviveAt:0,
+    reviveLeft: def.revive||0, dom:wrap, hpEl:wrap.querySelector(".mini-hp>i"),
+    flashT:0, warpTimer:3, kbTimer: def.boss?2:0,
+    barrier: def.barrier||0, barrierMax: def.barrier||0,
+    abilities: def.abilities||new Set(), strong: def.strong||new Set() };
+
+  // barrier visual
+  if(a.barrier>0){
+    const bsz=px*1.25;
+    const bar=el(`<div class="barrier ${def.demon?"demon":""}" style="width:${bsz}px;height:${bsz}px;margin-left:${-bsz/2}px;margin-top:${-bsz/2}px"></div>`);
+    wrap.appendChild(bar); a.barrierEl=bar;
+  }
+  // friendly level pips + aura
+  if(side==="player" && charLevel){
+    const tier = charLevel>=8?"⭐⭐⭐" : charLevel>=5?"⭐⭐" : charLevel>=3?"⭐":"";
+    if(tier){ const p=el(`<div class="lvpips">${tier}</div>`); wrap.appendChild(p); }
+    if(charLevel>=5){ wrap.classList.add("aura"); wrap.style.setProperty("--auraC", charLevel>=8?"#ffd23f":"#7fe3ff"); }
+  }
+  FIELD().appendChild(wrap);
+  pos(a);
+  return a;
+}
+function pos(a){ a.dom.style.left=a.x+"px"; }
+
+function trySpawn(id){
+  if(!G.running||G.over) return;
+  const c=charById(id); const lv=profile.levels[id]||0; if(lv<1) return;
+  const st=statsAt(c,lv);
+  if(G.coins<st.cost){ bump(id); return; }
+  if((G.cooldowns[id]||0)>0) return;
+  G.coins-=st.cost;
+  const cd = Math.max(1.5, st.cost/45);     // deploy cooldown scales with cost
+  G.cooldowns[id]=cd; G.cooldowns["_max_"+id]=cd;
+  const pw=powersAt(c,lv);
+  const def={ name:c.name, art:c.art, hp:st.hp, dmg:st.dmg, range:st.range,
+    atkCd:st.atkCd, speed:st.speed, scale:st.scale, abilities:pw.abilities, strong:pw.strong };
+  G.units.push(makeActor(def,"player",lv));
+  syncHud();
+}
+function bump(id){ const b=document.querySelector(`.unitbtn[data-id="${id}"]`); if(b){ b.style.transform="translateX(-3px)"; setTimeout(()=>b.style.transform="",80);} }
+
+function spawnEnemy(key){
+  const base=ENEMY[key];
+  const def=Object.assign({},base,{type:base.type, abilities:new Set(), strong:new Set()});
+  const a=makeActor(def,"enemy");
+  G.enemies.push(a);
+  if(base.boss){ G.bossSpawned=true; const bn=$("#bossBanner"); bn.classList.remove("go"); void bn.offsetWidth; bn.classList.add("go"); }
+}
+
+// ----- report -----
+function doReport(){
+  if(!G.running||G.over||G.report<1) return;
+  G.report=0;
+  const fx=$("#reportFx"); fx.classList.remove("go"); void fx.offsetWidth; fx.classList.add("go");
+  const mw=$("#meetingWord"); mw.classList.remove("go"); void mw.offsetWidth; mw.classList.add("go");
+  let hit=0;
+  G.enemies.forEach(e=>{ if(e.dead) return;
+    // pops barriers and blasts impostors; boss takes big (not insta) damage
+    if(e.barrier>0){ e.barrier=0; if(e.barrierEl) e.barrierEl.remove(); }
+    const dmg = e.def.boss? 600 : REPORT_DMG;
+    dealDamage(null, e, dmg, true);
+    floatText(e.x+e.w/2, 70+Math.random()*60, "SUS!", "#ff3b5c"); hit++;
+  });
+  if(!hit) floatText(W()/2,120,"インポスター いないよ 👀","#fff");
+}
+
+// ----- damage core -----
+function dealDamage(attacker, target, dmg, isReport){
+  if(target.dead || target.down) return;
+  // type multiplier
+  let mult=1;
+  if(attacker && attacker.strong && target.def.type && target.def.type.some(t=>attacker.strong.has(t))) mult=1.5;
+  dmg = dmg*mult;
+  // metal: only crit (or report) deals real damage
+  if(target.def.metal && !isReport && !(attacker&&attacker.abilities.has("crit"))) dmg=1;
+  // barrier
+  if(target.barrier>0 && !isReport){
+    if(attacker && attacker.abilities.has("barrierBreaker")){
+      target.barrier=0; if(target.barrierEl) target.barrierEl.remove();
+      shock(target.x+target.w/2, 70, target.w*1.3, target.def.demon?"#d36bff":"#6ff");
+      floatText(target.x+target.w/2, 80, "バリアブレイク!", "#6ff");
+      // breaking still lands the hit below
+    } else {
+      target.barrier-=dmg;
+      if(target.barrierEl) target.barrierEl.style.opacity = Math.max(0.25, target.barrier/target.barrierMax)*0.7+0.15;
+      if(target.barrier<=0){ target.barrier=0; if(target.barrierEl) target.barrierEl.remove();
+        shock(target.x+target.w/2,70,target.w*1.2,target.def.demon?"#d36bff":"#6ff"); }
+      dust(target.x+target.w/2, 60, "#bff");
+      return; // damage absorbed by barrier
+    }
+  }
+  if(mult>1) floatText(target.x+target.w/2, 90, Math.round(dmg)+"!", "#ffd23f");
+  target.hp-=dmg;
+  target.flashT=0.12;
+  dust(target.x + (target.side==="enemy"? target.w*0.2 : target.w*0.8), 50, "#efe6d2");
+  if(target.hpEl) target.hpEl.style.width=Math.max(0,target.hp/target.maxhp*100)+"%";
+
+  // knockback (player ability) on enemy
+  if(attacker && attacker.side==="player" && attacker.abilities.has("knockback") && !target.def.boss && Math.random()<0.3){
+    target.x=Math.min(enemyBaseX()-target.w, target.x+22); pos(target); target.stun=Math.max(target.stun,0.3);
+  }
+
+  if(target.hp<=0){
+    // zombie revive?
+    if(target.def.revive && target.reviveLeft>0 && !isReport && !(attacker && attacker.abilities.has("zombieKiller"))){
+      target.reviveLeft--; target.down=true; target.hp=0;
+      target.reviveAt=G.time+1.3; target.dom.classList.add("down");
+      floatText(target.x+target.w/2,80,"ぐぬぬ…","#8ab84f");
+      return;
+    }
+    killActor(target, attacker);
+  }
+}
+
+function killActor(target, attacker){
+  if(target.dead) return;
+  target.dead=true;
+  if(target.side==="enemy"){
+    G.coins=Math.min(walletMax(G.walletLv), G.coins+(target.def.reward||0));
+    G.battleXp += target.def.xp||0;
+    if(target.def.revive && attacker && attacker.abilities.has("zombieKiller"))
+      floatText(target.x+target.w/2,90,"ゾンビキラー！","#fff");
+  }
+  target.dom.style.transition="opacity .25s, transform .25s";
+  target.dom.style.opacity="0";
+  target.dom.style.transform=(target.side==="enemy"?"scaleX(-1) ":"")+"translateY(18px) rotate(18deg)";
+  dust(target.x+target.w/2,40,target.side==="enemy"?"#caa":"#ace");
+  setTimeout(()=>target.dom.remove(),260);
+}
+
+// front opposing target
+function frontFor(a){
+  if(a.side==="player"){
+    let f=null; for(const e of G.enemies){ if(e.dead||e.down) continue; if(e.x+e.w>=a.x){ if(!f||e.x<f.x) f=e; } } return f;
+  } else {
+    let f=null; for(const u of G.units){ if(u.dead) continue; if(u.x<=a.x+a.w){ if(!f||u.x>f.x) f=u; } } return f;
+  }
+}
+
+function step(dt){
+  // coins
+  G.coinAcc += walletRate(G.walletLv)*dt;
+  if(G.coinAcc>=1){ const add=Math.floor(G.coinAcc); G.coins=Math.min(walletMax(G.walletLv),G.coins+add); G.coinAcc-=add; }
+  // cooldowns
+  for(const k in G.cooldowns){ if(k.startsWith("_max_")) continue; if(G.cooldowns[k]>0) G.cooldowns[k]=Math.max(0,G.cooldowns[k]-dt); }
+  // report charge
+  if(G.report<1) G.report=Math.min(1,G.report+dt/REPORT_CHARGE);
+  // spawns
+  while(G.spawnIdx<LEVEL.spawns.length && G.time>=LEVEL.spawns[G.spawnIdx].t){ spawnEnemy(LEVEL.spawns[G.spawnIdx].e); G.spawnIdx++; }
+
+  updateSide(G.units,dt,"player");
+  updateSide(G.enemies,dt,"enemy");
+
+  G.units=G.units.filter(u=>!u.dead);
+  G.enemies=G.enemies.filter(e=>!e.dead);
+
+  if(G.eHP<=0){ endGame(true); return; }
+  if(G.pHP<=0){ endGame(false); return; }
+  syncHud(); syncButtons();
+}
+
+function updateSide(list,dt,side){
+  for(const a of list){
+    if(a.dead) continue;
+    if(a.flashT>0){ a.flashT-=dt; a.dom.classList.toggle("hit-flash",a.flashT>0); }
+    // zombie revive
+    if(a.down){ if(G.time>=a.reviveAt){ a.down=false; a.dom.classList.remove("down"); a.hp=a.maxhp*0.5; if(a.hpEl) a.hpEl.style.width="50%"; floatText(a.x+a.w/2,80,"いきかえった!","#8ab84f"); } else continue; }
+    if(a.stun>0){ a.stun-=dt; a.dom.classList.add("stun"); if(a.stun<=0) a.dom.classList.remove("stun"); else continue; }
+    if(a.atkTimer>0) a.atkTimer-=dt;
+
+    // boss: warp + knockback shockwave
+    if(a.def.warp){ a.warpTimer-=dt; if(a.warpTimer<=0){ a.warpTimer=5; if(a.x>W()*0.4){ a.x-=90; pos(a); shock(a.x+a.w,a.def.scale*60,80,"#b6ff00"); floatText(a.x+a.w/2,120,"ワープ!","#b6ff00"); } } }
+    if(a.def.knockback && a.side==="enemy"){ a.kbTimer-=dt; if(a.kbTimer<=0){ a.kbTimer=4.5; bossShock(a); } }
+
+    const target=frontFor(a);
+    if(side==="player"){
+      let blocked=false;
+      if(target){
+        if(target.x-(a.x+a.w) <= a.def.range){ blocked=true;
+          if(a.atkTimer<=0){ attack(a); a.atkTimer=a.def.atkCd; } }
+      } else if(a.x+a.w >= enemyBaseX()-a.def.range){ blocked=true;
+        if(a.atkTimer<=0){ a.atkTimer=a.def.atkCd; G.eHP=Math.max(0,G.eHP-a.def.dmg); dust(enemyBaseX(),120,"#fb8"); floatText(enemyBaseX(),120+Math.random()*30,"-"+a.def.dmg,"#fff"); } }
+      if(!blocked){ a.x+=a.def.speed*dt; if(a.x+a.w>enemyBaseX()) a.x=enemyBaseX()-a.w; pos(a); }
+    } else {
+      let blocked=false;
+      if(target){
+        if(a.x-(target.x+target.w) <= a.def.range){ blocked=true;
+          if(a.atkTimer<=0){ attack(a); a.atkTimer=a.def.atkCd; } }
+      } else if(a.x <= playerBaseX()+a.def.range){ blocked=true;
+        if(a.atkTimer<=0){ a.atkTimer=a.def.atkCd; G.pHP=Math.max(0,G.pHP-a.def.dmg); dust(playerBaseX()+30,120,"#f88"); floatText(playerBaseX()+30,120+Math.random()*30,"-"+a.def.dmg,"#ff3b5c"); } }
+      if(!blocked){ a.x-=a.def.speed*dt; if(a.x<playerBaseX()) a.x=playerBaseX(); pos(a); }
+    }
+  }
+}
+
+// an actor attacks: area hits everyone in range, else just the front
+function attack(a){
+  const foes = a.side==="player"? G.enemies : G.units;
+  if(a.def.abilities && a.def.abilities.has("area")){
+    let any=false;
+    for(const f of foes){ if(f.dead||f.down) continue;
+      const inRange = a.side==="player" ? (f.x+f.w>=a.x && f.x-(a.x+a.w)<=a.def.range)
+                                        : (f.x<=a.x+a.w && a.x-(f.x+f.w)<=a.def.range);
+      if(inRange){ dealDamage(a,f,a.def.dmg); any=true; }
+    }
+    if(any) shock(a.x+(a.side==="player"?a.w:0), 60, a.def.range*1.6, "#ffd27a");
+  } else {
+    const f=frontFor(a); if(f) dealDamage(a,f,a.def.dmg);
+  }
+}
+
+// boss shockwave knockback
+function bossShock(boss){
+  shock(boss.x+boss.w/2, 80, 260, "#ffd23f");
+  floatText(boss.x+boss.w/2,140,"ノックバック!!","#ffd23f");
+  for(const u of G.units){ if(u.dead) continue;
+    if(Math.abs((u.x+u.w/2)-(boss.x+boss.w/2)) < 200){
+      u.x=Math.max(playerBaseX(), u.x-70); pos(u); u.stun=Math.max(u.stun,0.7);
+      dust(u.x+u.w/2,50,"#fff");
+    }
+  }
+}
+
+// ----- HUD -----
+function syncHud(){
+  $("#coins").textContent=Math.floor(G.coins);
+  $("#coinMax").textContent=walletMax(G.walletLv);
+  $("#walletLv").textContent=G.walletLv;
+  $("#phpFill").style.width=(G.pHP/LEVEL.playerTowerHP*100)+"%";
+  $("#ehpFill").style.width=(G.eHP/LEVEL.enemyTowerHP*100)+"%";
+}
+function syncButtons(){
+  // wallet
+  const wb=$("#walletBtn"), wc=$("#walletCost");
+  if(wb){ if(G.walletLv>=LEVEL.walletMaxLv){ wc.textContent="MAX"; wb.classList.add("cant"); }
+    else { const c=walletUpCost(G.walletLv); wc.textContent=c; wb.classList.toggle("cant",G.coins<c); } }
+  for(const c of CHARS){ const lv=profile.levels[c.id]||0; if(lv<1) continue;
+    const b=document.querySelector(`.unitbtn[data-id="${c.id}"]`); if(!b) continue;
+    const cd=b.querySelector(".cd"), bar=cd.querySelector("i");
+    const rem=G.cooldowns[c.id]||0, max=G.cooldowns["_max_"+c.id]||1;
+    if(rem>0){ cd.style.display="flex"; bar.style.height=(100*(1-rem/max))+"%"; } else cd.style.display="none";
+    b.classList.toggle("cant", G.coins<statsAt(c,lv).cost);
+  }
+  const rep=document.querySelector('.unitbtn[data-id="__report"]');
+  if(rep){ const cd=rep.querySelector(".cd"), bar=cd.querySelector("i");
+    if(G.report<1){ cd.style.display="flex"; bar.style.height=(G.report*100)+"%"; rep.classList.remove("ready"); }
+    else { cd.style.display="none"; rep.classList.add("ready"); } }
+}
+
+// ----- bases & decor -----
+function placeBases(){
+  FIELD().querySelectorAll(".base, .star, .actor, .float-txt, .dust, .shock").forEach(n=>n.remove());
+  const pb=el(`<div class="base" style="left:-16px">${ART.playerBase()}</div>`);
+  const eb=el(`<div class="base" style="right:-16px">${ART.enemyBase()}</div>`);
+  [pb,eb].forEach(b=>{ const s=b.querySelector("svg"); s.setAttribute("width","94"); s.setAttribute("height","134"); });
+  FIELD().appendChild(pb); FIELD().appendChild(eb);
+  for(let i=0;i<26;i++){ const s=el(`<div class="star"></div>`); const sz=Math.random()*2+1;
+    s.style.width=s.style.height=sz+"px"; s.style.left=(Math.random()*100)+"%"; s.style.top=(Math.random()*55)+"%";
+    s.style.animationDelay=(Math.random()*2)+"s"; FIELD().appendChild(s); }
+}
+
+// ----- loop -----
+function loop(ts){
+  if(!G.running) return;
+  if(!G.last) G.last=ts;
+  let dt=(ts-G.last)/1000; G.last=ts; if(dt>0.1) dt=0.1;
+  G.time+=dt; step(dt);
+  if(G.running) requestAnimationFrame(loop);
+}
+
+function startBattle(){
+  show("screen-battle");
+  buildBar();
+  G=freshGame();
+  placeBases();
+  syncHud(); syncButtons();
+  G.running=true; G.last=0;
+  requestAnimationFrame(loop);
+}
+
+function endGame(win){
+  G.over=true; G.running=false;
+  const reward = win ? 600 + G.battleXp : Math.round(G.battleXp*0.6);
+  profile.xp += reward; saveProfile();
+  $(win?"#winXp":"#loseXp").textContent = reward;
+  setTimeout(()=>$(win?"#winOverlay":"#loseOverlay").classList.add("show"), 500);
+}
+
+// ====================================================
+//  WIRING
+// ====================================================
+function buildTitleRow(){
+  const row=$("#titleRow"); row.innerHTML="";
+  [ART.crewmate("#3fa9f5"),ART.tralalero(),ART.cappuccino(),ART.boneca(),ART.imp("demon")].forEach(svg=>row.appendChild(el(svg)));
+}
+function buildHelpLegend(){
+  const L=$("#helpLegend"); L.innerHTML="";
+  const items=[
+    {a:ART.crewmate("#3fa9f5"),n:"クルーメイト"},{a:ART.tralalero(),n:"トラレロ"},
+    {a:ART.tung(),n:"サフール"},{a:ART.bombardiro(),n:"ボンバルディーロ"},
+    {a:ART.cappuccino(),n:"カプチーノ(EX)"},{a:ART.boneca(),n:"ボネカ(EX)"},
+    {a:ART.imp("zombie"),n:"ゾンビ(敵)"},{a:ART.imp("alien"),n:"エイリアン(敵)"},
+    {a:ART.bossImpostor(),n:"ボス"},
+  ];
+  items.forEach(it=>L.appendChild(el(`<div class="li">${it.a}<span>${it.n}</span></div>`)));
+}
+
+window.addEventListener("DOMContentLoaded",()=>{
+  // title stars
+  const t=$("#screen-title");
+  for(let i=0;i<40;i++){ const s=el(`<div class="tstar"></div>`); const sz=Math.random()*2+1;
+    s.style.width=s.style.height=sz+"px"; s.style.left=(Math.random()*100)+"%"; s.style.top=(Math.random()*100)+"%";
+    s.style.animationDelay=(Math.random()*2.5)+"s"; t.appendChild(s); }
+  buildTitleRow(); buildHelpLegend();
+  $("#titleXp").textContent=profile.xp;
+
+  $("#toBattle").onclick=startBattle;
+  $("#toShop").onclick=()=>{ renderShop(); show("screen-shop"); };
+  $("#shopBack").onclick=()=>{ $("#titleXp").textContent=profile.xp; show("screen-title"); };
+  $("#helpLink").onclick=()=>$("#helpOverlay").classList.add("show");
+  $("#helpClose").onclick=()=>$("#helpOverlay").classList.remove("show");
+  $("#quitBtn").onclick=()=>{ G.running=false; $("#titleXp").textContent=profile.xp; show("screen-title"); };
+  $("#winBtn").onclick=()=>{ $("#winOverlay").classList.remove("show"); $("#titleXp").textContent=profile.xp; show("screen-title"); };
+  $("#loseBtn").onclick=()=>{ $("#loseOverlay").classList.remove("show"); $("#titleXp").textContent=profile.xp; show("screen-title"); };
+
+  // keyboard: 1..N deploy owned, W wallet, R report
+  window.addEventListener("keydown",e=>{
+    if(!G||!G.running) return;
+    if(e.key.toLowerCase()==="w") upgradeWallet();
+    if(e.key.toLowerCase()==="r") doReport();
+    const n=parseInt(e.key);
+    if(n>=1){ const owned=CHARS.filter(c=>(profile.levels[c.id]||0)>=1); if(owned[n-1]) trySpawn(owned[n-1].id); }
+  });
+});
