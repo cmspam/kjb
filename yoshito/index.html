@@ -99,7 +99,10 @@
   .actor.aura svg{filter:drop-shadow(0 0 8px var(--auraC)) drop-shadow(0 6px 4px rgba(0,0,0,.45));}
   .actor.down svg{transform:rotate(82deg);opacity:.6;}
   .actor.stun svg{filter:grayscale(.4) brightness(1.4);}
-  .hit-flash svg{filter:brightness(3.5)!important;}
+  /* march/waddle while advancing — replaces the old static look */
+  @keyframes walkBob{0%,100%{transform:translateY(0) rotate(-2.5deg);}50%{transform:translateY(-3px) rotate(2.5deg);}}
+  .actor.walking svg{animation:walkBob .42s infinite ease-in-out;}
+  .hit-flash svg{filter:brightness(1.6) saturate(1.3)!important;}
   .barrier{position:absolute;top:50%;left:50%;border-radius:50%;border:3px solid #6ff;
     box-shadow:0 0 14px #6ff,inset 0 0 14px #6ff;opacity:.7;pointer-events:none;animation:barr 1.2s infinite;}
   .barrier.demon{border-color:#d36bff;box-shadow:0 0 14px #d36bff,inset 0 0 14px #d36bff;}
@@ -278,7 +281,7 @@
     <h1>かんぜん しょうり！🎉</h1>
     <p>てきのタワーを はかいした！クルーは ぶじ、ブレインロッドぐんだんの しょうり！🦈👟</p>
     <div class="reward">＋<span id="winXp">0</span> XP げっと！</div>
-    <div class="reward" style="color:#ff8af0">🎰 ＋1 ガチャポイント！</div>
+    <div class="reward" id="winPtLine" style="color:#ff8af0">🎰 ＋1 ガチャポイント！</div>
     <button class="bigbtn green" id="winBtn">タイトルへ ↻</button>
   </div>
   <div class="overlay lose" id="loseOverlay">
@@ -294,8 +297,10 @@
       ・<b>おかね 🪙</b> は じかんで たまる。<b>お財布レベルアップ</b>で もっと はやく たまる！<br>
       ・てきには <b>ぞくせい</b>（赤・浮遊・ゾンビ・エイリアン・悪魔・メタル…）が あるよ。<br>
       ・じぶんが その ぞくせいに <b>めっぽう強い</b> と、ダメージ <b>1.5ばい</b>！<br>
-      ・<b>ゾンビキラー</b>で たおすと ゾンビは <b>いきかえらない</b>。<br>
-      ・<b>バリア</b>（エイリアン・悪魔）は <b>バリアブレイカー</b>で わる！<br>
+      ・<b>ゾンビ</b>は たおしても <b>たいりょく ぜんかい</b>で いきかえる！<b>ゾンビキラー</b>で とどめを さそう。<br>
+      ・<b>メタル</b>は たいりょくが すくないけど <b>1ダメージ</b>しか とおらない。でも <b>クリティカル⚡</b>なら 大ダメージ！<br>
+      ・<b>クリティカル⚡</b>もちの キャラは ときどき すごい ダメージを だすよ。<br>
+      ・<b>バリア（シールド）</b>（黒・エイリアン・悪魔）は <b>バリアブレイカー</b>で わる！<br>
       ・<span class="r">きんきゅうしょうしゅう（レポート）</span>が ひかったら タップで インポスターを ドカン！<br>
       ・<b>XP</b>で キャラを <b>きょうか</b>＆ <b>EXキャラ</b>を かいきん できるよ。<br>
       ・てきの タワーを ゼロに したら <b>かんぜんしょうり</b>！じぶんの タワーが ゼロで まけ。

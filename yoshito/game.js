@@ -25,7 +25,7 @@ const AB = {
   knockback:     { jp:"ふっとばし",          ic:"👊" },
   zombieKiller:  { jp:"ゾンビキラー",        ic:"☠️" },
   barrierBreaker:{ jp:"バリアブレイカー",    ic:"🛡️" },
-  crit:          { jp:"クリティカル(メタル)", ic:"⚡" },
+  crit:          { jp:"クリティカル",        ic:"⚡" },
   tank:          { jp:"たいりょく おおい",   ic:"🧱" },
   longrange:     { jp:"えんきょり",          ic:"🎯" },
   slow:          { jp:"タイムストップ",      ic:"⏱️" },
@@ -149,11 +149,11 @@ const upgradeCost = lv => 200*lv;            // XP to go lv→lv+1
 const ENEMY = {
   redImp:   { name:"赤インポスター",       art:()=>ART.imp("red"),    type:["red"],   hp:130, dmg:16, range:46, atkCd:0.8, speed:40, scale:0.58, reward:30, xp:6 },
   floatImp: { name:"浮遊インポスター",     art:()=>ART.imp("float"),  type:["float"], hp:150, dmg:18, range:46, atkCd:0.8, speed:52, scale:0.56, reward:34, xp:7 },
-  blackImp: { name:"黒インポスター",       art:()=>ART.imp("black"),  type:["black"], hp:260, dmg:30, range:46, atkCd:0.9, speed:34, scale:0.62, reward:45, xp:9 },
+  blackImp: { name:"黒インポスター",       art:()=>ART.imp("black"),  type:["black"], hp:300, dmg:32, range:46, atkCd:0.9, speed:34, scale:0.62, reward:48, xp:10, barrier:280 },
   zombieImp:{ name:"ゾンビインポスター",   art:()=>ART.imp("zombie"), type:["zombie"],hp:180, dmg:20, range:46, atkCd:0.8, speed:46, scale:0.60, reward:40, xp:9, revive:1 },
   alienImp: { name:"エイリアンインポスター",art:()=>ART.imp("alien"), type:["alien"], hp:200, dmg:22, range:48, atkCd:0.9, speed:38, scale:0.62, reward:50, xp:11, barrier:260 },
   demonImp: { name:"悪魔インポスター",     art:()=>ART.imp("demon"),  type:["demon"], hp:320, dmg:34, range:50, atkCd:1.0, speed:30, scale:0.66, reward:70, xp:14, barrier:420, demon:true },
-  metalImp: { name:"メタルインポスター",   art:()=>ART.imp("metal"),  type:["metal"], hp:900, dmg:24, range:46, atkCd:0.9, speed:24, scale:0.62, reward:90, xp:18, metal:true },
+  metalImp: { name:"メタルインポスター",   art:()=>ART.imp("metal"),  type:["metal"], hp:120, dmg:24, range:46, atkCd:0.9, speed:24, scale:0.62, reward:90, xp:18, metal:true },
   boss:     { name:"ギガ・インポスター",   art:()=>ART.bossImpostor(),type:["star","alien"], hp:2400, dmg:70, range:64, atkCd:1.4, speed:18, scale:1.5, reward:400, xp:250, barrier:600, boss:true, warp:true, knockback:true },
 };
 
@@ -163,13 +163,14 @@ const LEVEL = {
   coinRate:8,                  // base coins/sec at wallet Lv1 (per-level adds)
   walletMaxLv:8,
   spawns:[
-    {t:2,e:"redImp"},{t:6,e:"redImp"},{t:9,e:"floatImp"},{t:13,e:"redImp"},
-    {t:16,e:"zombieImp"},{t:20,e:"floatImp"},{t:23,e:"redImp"},
-    {t:27,e:"alienImp"},{t:31,e:"zombieImp"},{t:34,e:"blackImp"},
-    {t:39,e:"demonImp"},{t:43,e:"redImp"},{t:46,e:"alienImp"},
-    {t:50,e:"metalImp"},{t:54,e:"zombieImp"},{t:58,e:"demonImp"},
-    {t:62,e:"boss"},
-    {t:66,e:"redImp"},{t:70,e:"floatImp"},{t:74,e:"zombieImp"},{t:80,e:"alienImp"},
+    {t:1,e:"redImp"},{t:4,e:"redImp"},{t:7,e:"floatImp"},{t:10,e:"redImp"},{t:12,e:"zombieImp"},
+    {t:15,e:"blackImp"},{t:18,e:"floatImp"},{t:20,e:"redImp"},{t:22,e:"alienImp"},
+    {t:26,e:"zombieImp"},{t:28,e:"redImp"},{t:30,e:"blackImp"},{t:33,e:"demonImp"},
+    {t:36,e:"metalImp"},{t:38,e:"floatImp"},{t:40,e:"alienImp"},{t:42,e:"zombieImp"},
+    {t:45,e:"demonImp"},{t:48,e:"blackImp"},{t:50,e:"redImp"},{t:52,e:"metalImp"},
+    {t:56,e:"boss"},
+    {t:58,e:"alienImp"},{t:60,e:"zombieImp"},{t:62,e:"demonImp"},{t:64,e:"floatImp"},
+    {t:68,e:"metalImp"},{t:72,e:"demonImp"},{t:76,e:"alienImp"},{t:80,e:"blackImp"},
   ],
 };
 
@@ -181,6 +182,10 @@ const walletUpCost = lv => Math.round(80 * Math.pow(1.7, lv-1));
 // report ability
 const REPORT_CHARGE = 16;     // seconds to charge
 const REPORT_DMG = 99999;
+
+// critical hits — characters with the crit power roll this chance per hit
+const CRIT_CHANCE = 0.20;     // 20% of attacks land a critical
+const CRIT_MULT   = 3;        // critical hits do 3x damage (and shatter metal)
 
 // ---------------- profile (persisted) ----------------
 const SAVE_KEY = "yoshito_nyanyako_v1";
@@ -224,6 +229,21 @@ function shock(x,y,size,color){
   s.style.left=(x-size/2)+"px"; s.style.bottom=(y-size/2)+"px";
   s.style.width=s.style.height=size+"px"; s.style.borderColor=color||"#fff";
   FIELD().appendChild(s); setTimeout(()=>s.remove(),520);
+}
+// ----- sprite motion (Web Animations API: auto-clears, so it never fights CSS state) -----
+function lungeAttack(a){
+  if(!a.svgEl) return;
+  // local +x always reads as "toward the enemy" (enemy wrappers are flipped by CSS)
+  a.svgEl.animate(
+    [{transform:"translateX(0)"},{transform:"translateX(11px) scale(1.07)",offset:.35},{transform:"translateX(0)"}],
+    {duration:240, easing:"ease-out"});
+}
+function hurtFlinch(target, big){
+  if(!target.svgEl) return;
+  const dx = big?-9:-5, s = big?0.86:0.93, d = big?280:170;
+  target.svgEl.animate(
+    [{transform:"translateX(0) scale(1)"},{transform:`translateX(${dx}px) scale(${s})`,offset:.4},{transform:"translateX(0) scale(1)"}],
+    {duration:d, easing:"ease-out"});
 }
 
 // ====================================================
@@ -338,7 +358,7 @@ function makeActor(def, side, charLevel){
   const a={ id, def, side, hp:def.hp, maxhp:def.hp, w:px,
     x: side==="player"? playerBaseX() : enemyBaseX()-px,
     atkTimer:0, stun:0, dead:false, down:false, reviveAt:0,
-    reviveLeft: def.revive||0, dom:wrap, hpEl:wrap.querySelector(".mini-hp>i"),
+    reviveLeft: def.revive||0, dom:wrap, svgEl:svg, hpEl:wrap.querySelector(".mini-hp>i"),
     flashT:0, warpTimer:3, kbTimer: def.boss?2:0,
     barrier: def.barrier||0, barrierMax: def.barrier||0,
     abilities: def.abilities||new Set(), strong: def.strong||new Set() };
@@ -410,8 +430,14 @@ function dealDamage(attacker, target, dmg, isReport){
   let mult=1;
   if(attacker && attacker.strong && target.def.type && target.def.type.some(t=>attacker.strong.has(t))) mult=1.5;
   dmg = dmg*mult;
-  // metal: only crit (or report) deals real damage
-  if(target.def.metal && !isReport && !(attacker&&attacker.abilities.has("crit"))) dmg=1;
+  // critical hit (only crit-power characters), rolled per attack
+  let isCrit=false;
+  if(attacker && attacker.abilities && attacker.abilities.has("crit") && !isReport && Math.random()<CRIT_CHANCE){
+    isCrit=true; dmg*=CRIT_MULT;
+  }
+  // メタル: shrugs off any hit for just 1 dmg — unless a クリティカル lands (or report)
+  let metalGuard=false;
+  if(target.def.metal && !isReport && !isCrit){ dmg=1; metalGuard=true; }
   // barrier
   if(target.barrier>0 && !isReport){
     if(attacker && attacker.abilities.has("barrierBreaker")){
@@ -428,9 +454,12 @@ function dealDamage(attacker, target, dmg, isReport){
       return; // damage absorbed by barrier
     }
   }
-  if(mult>1) floatText(target.x+target.w/2, 90, Math.round(dmg)+"!", "#ffd23f");
+  if(isCrit) floatText(target.x+target.w/2, 96, "クリティカル！"+Math.round(dmg), "#ff5b5b");
+  else if(mult>1) floatText(target.x+target.w/2, 90, Math.round(dmg)+"!", "#ffd23f");
+  else if(metalGuard && Math.random()<0.5) floatText(target.x+target.w/2, 84, "カキーン！", "#cfe8ff");
   target.hp-=dmg;
   target.flashT=0.12;
+  hurtFlinch(target, isCrit);
   dust(target.x + (target.side==="enemy"? target.w*0.2 : target.w*0.8), 50, "#efe6d2");
   if(target.hpEl) target.hpEl.style.width=Math.max(0,target.hp/target.maxhp*100)+"%";
 
@@ -507,8 +536,8 @@ function updateSide(list,dt,side){
     if(a.dead) continue;
     if(a.flashT>0){ a.flashT-=dt; a.dom.classList.toggle("hit-flash",a.flashT>0); }
     // zombie revive
-    if(a.down){ if(G.time>=a.reviveAt){ a.down=false; a.dom.classList.remove("down"); a.hp=a.maxhp*0.5; if(a.hpEl) a.hpEl.style.width="50%"; floatText(a.x+a.w/2,80,"いきかえった!","#8ab84f"); } else continue; }
-    if(a.stun>0){ a.stun-=dt; a.dom.classList.add("stun"); if(a.stun<=0) a.dom.classList.remove("stun"); else continue; }
+    if(a.down){ if(G.time>=a.reviveAt){ a.down=false; a.dom.classList.remove("down"); a.hp=a.maxhp; if(a.hpEl) a.hpEl.style.width="100%"; floatText(a.x+a.w/2,80,"ふっかつ！ぜんかい！","#8ab84f"); if(a.svgEl) a.svgEl.animate([{transform:"scale(.6)"},{transform:"scale(1.15)"},{transform:"scale(1)"}],{duration:380,easing:"ease-out"}); } else { a.dom.classList.remove("walking"); continue; } }
+    if(a.stun>0){ a.stun-=dt; a.dom.classList.add("stun"); if(a.stun<=0) a.dom.classList.remove("stun"); else { a.dom.classList.remove("walking"); continue; } }
     if(a.atkTimer>0) a.atkTimer-=dt;
 
     // boss: warp + knockback shockwave
@@ -524,6 +553,7 @@ function updateSide(list,dt,side){
       } else if(a.x+a.w >= enemyBaseX()-a.def.range){ blocked=true;
         if(a.atkTimer<=0){ a.atkTimer=a.def.atkCd; G.eHP=Math.max(0,G.eHP-a.def.dmg); dust(enemyBaseX(),120,"#fb8"); floatText(enemyBaseX(),120+Math.random()*30,"-"+a.def.dmg,"#fff"); } }
       if(!blocked){ a.x+=a.def.speed*dt; if(a.x+a.w>enemyBaseX()) a.x=enemyBaseX()-a.w; pos(a); }
+      a.dom.classList.toggle("walking", !blocked);
     } else {
       let blocked=false;
       if(target){
@@ -532,12 +562,14 @@ function updateSide(list,dt,side){
       } else if(a.x <= playerBaseX()+a.def.range){ blocked=true;
         if(a.atkTimer<=0){ a.atkTimer=a.def.atkCd; G.pHP=Math.max(0,G.pHP-a.def.dmg); dust(playerBaseX()+30,120,"#f88"); floatText(playerBaseX()+30,120+Math.random()*30,"-"+a.def.dmg,"#ff3b5c"); } }
       if(!blocked){ a.x-=a.def.speed*dt; if(a.x<playerBaseX()) a.x=playerBaseX(); pos(a); }
+      a.dom.classList.toggle("walking", !blocked);
     }
   }
 }
 
 // an actor attacks: area hits everyone in range, else just the front
 function attack(a){
+  lungeAttack(a);
   const foes = a.side==="player"? G.enemies : G.units;
   if(a.def.abilities && a.def.abilities.has("area")){
     let any=false;
@@ -625,7 +657,18 @@ function endGame(win){
   G.over=true; G.running=false;
   const reward = win ? 600 + G.battleXp : Math.round(G.battleXp*0.6);
   profile.xp += reward;
-  if(win) profile.gachaPoints = (profile.gachaPoints||0) + 1;   // 1 ガチャポイント per clear
+  if(win){
+    // gacha points are a lucky drop: sometimes 0, sometimes 1, rarely 2
+    const r=Math.random();
+    const pts = r<0.40 ? 0 : (r<0.85 ? 1 : 2);
+    profile.gachaPoints = (profile.gachaPoints||0) + pts;
+    const line=$("#winPtLine");
+    if(line){
+      if(pts===0){ line.textContent="🎰 こんかいは ガチャポイント なし… ざんねん！"; line.style.color="#9aa0b0"; }
+      else if(pts===1){ line.textContent="🎰 ＋1 ガチャポイント ゲット！"; line.style.color="#ff8af0"; }
+      else { line.textContent="🎰 ＋2 ガチャポイント！ 大あたり！🎉"; line.style.color="#ffd23f"; }
+    }
+  }
   saveProfile();
   $(win?"#winXp":"#loseXp").textContent = reward;
   setTimeout(()=>$(win?"#winOverlay":"#loseOverlay").classList.add("show"), 500);

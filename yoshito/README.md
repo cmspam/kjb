@@ -18,12 +18,17 @@ or **⬆ きょうか** to upgrade your characters with XP.
 ### Types & combat (ぞくせい)
 Enemies have types: 赤 / 浮遊 / 黒 / ゾンビ / エイリアン / 悪魔 / メタル / 星.
 - If your character is **めっぽう強い** against that type → **1.5× damage**.
-- **ゾンビ** revive once when killed — unless a **ゾンビキラー** finishes them (then they stay dead).
-- **エイリアン / 悪魔** have a **バリア**. Only a **バリアブレイカー** pops it.
-- **メタル** only takes 1 damage unless hit by a **クリティカル** character.
+- **ゾンビ** revive once when killed, and come back at **FULL HP (ぜんかい)** — unless a
+  **ゾンビキラー** finishes them (then they stay dead).
+- **メタル** has **low HP** but shrugs off every hit for just **1 damage** — no matter how
+  strong. The only way through is a **クリティカル⚡**, which deals full (3×) damage.
+- **クリティカル⚡** characters have a **20% chance per attack** to land a critical for
+  **3× damage** (and it's the only thing that hurts メタル).
+- **黒 / エイリアン / 悪魔** carry a **シールド (barrier)** that must be broken before they
+  take damage. Only a **バリアブレイカー** pops it instantly.
 - The **BOSS (ギガ・インポスター)** has a barrier, **warps** forward, and does a
   **knockback shockwave** that pushes your army back.
-- Every hit puffs out **dust particles**.
+- Characters **march, lunge on attack, and flinch when hit** — and every hit puffs **dust**.
 
 ### 🚨 レポート! (Report the Impostor)
 When the **レポート!** button glows, tap it to call an **きんきゅうしょうしゅう
@@ -41,7 +46,8 @@ Charges over time.
 | ボネカ・アンバラブ | **EX** | **バリアブレイカー**・ふっとばし・タンク |
 
 ### 🎰 Gacha (ガチャ)
-Clear the game to earn **ガチャポイント** (1 per win). Spend points to **まわす** (pull):
+Clearing the game is a **lucky draw** for **ガチャポイント**: sometimes you get **0**,
+usually **1**, and rarely **2** (大あたり!). Spend points to **まわす** (pull):
 - Every pull gives a **character**, picked by **rarity**: ★ノーマル 50% / ★★レア 30% /
   ★★★スーパーレア 14% / ★★★★レジェンド 6% (shown with color-coded frames).
 - If you **already own** that character, it **converts to XP** (more XP for higher rarity).
