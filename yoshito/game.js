@@ -612,6 +612,27 @@ function attack(a){
   const frontX = a.side==="player"? a.x+a.w : a.x;
   const land = ()=>{ for(const f of targets) dealDamage(a,f,a.def.dmg); };
 
+  // Tung's secondary: a ~30% "home run" — he bats a baseball at the front foe
+  // (ranged hit, extra damage, sends it flying back)
+  if(style==="swing" && a.side==="player" && Math.random()<0.3){
+    playAttackAnim(a, "swing");
+    const f = frontFor(a);
+    const tx = f ? f.x + f.w/2 : frontX + dir*170;
+    floatText(frontX, 98, "ホームラン！", "#ffd23f");
+    launchProjectile("baseball", frontX, 66, tx, 58, ()=>{
+      const tgt = (f && !f.dead && !f.down) ? f : frontFor(a);
+      if(tgt){
+        dealDamage(a, tgt, Math.round(a.def.dmg*1.4));
+        if(!tgt.def.boss && !tgt.dead){
+          tgt.x = Math.min(enemyBaseX()-tgt.w, tgt.x + 64); pos(tgt);
+          tgt.stun = Math.max(tgt.stun, 0.5);
+          shock(tgt.x+tgt.w/2, 70, 72, "#ffd23f");
+        }
+      }
+    });
+    return;
+  }
+
   playAttackAnim(a, style);
 
   if(style==="bomb" || style==="shoot"){
@@ -659,19 +680,23 @@ function meleeImpact(style, x, dir, isArea, range){
 
 // fly a bomb/orb from attacker to target, then explode and apply damage
 function launchProjectile(style, fromX, fromY, toX, toY, onHit){
-  const p=el(`<div class="proj ${style==="bomb"?"bomb":"orb"}"></div>`);
+  const cls = style==="bomb"?"bomb" : (style==="baseball"?"baseball":"orb");
+  const p=el(`<div class="proj ${cls}"></div>`);
   p.style.left=fromX+"px"; p.style.bottom=fromY+"px";
   FIELD().appendChild(p);
   const dur = style==="bomb"?340:230;
-  const midY = Math.max(fromY,toY) + (style==="bomb"?56:12);
+  const midY = Math.max(fromY,toY) + (style==="bomb"?56:14);
   p.animate([
     {left:fromX+"px", bottom:fromY+"px"},
     {left:(fromX+(toX-fromX)*0.5)+"px", bottom:midY+"px", offset:.5},
     {left:toX+"px", bottom:toY+"px"},
   ],{duration:dur, easing:"linear", fill:"forwards"});
   if(style==="bomb") p.animate([{transform:"rotate(0)"},{transform:"rotate(230deg)"}],{duration:dur});
+  else if(style==="baseball") p.animate([{transform:"rotate(0)"},{transform:"rotate(540deg)"}],{duration:dur});
   setTimeout(()=>{ p.remove();
-    if(style==="bomb"){ boom(toX,toY); } else { shock(toX,toY,56,"#9fd8ff"); impactStar(toX,toY,"#cfeaff"); }
+    if(style==="bomb"){ boom(toX,toY); }
+    else if(style==="baseball"){ impactStar(toX,toY,"#ffffff"); dust(toX,toY,"#efe6d2"); dust(toX,toY,"#fff"); }
+    else { shock(toX,toY,56,"#9fd8ff"); impactStar(toX,toY,"#cfeaff"); }
     onHit();
   }, dur);
 }

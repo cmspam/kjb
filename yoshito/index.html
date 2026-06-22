@@ -121,6 +121,8 @@
   .proj.bomb{background:radial-gradient(circle at 35% 30%,#5a5a64,#111);box-shadow:0 1px 3px #000;}
   .proj.bomb::after{content:"";position:absolute;top:-5px;left:6px;width:3px;height:6px;background:#f0a83a;border-radius:2px;box-shadow:0 0 5px #ffb24a;}
   .proj.orb{background:radial-gradient(circle at 35% 30%,#fff,#6cf 60%,#39f);box-shadow:0 0 10px #6cf,0 0 4px #fff;}
+  .proj.baseball{background:radial-gradient(circle at 35% 30%,#fff,#dcdce2);box-shadow:0 1px 2px #0007;}
+  .proj.baseball::before{content:"";position:absolute;inset:2px;border-radius:50%;border:1.5px solid transparent;border-left-color:#e23b3b;border-right-color:#e23b3b;transform:rotate(28deg);}
   .hitstar{position:absolute;z-index:9;font-size:26px;line-height:1;color:#ffe08a;text-shadow:0 0 6px #fff;pointer-events:none;transform:translate(-50%,50%);animation:hitstarPop .34s ease-out forwards;}
   @keyframes hitstarPop{0%{transform:translate(-50%,50%) scale(.2) rotate(0);opacity:0;}40%{opacity:1;}100%{transform:translate(-50%,50%) scale(1.5) rotate(45deg);opacity:0;}}
   .slashfx{position:absolute;z-index:9;height:5px;border-radius:3px;pointer-events:none;transform:rotate(var(--rot));animation:slashGo .27s ease-out forwards;}
