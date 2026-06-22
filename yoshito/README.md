@@ -26,9 +26,13 @@ Enemies have types: 赤 / 浮遊 / 黒 / ゾンビ / エイリアン / 悪魔 / 
   **3× damage** (and it's the only thing that hurts メタル).
 - **黒 / エイリアン / 悪魔** carry a **シールド (barrier)** that must be broken before they
   take damage. Only a **バリアブレイカー** pops it instantly.
-- The **BOSS (ギガ・インポスター)** has a barrier, **warps** forward, and does a
-  **knockback shockwave** that pushes your army back.
+- The **BOSS (ギガ・インポスター)** has a big shield, a **knockback shockwave** that pushes
+  your army back, and **warps**: once it charges up (green glow), the next hit makes it
+  **blink to the left of the unit that hit it**, slipping past your front line.
 - Characters **march, lunge on attack, and flinch when hit** — and every hit puffs **dust**.
+
+The waves are **relentless** — many enemies, heavy shields, and **two boss** appearances.
+Keep a layered army, break shields with **レポート!** / **バリアブレイカー**, and level up.
 
 ### 🚨 レポート! (Report the Impostor)
 When the **レポート!** button glows, tap it to call an **きんきゅうしょうしゅう

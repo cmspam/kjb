@@ -153,30 +153,33 @@ const upgradeCost = lv => 200*lv;            // XP to go lv→lv+1
 
 // ---------------- enemies ----------------
 const ENEMY = {
-  redImp:   { name:"赤インポスター",       art:()=>ART.imp("red"),    type:["red"],   hp:130, dmg:16, range:46, atkCd:0.8, speed:40, scale:0.58, reward:30, xp:6 },
-  floatImp: { name:"浮遊インポスター",     art:()=>ART.imp("float"),  type:["float"], hp:150, dmg:18, range:46, atkCd:0.8, speed:52, scale:0.56, reward:34, xp:7 },
-  blackImp: { name:"黒インポスター",       art:()=>ART.imp("black"),  type:["black"], hp:300, dmg:32, range:46, atkCd:0.9, speed:34, scale:0.62, reward:48, xp:10, barrier:280 },
-  zombieImp:{ name:"ゾンビインポスター",   art:()=>ART.imp("zombie"), type:["zombie"],hp:180, dmg:20, range:46, atkCd:0.8, speed:46, scale:0.60, reward:40, xp:9, revive:1 },
-  alienImp: { name:"エイリアンインポスター",art:()=>ART.imp("alien"), type:["alien"], hp:200, dmg:22, range:48, atkCd:0.9, speed:38, scale:0.62, reward:50, xp:11, barrier:260 },
-  demonImp: { name:"悪魔インポスター",     art:()=>ART.imp("demon"),  type:["demon"], hp:320, dmg:34, range:50, atkCd:1.0, speed:30, scale:0.66, reward:70, xp:14, barrier:420, demon:true },
-  metalImp: { name:"メタルインポスター",   art:()=>ART.imp("metal"),  type:["metal"], hp:120, dmg:24, range:46, atkCd:0.9, speed:24, scale:0.62, reward:90, xp:18, metal:true },
-  boss:     { name:"ギガ・インポスター",   art:()=>ART.bossImpostor(),type:["star","alien"], hp:2400, dmg:70, range:64, atkCd:1.4, speed:18, scale:1.5, reward:400, xp:250, barrier:600, boss:true, warp:true, knockback:true },
+  redImp:   { name:"赤インポスター",       art:()=>ART.imp("red"),    type:["red"],   hp:175, dmg:18, range:46, atkCd:0.8, speed:40, scale:0.58, reward:32, xp:6 },
+  floatImp: { name:"浮遊インポスター",     art:()=>ART.imp("float"),  type:["float"], hp:200, dmg:20, range:46, atkCd:0.8, speed:54, scale:0.56, reward:36, xp:7 },
+  blackImp: { name:"黒インポスター",       art:()=>ART.imp("black"),  type:["black"], hp:390, dmg:34, range:46, atkCd:0.9, speed:34, scale:0.62, reward:52, xp:10, barrier:340 },
+  zombieImp:{ name:"ゾンビインポスター",   art:()=>ART.imp("zombie"), type:["zombie"],hp:240, dmg:24, range:46, atkCd:0.8, speed:46, scale:0.60, reward:44, xp:9, revive:1 },
+  alienImp: { name:"エイリアンインポスター",art:()=>ART.imp("alien"), type:["alien"], hp:270, dmg:26, range:48, atkCd:0.9, speed:38, scale:0.62, reward:54, xp:11, barrier:340 },
+  demonImp: { name:"悪魔インポスター",     art:()=>ART.imp("demon"),  type:["demon"], hp:440, dmg:40, range:50, atkCd:1.0, speed:30, scale:0.66, reward:76, xp:14, barrier:540, demon:true },
+  metalImp: { name:"メタルインポスター",   art:()=>ART.imp("metal"),  type:["metal"], hp:150, dmg:30, range:46, atkCd:0.9, speed:24, scale:0.62, reward:95, xp:18, metal:true },
+  boss:     { name:"ギガ・インポスター",   art:()=>ART.bossImpostor(),type:["star","alien"], hp:3200, dmg:85, range:64, atkCd:1.4, speed:18, scale:1.5, reward:420, xp:260, barrier:800, boss:true, warp:true, knockback:true },
 };
 
 // ---------------- sample level ----------------
 const LEVEL = {
-  playerTowerHP:1500, enemyTowerHP:1500,
-  coinRate:8,                  // base coins/sec at wallet Lv1 (per-level adds)
+  playerTowerHP:1800, enemyTowerHP:2200,
+  coinRate:9,                  // base coins/sec at wallet Lv1 (per-level adds)
   walletMaxLv:8,
   spawns:[
-    {t:1,e:"redImp"},{t:4,e:"redImp"},{t:7,e:"floatImp"},{t:10,e:"redImp"},{t:12,e:"zombieImp"},
-    {t:15,e:"blackImp"},{t:18,e:"floatImp"},{t:20,e:"redImp"},{t:22,e:"alienImp"},
-    {t:26,e:"zombieImp"},{t:28,e:"redImp"},{t:30,e:"blackImp"},{t:33,e:"demonImp"},
-    {t:36,e:"metalImp"},{t:38,e:"floatImp"},{t:40,e:"alienImp"},{t:42,e:"zombieImp"},
-    {t:45,e:"demonImp"},{t:48,e:"blackImp"},{t:50,e:"redImp"},{t:52,e:"metalImp"},
-    {t:56,e:"boss"},
-    {t:58,e:"alienImp"},{t:60,e:"zombieImp"},{t:62,e:"demonImp"},{t:64,e:"floatImp"},
-    {t:68,e:"metalImp"},{t:72,e:"demonImp"},{t:76,e:"alienImp"},{t:80,e:"blackImp"},
+    {t:1,e:"redImp"},{t:3,e:"redImp"},{t:5,e:"floatImp"},{t:7,e:"redImp"},{t:9,e:"zombieImp"},{t:11,e:"floatImp"},
+    {t:13,e:"blackImp"},{t:15,e:"redImp"},{t:17,e:"alienImp"},{t:19,e:"zombieImp"},{t:21,e:"floatImp"},
+    {t:23,e:"blackImp"},{t:25,e:"demonImp"},{t:27,e:"redImp"},{t:29,e:"metalImp"},{t:31,e:"alienImp"},
+    {t:33,e:"zombieImp"},{t:35,e:"demonImp"},{t:37,e:"floatImp"},{t:39,e:"blackImp"},{t:41,e:"alienImp"},
+    {t:43,e:"metalImp"},{t:45,e:"demonImp"},{t:47,e:"zombieImp"},{t:49,e:"redImp"},{t:51,e:"alienImp"},
+    {t:54,e:"boss"},
+    {t:56,e:"redImp"},{t:58,e:"floatImp"},{t:60,e:"blackImp"},{t:62,e:"zombieImp"},{t:64,e:"demonImp"},{t:66,e:"metalImp"},
+    {t:68,e:"alienImp"},{t:70,e:"demonImp"},{t:72,e:"floatImp"},{t:74,e:"blackImp"},{t:76,e:"metalImp"},{t:78,e:"alienImp"},
+    {t:80,e:"demonImp"},{t:82,e:"zombieImp"},
+    {t:86,e:"boss"},
+    {t:88,e:"demonImp"},{t:90,e:"metalImp"},{t:92,e:"alienImp"},{t:94,e:"blackImp"},{t:96,e:"demonImp"},{t:98,e:"metalImp"},
   ],
 };
 
