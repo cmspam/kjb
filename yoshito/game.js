@@ -104,6 +104,12 @@ const CHARS = [
 ];
 const charById = id => CHARS.find(c=>c.id===id);
 
+// per-character attack flavor (animation + impact effect). default "bonk".
+const ATK_STYLE = {
+  crew:"bonk", trala:"bite", tung:"swing", bomb:"bomb", capp:"slash", bone:"slam",
+  chimp:"bite", patapim:"slam", ballerina:"spin", lirili:"shoot", vaca:"slam",
+};
+
 // ---------------- gacha ----------------
 const RARITY = {
   N:  { stars:"★",    name:"ノーマル",      color:"#5aa9e6", weight:50, dupeXp:150 },
@@ -245,6 +251,19 @@ function hurtFlinch(target, big){
     [{transform:"translateX(0) scale(1)"},{transform:`translateX(${dx}px) scale(${s})`,offset:.4},{transform:"translateX(0) scale(1)"}],
     {duration:d, easing:"ease-out"});
 }
+// armed warp enemy blinks to the LEFT of (behind) the unit that just hit it — bypassing it
+function warpBypass(enemy, attacker){
+  enemy.warpArmed=false; enemy.warpTimer=6;
+  enemy.dom.classList.remove("warparmed");
+  shock(enemy.x+enemy.w/2, 80, enemy.w*1.3, "#b6ff00");
+  floatText(enemy.x+enemy.w/2, 120, "ワープ!", "#b6ff00");
+  let nx = Math.min(enemy.x, attacker.x - enemy.w - 8);
+  enemy.x = Math.max(playerBaseX(), nx); pos(enemy);
+  enemy.atkTimer = 0;                          // ready to strike whatever it landed in front of
+  shock(enemy.x+enemy.w/2, 80, enemy.w*1.3, "#b6ff00");
+  if(enemy.svgEl) enemy.svgEl.animate(
+    [{opacity:0,transform:"scale(.4)"},{opacity:1,transform:"scale(1)"}],{duration:280,easing:"ease-out"});
+}
 
 // ====================================================
 //  SHOP
@@ -359,7 +378,7 @@ function makeActor(def, side, charLevel){
     x: side==="player"? playerBaseX() : enemyBaseX()-px,
     atkTimer:0, stun:0, dead:false, down:false, reviveAt:0,
     reviveLeft: def.revive||0, dom:wrap, svgEl:svg, hpEl:wrap.querySelector(".mini-hp>i"),
-    flashT:0, warpTimer:3, kbTimer: def.boss?2:0,
+    flashT:0, warpTimer:3, warpArmed:false, kbTimer: def.boss?2:0,
     barrier: def.barrier||0, barrierMax: def.barrier||0,
     abilities: def.abilities||new Set(), strong: def.strong||new Set() };
 
@@ -392,7 +411,8 @@ function trySpawn(id){
   G.cooldowns[id]=cd; G.cooldowns["_max_"+id]=cd;
   const pw=powersAt(c,lv);
   const def={ name:c.name, art:c.art, hp:st.hp, dmg:st.dmg, range:st.range,
-    atkCd:st.atkCd, speed:st.speed, scale:st.scale, abilities:pw.abilities, strong:pw.strong };
+    atkCd:st.atkCd, speed:st.speed, scale:st.scale, atk:ATK_STYLE[c.id]||"bonk",
+    abilities:pw.abilities, strong:pw.strong };
   G.units.push(makeActor(def,"player",lv));
   syncHud();
 }
@@ -482,6 +502,10 @@ function dealDamage(attacker, target, dmg, isReport){
     }
     killActor(target, attacker);
   }
+  // warp-bypass: an armed warp enemy, once a player unit lands a hit, blinks past it
+  if(!target.dead && !target.down && target.def.warp && target.warpArmed && attacker && attacker.side==="player" && !isReport){
+    warpBypass(target, attacker);
+  }
 }
 
 function killActor(target, attacker){
@@ -541,7 +565,8 @@ function updateSide(list,dt,side){
     if(a.atkTimer>0) a.atkTimer-=dt;
 
     // boss: warp + knockback shockwave
-    if(a.def.warp){ a.warpTimer-=dt; if(a.warpTimer<=0){ a.warpTimer=5; if(a.x>W()*0.4){ a.x-=90; pos(a); shock(a.x+a.w,a.def.scale*60,80,"#b6ff00"); floatText(a.x+a.w/2,120,"ワープ!","#b6ff00"); } } }
+    // warp: charge up, then ARM. The actual blink happens when it gets hit (see dealDamage).
+    if(a.def.warp && !a.warpArmed){ a.warpTimer-=dt; if(a.warpTimer<=0){ a.warpArmed=true; a.dom.classList.add("warparmed"); floatText(a.x+a.w/2,130,"ワープ じゅうでん!","#b6ff00"); } }
     if(a.def.knockback && a.side==="enemy"){ a.kbTimer-=dt; if(a.kbTimer<=0){ a.kbTimer=4.5; bossShock(a); } }
 
     const target=frontFor(a);
@@ -567,21 +592,107 @@ function updateSide(list,dt,side){
   }
 }
 
-// an actor attacks: area hits everyone in range, else just the front
+// an actor attacks. each character has its own flavour (a.def.atk):
+// swing (club), bomb/shoot (projectile), slash, slam, spin, bite, bonk.
 function attack(a){
-  lungeAttack(a);
+  const style = a.def.atk || "bonk";
+  const isArea = !!(a.def.abilities && a.def.abilities.has("area"));
   const foes = a.side==="player"? G.enemies : G.units;
-  if(a.def.abilities && a.def.abilities.has("area")){
-    let any=false;
+  // gather everyone this swing will hit
+  const targets=[];
+  if(isArea){
     for(const f of foes){ if(f.dead||f.down) continue;
       const inRange = a.side==="player" ? (f.x+f.w>=a.x && f.x-(a.x+a.w)<=a.def.range)
                                         : (f.x<=a.x+a.w && a.x-(f.x+f.w)<=a.def.range);
-      if(inRange){ dealDamage(a,f,a.def.dmg); any=true; }
+      if(inRange) targets.push(f);
     }
-    if(any) shock(a.x+(a.side==="player"?a.w:0), 60, a.def.range*1.6, "#ffd27a");
+  } else { const f=frontFor(a); if(f) targets.push(f); }
+
+  const dir = a.side==="player"? 1 : -1;
+  const frontX = a.side==="player"? a.x+a.w : a.x;
+  const land = ()=>{ for(const f of targets) dealDamage(a,f,a.def.dmg); };
+
+  playAttackAnim(a, style);
+
+  if(style==="bomb" || style==="shoot"){
+    const tx = targets.length ? targets.reduce((s,f)=>s+f.x+f.w/2,0)/targets.length
+                              : frontX + dir*a.def.range*0.8;
+    launchProjectile(style, frontX, 74, tx, 56, land);
   } else {
-    const f=frontFor(a); if(f) dealDamage(a,f,a.def.dmg);
+    land();
+    meleeImpact(style, frontX, dir, isArea, a.def.range);
   }
+}
+
+// attacker sprite motion, per style (auto-clears, so it never fights CSS state)
+function playAttackAnim(a, style){
+  const s=a.svgEl; if(!s) return;
+  if(style==="swing"){
+    const arm=s.querySelector(".swingarm");
+    if(arm) arm.animate([{transform:"rotate(-50deg)"},{transform:"rotate(26deg)",offset:.5},{transform:"rotate(0deg)"}],{duration:300,easing:"ease-in"});
+    s.animate([{transform:"rotate(0)"},{transform:"rotate(7deg)",offset:.5},{transform:"rotate(0)"}],{duration:300,easing:"ease-out"});
+  } else if(style==="bomb"){
+    s.animate([{transform:"translateX(0)"},{transform:"translateX(-8px)",offset:.25},{transform:"translateX(0)"}],{duration:260,easing:"ease-out"});
+  } else if(style==="shoot"){
+    s.animate([{transform:"scale(1,1)"},{transform:"scale(1.09,0.93)",offset:.3},{transform:"scale(1,1)"}],{duration:240});
+  } else if(style==="slash"){
+    s.animate([{transform:"translateX(0)"},{transform:"translateX(15px)",offset:.3},{transform:"translateX(3px)",offset:.55},{transform:"translateX(17px)",offset:.78},{transform:"translateX(0)"}],{duration:260,easing:"ease-out"});
+  } else if(style==="slam"){
+    s.animate([{transform:"translateY(0) scale(1,1)"},{transform:"translateY(-11px) scale(1.05,1.05)",offset:.4},{transform:"translateY(0) scale(1.04,0.94)",offset:.7},{transform:"translateY(0) scale(1,1)"}],{duration:340,easing:"ease-in"});
+  } else if(style==="spin"){
+    s.animate([{transform:"rotate(0)"},{transform:"rotate(360deg)"}],{duration:340,easing:"ease-in-out"});
+  } else if(style==="bite"){
+    s.animate([{transform:"translateX(0) scaleX(1)"},{transform:"translateX(13px) scaleX(1.08)",offset:.4},{transform:"translateX(0) scaleX(1)"}],{duration:220,easing:"ease-out"});
+  } else { lungeAttack(a); }
+}
+
+// melee impact flourish at the contact point
+function meleeImpact(style, x, dir, isArea, range){
+  if(isArea) shock(x, 60, range*1.6, "#ffd27a");
+  if(style==="swing"){ impactStar(x+dir*10, 64, "#ffe08a"); }
+  else if(style==="slash"){ slashArc(x+dir*8, 58, dir, "#bdeaff"); slashArc(x+dir*15, 50, dir, "#ffffff"); }
+  else if(style==="spin"){ slashArc(x+dir*8, 58, dir, "#ff9ec4"); }
+  else if(style==="slam"){ shock(x+dir*6, 40, 72, "#ffffff"); impactStar(x+dir*6, 46, "#ffffff"); dust(x+dir*6,40,"#e8e0cf"); }
+  else if(style==="bite"){ slashArc(x+dir*6, 56, dir, "#cdebff"); }
+  else { dust(x+dir*6, 50, "#efe6d2"); }
+}
+
+// fly a bomb/orb from attacker to target, then explode and apply damage
+function launchProjectile(style, fromX, fromY, toX, toY, onHit){
+  const p=el(`<div class="proj ${style==="bomb"?"bomb":"orb"}"></div>`);
+  p.style.left=fromX+"px"; p.style.bottom=fromY+"px";
+  FIELD().appendChild(p);
+  const dur = style==="bomb"?340:230;
+  const midY = Math.max(fromY,toY) + (style==="bomb"?56:12);
+  p.animate([
+    {left:fromX+"px", bottom:fromY+"px"},
+    {left:(fromX+(toX-fromX)*0.5)+"px", bottom:midY+"px", offset:.5},
+    {left:toX+"px", bottom:toY+"px"},
+  ],{duration:dur, easing:"linear", fill:"forwards"});
+  if(style==="bomb") p.animate([{transform:"rotate(0)"},{transform:"rotate(230deg)"}],{duration:dur});
+  setTimeout(()=>{ p.remove();
+    if(style==="bomb"){ boom(toX,toY); } else { shock(toX,toY,56,"#9fd8ff"); impactStar(toX,toY,"#cfeaff"); }
+    onHit();
+  }, dur);
+}
+
+// --- impact fx ---
+function impactStar(x,y,color){
+  const s=el(`<div class="hitstar">✸</div>`);
+  s.style.left=x+"px"; s.style.bottom=y+"px"; if(color) s.style.color=color;
+  FIELD().appendChild(s); setTimeout(()=>s.remove(),340);
+}
+function slashArc(x,y,dir,color){
+  const w=36, s=el(`<div class="slashfx"></div>`);
+  s.style.left=(x-w/2)+"px"; s.style.bottom=y+"px"; s.style.width=w+"px";
+  s.style.background=`linear-gradient(90deg,transparent,${color},transparent)`;
+  s.style.setProperty("--rot",(dir>0?-35:35)+"deg");
+  FIELD().appendChild(s); setTimeout(()=>s.remove(),280);
+}
+function boom(x,y){
+  shock(x,y,96,"#ff8a00"); shock(x,y,58,"#ffd23f");
+  impactStar(x,y,"#ffd23f");
+  for(let i=0;i<3;i++) dust(x,y,"#ffb24a");
 }
 
 // boss shockwave knockback

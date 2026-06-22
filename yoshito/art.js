@@ -252,11 +252,13 @@ ART.tung = function () {
     <path d="M40 30 Q40 12 60 12 Q80 12 80 30 L80 98 Q80 102 71 102 L49 102 Q40 102 40 98 Z" fill="url(#w${u})" stroke="${woodD}" stroke-width="3"/>
     <path d="M50 24 Q54 60 50 94 M70 24 Q66 60 70 94" stroke="${woodD}" stroke-width="2" fill="none" opacity=".38"/>
     <ellipse cx="60" cy="20" rx="16" ry="5" fill="${woodL}" opacity=".55"/>
-    <!-- right arm + bat -->
-    <rect x="78" y="48" width="9" height="26" rx="4.5" fill="${wood}" stroke="${woodD}" stroke-width="2" transform="rotate(22 82 60)"/>
-    <g transform="rotate(30 98 42)">
-      <rect x="93" y="14" width="10" height="38" rx="5" fill="${woodL}" stroke="${woodD}" stroke-width="2"/>
-      <rect x="94" y="46" width="8" height="9" rx="2" fill="${woodD}"/>
+    <!-- right arm + bat (the .swingarm group rotates when he attacks) -->
+    <g class="swingarm" style="transform-box:view-box;transform-origin:64px 56px">
+      <rect x="78" y="48" width="9" height="26" rx="4.5" fill="${wood}" stroke="${woodD}" stroke-width="2" transform="rotate(22 82 60)"/>
+      <g transform="rotate(30 98 42)">
+        <rect x="93" y="14" width="10" height="38" rx="5" fill="${woodL}" stroke="${woodD}" stroke-width="2"/>
+        <rect x="94" y="46" width="8" height="9" rx="2" fill="${woodD}"/>
+      </g>
     </g>
     <!-- angry brows -->
     <path d="M47 40 L60 47 M73 40 L60 47" stroke="${woodD}" stroke-width="4.5" stroke-linecap="round"/>
