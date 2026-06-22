@@ -22,6 +22,30 @@ function shade(hex, pct) {
   return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
 
+/* ---- level-up evolution ----
+   Crown/jewels/wings/sparkles that grow as a unit levels toward 10, drawn
+   inside the sprite's own viewBox. hx,hy = head centre / head-top. Returns ""
+   below Lv3 (and for enemies, which pass no level). */
+function evoDecor(lv, hx, hy){
+  lv = lv|0; if(lv<3) return "";
+  const gold="#ffd23f", goldD="#b8860b", silver="#e2e8f2", silverD="#9aa6b8";
+  let s="";
+  if(lv>=10){ // ethereal wings behind the head
+    s += `<path d="M${hx-15} ${hy+6} q-17 -12 -27 -2 q15 0 25 12 Z" fill="#fff" opacity=".45"/>`;
+    s += `<path d="M${hx+15} ${hy+6} q17 -12 27 -2 q-15 0 -25 12 Z" fill="#fff" opacity=".45"/>`;
+  }
+  if(lv>=5){
+    const c = lv>=8?gold:silver, cd = lv>=8?goldD:silverD;
+    const top=Math.max(3, hy-12), base=hy+2, mid=(top+base)/2;
+    s += `<path d="M${hx-13} ${base} L${hx-13} ${top} L${hx-6} ${mid} L${hx} ${top-2} L${hx+6} ${mid} L${hx+13} ${top} L${hx+13} ${base} Z" fill="${c}" stroke="${cd}" stroke-width="1.5" stroke-linejoin="round"/>`;
+    if(lv>=8) s += `<circle cx="${hx}" cy="${top}" r="1.7" fill="#ff5b8a"/><circle cx="${hx-9}" cy="${mid}" r="1.4" fill="#5ad1ff"/><circle cx="${hx+9}" cy="${mid}" r="1.4" fill="#5ad1ff"/>`;
+  } else if(lv>=3){ // a single rank star
+    s += `<text x="${hx}" y="${hy-3}" font-size="13" text-anchor="middle" fill="${gold}" stroke="${goldD}" stroke-width=".6" font-family="sans-serif">★</text>`;
+  }
+  if(lv>=10) s += `<g fill="#fff"><circle cx="${hx-19}" cy="${hy+1}" r="1.5"/><circle cx="${hx+19}" cy="${hy-3}" r="1.7"/><circle cx="${hx+7}" cy="${hy-17}" r="1.4"/></g>`;
+  return s;
+}
+
 /* ---- shared Among-Us "bean" builder ----
    Draws the classic crewmate silhouette with volume shading, a glossy
    visor, backpack and ground shadow. Callers pass face/back/front art
@@ -65,17 +89,18 @@ function amongBean(o){
     <ellipse cx="82" cy="48" rx="3" ry="2.2" fill="#fff" opacity=".55"/>
     ${o.face || ""}
     ${o.front || ""}
+    ${evoDecor(o.lv, 64, 20)}
   </svg>`;
 }
 
 /* ---- Among Us CREWMATE (your basic trooper) ---- */
-ART.crewmate = function (color, visor) {
-  return amongBean({ color: color || "#3fa9f5", visor: visor });
+ART.crewmate = function (color, visor, lv) {
+  return amongBean({ color: color || "#3fa9f5", visor: visor, lv: lv });
 };
 
 /* ---- FUSED IMPOSTOR builder — Among Us silhouette + element accessory ----
    kind: red | float | black | zombie | alien | demon | metal           */
-ART.imp = function (kind) {
+ART.imp = function (kind, lv) {
   const P = {
     red:   { b:"#d11a36", v:"#ffd0d0" },
     float: { b:"#7fc7ff", v:"#eaf6ff" },
@@ -134,14 +159,14 @@ ART.imp = function (kind) {
       <path d="M48 30 q5 9 0 18" stroke="#fff" stroke-width="3" opacity=".55" fill="none"/>`;
   }
 
-  return amongBean({ color, visor, face, back, front, defs });
+  return amongBean({ color, visor, face, back, front, defs, lv });
 };
 
 /* standalone red impostor (kept for compatibility) */
 ART.impostor = function () { return ART.imp("red"); };
 
 /* ---- TRALALERO TRALALA — blue shark on three sneaker'd legs ---- */
-ART.tralalero = function () {
+ART.tralalero = function (lv) {
   const body = "#4aa3ea", bodyD = "#23618f", bodyL = "#8fcdf5", belly = "#eaf6ff", fin = "#2e6da4";
   const shoe = "#1e3a8a", shoeD = "#0c1f52", sole = "#f6f6f6";
   const u = U();
@@ -180,11 +205,12 @@ ART.tralalero = function () {
     <circle cx="90" cy="54" r="6.5" fill="#fff" stroke="${bodyD}" stroke-width="1.5"/>
     <circle cx="91" cy="55" r="3.2" fill="#08203a"/>
     <circle cx="89.4" cy="53" r="1.2" fill="#fff"/>
+    ${evoDecor(lv, 90, 42)}
   </svg>`;
 };
 
 /* ---- BOMBARDIRO CROCODILO — croc head fused to a bomber plane (TANK) ---- */
-ART.bombardiro = function () {
+ART.bombardiro = function (lv) {
   const metal = "#7a8a5e", metalD = "#3f4a30", metalL = "#a6b67e";
   const croc = "#5f7d3a", crocD = "#34471e", crocL = "#8aac58";
   const u = U();
@@ -228,11 +254,12 @@ ART.bombardiro = function () {
     <circle cx="92" cy="49" r="5.5" fill="#dff0b2" stroke="${crocD}" stroke-width="1.5"/>
     <circle cx="93" cy="49" r="2.6" fill="#1b2a0a"/><circle cx="91.6" cy="48" r="1" fill="#fff"/>
     <circle cx="111" cy="52" r="1.6" fill="${crocD}"/>
+    ${evoDecor(lv, 60, 48)}
   </svg>`;
 };
 
 /* ---- TUNG TUNG TUNG SAHUR — angry wooden log with a tiny bat (HITTER) ---- */
-ART.tung = function () {
+ART.tung = function (lv) {
   const wood = "#b07c45", woodD = "#6e441f", woodL = "#d8ad72";
   const u = U();
   return `
@@ -270,11 +297,12 @@ ART.tung = function () {
     <ellipse cx="60" cy="69" rx="9" ry="10" fill="#3a1c0a"/>
     <path d="M52 65 Q60 61 68 65" stroke="${woodD}" stroke-width="2" fill="none"/>
     <ellipse cx="60" cy="73" rx="4.5" ry="4" fill="#9a3a16"/>
+    ${evoDecor(lv, 60, 12)}
   </svg>`;
 };
 
 /* ---- CAPPUCCINO ASSASSINO (EX) — ninja coffee cup with twin daggers ---- */
-ART.cappuccino = function () {
+ART.cappuccino = function (lv) {
   const cup = "#f3e9d6", cupD = "#b89b6e", cupL = "#fffaf0", coffee = "#5a3a22", foam = "#fff7ea";
   const cloak = "#6e4326", steel = "#dfe5ee", steelD = "#7d8694";
   const u = U();
@@ -314,11 +342,12 @@ ART.cappuccino = function () {
     <rect x="49" y="94" width="22" height="6" rx="3" fill="#241712"/>
     <!-- steam -->
     <path d="M52 28 q-5 -8 2 -12 M62 27 q5 -8 -2 -12 M72 28 q5 -8 -2 -12" stroke="#fff" stroke-width="2" fill="none" opacity=".55" stroke-linecap="round"/>
+    ${evoDecor(lv, 60, 30)}
   </svg>`;
 };
 
 /* ---- BONECA AMBALABU (EX) — frog head on a car tire, human legs ---- */
-ART.boneca = function () {
+ART.boneca = function (lv) {
   const frog = "#74b84a", frogD = "#3f6e26", frogL = "#a3da70", skin = "#e7b487", skinD = "#b07e54";
   const u = U();
   return `
@@ -354,6 +383,7 @@ ART.boneca = function () {
     <circle cx="47" cy="11.5" r="1.2" fill="#fff"/><circle cx="71" cy="11.5" r="1.2" fill="#fff"/>
     <path d="M46 34 Q60 44 74 34" stroke="${frogD}" stroke-width="3" fill="none" stroke-linecap="round"/>
     <circle cx="46" cy="32" r="2.5" fill="#e88" opacity=".55"/><circle cx="74" cy="32" r="2.5" fill="#e88" opacity=".55"/>
+    ${evoDecor(lv, 60, 8)}
   </svg>`;
 };
 
@@ -432,7 +462,7 @@ ART.bossImpostor = function () {
 /* ========== GACHA / BRAINROT NEW CHARACTERS ========== */
 
 /* チンパンジーニ・バナニーニ — monkey peeking out of a banana (★ N) */
-ART.chimp = function () {
+ART.chimp = function (lv) {
   const ban="#ffd33a", banD="#d9a400", banL="#ffe98a", tip="#6e4a1f", face="#caa06a", faceD="#8a6a3f", dark="#3a2a18";
   const u = U();
   return `
@@ -454,11 +484,12 @@ ART.chimp = function () {
     <path d="M53 74 Q58 79 63 74" stroke="${faceD}" stroke-width="2" fill="none"/>
     <path d="M82 80 q12 4 9 17" stroke="${faceD}" stroke-width="5" fill="none" stroke-linecap="round"/>
     <rect x="48" y="98" width="8" height="16" rx="4" fill="${faceD}"/><rect x="62" y="98" width="8" height="16" rx="4" fill="${faceD}"/>
+    ${evoDecor(lv, 58, 40)}
   </svg>`;
 };
 
 /* ブルブル・パタピム — forest creature: bark body, long nose, big feet (★★ R) */
-ART.patapim = function () {
+ART.patapim = function (lv) {
   const bark="#9a6634", barkD="#5f3d1c", barkL="#c08a4e", nose="#ead2a0", noseD="#b89a66", leaf="#54b34a", leafD="#2e7d32";
   const u = U();
   return `
@@ -480,11 +511,12 @@ ART.patapim = function () {
     <circle cx="49" cy="40" r="1.6" fill="#fff"/><circle cx="67" cy="40" r="1.6" fill="#fff"/>
     <path d="M44 56 Q60 52 76 56 Q80 70 60 74 Q40 70 44 56 Z" fill="${nose}" stroke="${noseD}" stroke-width="2.5"/>
     <ellipse cx="53" cy="64" rx="2" ry="3" fill="${noseD}"/><ellipse cx="67" cy="64" rx="2" ry="3" fill="${noseD}"/>
+    ${evoDecor(lv, 60, 26)}
   </svg>`;
 };
 
 /* バレリーナ・カプチーナ — ballerina with a cappuccino-cup head (★★ R) */
-ART.ballerina = function () {
+ART.ballerina = function (lv) {
   const cup="#f3e9d6", cupD="#b89b6e", cupL="#fffaf0", foam="#fff7ea", tutu="#ff9ec4", tutuD="#e06a99", skin="#ffe0c4", leg="#ffd0b0", legD="#caa080";
   const u = U();
   return `
@@ -511,11 +543,12 @@ ART.ballerina = function () {
     <path d="M54 46 Q60 50 66 46" stroke="${cupD}" stroke-width="2" fill="none"/>
     <circle cx="50" cy="44" r="2.4" fill="#ffb0c8" opacity=".7"/><circle cx="70" cy="44" r="2.4" fill="#ffb0c8" opacity=".7"/>
     <path d="M54 14 q-4 -6 2 -10 M66 14 q4 -6 -2 -10" stroke="#fff" stroke-width="2" fill="none" opacity=".6" stroke-linecap="round"/>
+    ${evoDecor(lv, 60, 16)}
   </svg>`;
 };
 
 /* リリリ・ラリラ — cactus-elephant in sandals with a clock (★★★ SR) */
-ART.lirili = function () {
+ART.lirili = function (lv) {
   const cac="#5fae4a", cacD="#357a2b", cacL="#86cf6e", ear="#4f9a3e", tan="#d8c39a", clock="#ffd23f", clockD="#b8860b";
   const u = U();
   return `
@@ -541,11 +574,12 @@ ART.lirili = function () {
     <circle cx="92" cy="84" r="13" fill="${clock}" stroke="${clockD}" stroke-width="3"/>
     <line x1="92" y1="84" x2="92" y2="76" stroke="${clockD}" stroke-width="2"/><line x1="92" y1="84" x2="98" y2="86" stroke="${clockD}" stroke-width="2"/>
     <circle cx="92" cy="84" r="2" fill="${clockD}"/><rect x="89" y="69" width="6" height="4" rx="2" fill="${clockD}"/>
+    ${evoDecor(lv, 60, 32)}
   </svg>`;
 };
 
 /* ラ・ヴァカ・サトゥルノ — cosmic Saturn cow (★★★★ UR / legendary) */
-ART.vaca = function () {
+ART.vaca = function (lv) {
   const body="#f4f4f7", bodyD="#c8c8d4", spot="#2b2b33", pink="#ffb0c0", horn="#e8d8b0", hornD="#b8a070", ring="#ffd23f", ringD="#c79a2e", dark="#1a1a22";
   const u = U();
   return `
@@ -572,6 +606,7 @@ ART.vaca = function () {
     <circle cx="53" cy="41" r="2.2" fill="#111"/><circle cx="67" cy="41" r="2.2" fill="#111"/>
     <ellipse cx="60" cy="52" rx="12" ry="8" fill="${pink}" stroke="${dark}" stroke-width="2"/>
     <ellipse cx="56" cy="52" rx="1.8" ry="2.6" fill="#a06"/><ellipse cx="64" cy="52" rx="1.8" ry="2.6" fill="#a06"/>
+    ${evoDecor(lv, 60, 25)}
   </svg>`;
 };
 

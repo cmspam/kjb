@@ -282,7 +282,7 @@ function renderShop(){
     const badge = c.gacha ? `<div class="ex" style="background:${R.color};color:#1a1a22">${R.stars}</div>`
                           : (c.ex?`<div class="ex">EX</div>`:"");
     const card = el(`<div class="card ${owned?"":"locked"}" ${R?`style="border-color:${R.color}"`:""}>
-      <div class="port">${badge}${c.art()}</div>
+      <div class="port">${badge}${c.art(dispLv)}</div>
       <div class="info">
         <div class="nm">${c.name} ${owned?`<span class="lv">Lv${lv}</span>`:""}</div>
         <div class="stats"><span>たいりょく <b>${st.hp}</b></span><span>こうげき <b>${st.dmg}</b></span><span>コスト <b>${st.cost}</b></span></div>
@@ -339,7 +339,7 @@ function buildBar(){
     const st = statsAt(c,lv);
     const b=el(`<div class="unitbtn" data-id="${c.id}">
         <div class="lvtag">Lv${lv}</div>
-        <div class="icon">${c.art()}</div>
+        <div class="icon">${c.art(lv)}</div>
         <div class="nm">${c.name}</div>
         <div class="cost"><svg viewBox="0 0 24 24" width="13" height="13"><circle cx="12" cy="12" r="11" fill="#ffd23f" stroke="#b8860b" stroke-width="2"/></svg>${st.cost}</div>
         <div class="cd" style="display:none"><i style="height:0%"></i></div></div>`);
@@ -368,7 +368,7 @@ function upgradeWallet(){
 function makeActor(def, side, charLevel){
   const id=G.nextId++;
   const wrap=el(`<div class="actor ${side==="enemy"?"enemy":""}" data-aid="${id}"></div>`);
-  wrap.innerHTML = def.art() + `<div class="mini-hp"><i style="width:100%"></i></div>`;
+  wrap.innerHTML = def.art(charLevel) + `<div class="mini-hp"><i style="width:100%"></i></div>`;
   const svg=wrap.querySelector("svg");
   const px=Math.round(120*def.scale);
   svg.setAttribute("width",px); svg.setAttribute("height",px);
@@ -801,7 +801,7 @@ function renderGacha(){
     const owned=(profile.levels[c.id]||0)>=1;
     const R=RARITY[c.rarity];
     pool.appendChild(el(`<div class="poolitem ${owned?"":"unowned"}" style="border-color:${R.color}">
-      ${c.art()}<div class="rb" style="color:${R.color}">${R.stars}</div>
+      ${c.art(profile.levels[c.id]||0)}<div class="rb" style="color:${R.color}">${R.stars}</div>
       <div class="nm2">${owned?c.name:"？？？"}</div></div>`));
   });
   $("#pullBtn").disabled = profile.gachaPoints < 1;
@@ -831,7 +831,7 @@ function showReveal(res){
   ov.classList.toggle("ur", res.rarity==="UR");
   $("#revStars").textContent=R.stars; $("#revStars").style.color=R.color;
   $("#revName").textContent=res.char.name;
-  $("#revPrizeArt").innerHTML=res.char.art();
+  $("#revPrizeArt").innerHTML=res.char.art(profile.levels[res.char.id]||1);
   const tag=$("#revTag");
   if(res.dupe){ tag.className="ptag dup"; tag.textContent=`だぶり！ ＋${res.xp} XP`; }
   else { tag.className="ptag new"; tag.textContent=`NEW!! ${R.name} を ゲット！`; }

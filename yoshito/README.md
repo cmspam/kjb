@@ -60,6 +60,8 @@ usually **1**, and rarely **2** (大あたり!). Spend points to **まわす** (
 Spend **XP** (earned by winning and defeating enemies) to:
 - **つよくする** — level up a character: stronger stats, **bigger + glowing aura**, and
   **new powers** unlock at certain levels (shown as Lv-tagged badges).
+- A character also **visibly evolves** as it levels: a **★ at Lv3**, a **silver crown at
+  Lv5**, a **jeweled gold crown at Lv8**, and **wings + sparkles at Lv10**.
 - **かいきん** — unlock the **EX characters** with XP.
 
 Progress (XP, levels, unlocks) is **saved automatically** in your browser.
