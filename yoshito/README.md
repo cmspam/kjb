@@ -32,8 +32,9 @@ Enemies have types: 赤 / 浮遊 / 黒 / ゾンビ / エイリアン / 悪魔 / 
 
 ### 🚨 レポート! (Report the Impostor)
 When the **レポート!** button glows, tap it to call an **きんきゅうしょうしゅう
-(Emergency Meeting)** — it pops barriers and **blasts every impostor** on the field.
-Charges over time.
+(Emergency Meeting)** — it **strips the シールド (barriers) off every enemy** on the field,
+but does **NOT** damage their HP. Use it to expose shielded enemies so your army can hit
+them. Charges over time.
 
 ### Your team (味方)
 | キャラ | タイプ | とくちょう |

@@ -185,9 +185,8 @@ const walletMax  = lv => 150 + (lv-1)*130;
 const walletRate = lv => LEVEL.coinRate + (lv-1)*4.5;
 const walletUpCost = lv => Math.round(80 * Math.pow(1.7, lv-1));
 
-// report ability
+// report ability — strips shields only (no HP damage)
 const REPORT_CHARGE = 16;     // seconds to charge
-const REPORT_DMG = 99999;
 
 // critical hits — characters with the crit power roll this chance per hit
 const CRIT_CHANCE = 0.20;     // 20% of attacks land a critical
@@ -434,13 +433,13 @@ function doReport(){
   const mw=$("#meetingWord"); mw.classList.remove("go"); void mw.offsetWidth; mw.classList.add("go");
   let hit=0;
   G.enemies.forEach(e=>{ if(e.dead) return;
-    // pops barriers and blasts impostors; boss takes big (not insta) damage
-    if(e.barrier>0){ e.barrier=0; if(e.barrierEl) e.barrierEl.remove(); }
-    const dmg = e.def.boss? 600 : REPORT_DMG;
-    dealDamage(null, e, dmg, true);
-    floatText(e.x+e.w/2, 70+Math.random()*60, "SUS!", "#ff3b5c"); hit++;
+    // Emergency Meeting strips SHIELDS only — it does NOT damage enemy HP
+    if(e.barrier>0){ e.barrier=0; if(e.barrierEl) e.barrierEl.remove();
+      shock(e.x+e.w/2, 72, e.w*1.3, e.def.demon?"#d36bff":"#6ff");
+      floatText(e.x+e.w/2, 70+Math.random()*40, "シールド かいじょ!", "#6ff"); hit++;
+    }
   });
-  if(!hit) floatText(W()/2,120,"インポスター いないよ 👀","#fff");
+  if(!hit) floatText(W()/2,120,"こわせる シールドが ないよ 👀","#fff");
 }
 
 // ----- damage core -----
