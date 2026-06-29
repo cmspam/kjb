@@ -73,9 +73,9 @@ function openCharEdit(i){ editIdx=i; editC=G.chars[i]; show("charEdit"); renderC
 function renderCharEdit(){
   const c=editC;
   $("#charEditTitle").textContent = c.name||baseName(c);
+  $("#charPv").innerHTML = `<div class="pvlabel">プレビュー 👀</div><div id="cPrev"></div>`;
   const body=$("#charEditBody");
   body.innerHTML=`
-    <div class="preview" id="cPrev"></div>
     <div class="ctl"><h3>みための タイプ</h3><div class="picks" id="basePicks"></div></div>
     <div class="ctl"><h3>いろ・おおきさ</h3>
       <div class="row"><label>いろ</label><input type="range" class="hueslider" id="hue" min="0" max="360" value="${c.hue||0}"></div>
