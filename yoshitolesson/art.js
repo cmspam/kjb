@@ -627,3 +627,57 @@ ART.gachaMachine = function () {
     <ellipse cx="50" cy="30" rx="14" ry="8" fill="#fff" opacity=".2"/>
   </svg>`;
 };
+
+/* ---- recolor: bake an SVG hue/saturate filter into any sprite string so a
+   character can be tinted any color, uniformly, everywhere art() is used ---- */
+function recolor(svg, hue, sat){
+  hue = hue||0; sat = (sat==null?1:sat);
+  if(!hue && sat===1) return svg;
+  const u = "hue"+(ART._uid++);
+  return svg
+    .replace(/(<svg[^>]*>)/, `$1<defs><filter id="${u}" color-interpolation-filters="sRGB"><feColorMatrix type="hueRotate" values="${hue}"/><feColorMatrix type="saturate" values="${sat}"/></filter></defs><g filter="url(#${u})">`)
+    .replace(/<\/svg>\s*$/, `</g></svg>`);
+}
+
+/* ---- the 11 designable base looks, by key ---- */
+const BASES = {
+  crewmate:  (lv)=>ART.crewmate(undefined, undefined, lv),
+  shark:     (lv)=>ART.tralalero(lv),
+  croc:      (lv)=>ART.bombardiro(lv),
+  tung:      (lv)=>ART.tung(lv),
+  coffee:    (lv)=>ART.cappuccino(lv),
+  frog:      (lv)=>ART.boneca(lv),
+  monkey:    (lv)=>ART.chimp(lv),
+  forest:    (lv)=>ART.patapim(lv),
+  ballerina: (lv)=>ART.ballerina(lv),
+  cactus:    (lv)=>ART.lirili(lv),
+  cow:       (lv)=>ART.vaca(lv),
+};
+const BASE_NAMES = {
+  crewmate:"クルー", shark:"サメ", croc:"ワニ", tung:"まるた", coffee:"コーヒー",
+  frog:"カエル", monkey:"サル", forest:"もり", ballerina:"バレリーナ", cactus:"サボテン", cow:"うし",
+};
+
+/* ---- ずんだもん guide ---- */
+ART.zunda = function(){
+  const lg="#cfe98f", lgD="#9cc25e", lgL="#eef9cf", dg="#6fae3a", dgD="#487d24", cheek="#ff9ec4";
+  const u = "z"+(ART._uid++);
+  return `
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="h${u}" cx="0.4" cy="0.32" r="0.8">
+      <stop offset="0" stop-color="${lgL}"/><stop offset=".7" stop-color="${lg}"/><stop offset="1" stop-color="${lgD}"/>
+    </radialGradient></defs>
+    <ellipse cx="60" cy="115" rx="26" ry="4" fill="#000" opacity=".15"/>
+    <path d="M60 6 Q40 6 40 30 L80 30 Q80 6 60 6 Z" fill="${dg}" stroke="${dgD}" stroke-width="2.5"/>
+    <circle cx="50" cy="22" r="5.5" fill="${dgD}" opacity=".5"/><circle cx="60" cy="18" r="5.5" fill="${dgD}" opacity=".5"/><circle cx="70" cy="22" r="5.5" fill="${dgD}" opacity=".5"/>
+    <rect x="48" y="92" width="24" height="20" rx="10" fill="${lg}" stroke="${lgD}" stroke-width="2.5"/>
+    <ellipse cx="40" cy="80" rx="7" ry="9" fill="${lg}" stroke="${lgD}" stroke-width="2"/>
+    <ellipse cx="80" cy="80" rx="7" ry="9" fill="${lg}" stroke="${lgD}" stroke-width="2"/>
+    <circle cx="60" cy="62" r="33" fill="url(#h${u})" stroke="${lgD}" stroke-width="3"/>
+    <path d="M40 44 Q38 64 44 84" stroke="#fff" stroke-width="5" opacity=".35" fill="none" stroke-linecap="round"/>
+    <circle cx="40" cy="70" r="6" fill="${cheek}" opacity=".7"/><circle cx="80" cy="70" r="6" fill="${cheek}" opacity=".7"/>
+    <ellipse cx="49" cy="60" rx="6.5" ry="9" fill="#2a2a2a"/><ellipse cx="71" cy="60" rx="6.5" ry="9" fill="#2a2a2a"/>
+    <circle cx="51" cy="56" r="2.4" fill="#fff"/><circle cx="73" cy="56" r="2.4" fill="#fff"/>
+    <path d="M55 74 Q60 80 65 74" stroke="${dgD}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </svg>`;
+};

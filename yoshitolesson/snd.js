@@ -98,7 +98,7 @@ const SND = (function(){
       .catch(()=>{ bufs[url]=null; return null; });
     bufs[url]=p; return p;
   }
-  const vurl = id => "voice/"+id+".mp3?v="+VOICE_VER;
+  const vurl = id => (window.VOICE_DIR||"voice/")+id+".mp3?v="+VOICE_VER;
   function preload(ids){
     if(!ctx) return Promise.resolve();
     return Promise.all((ids||[]).map(id=>loadClip(vurl(id))));

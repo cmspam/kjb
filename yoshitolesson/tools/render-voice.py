@@ -10,19 +10,27 @@ FORCE = "--force" in sys.argv
 os.makedirs(OUT, exist_ok=True)
 ZUNDA = 3
 
-# id -> text  (ずんだもん, friendly, hiragana, ends in のだ)
 LINES = {
-    "welcome":  "やあ！ ぼくは ずんだもん。いっしょに ゲームの つくりかたを まなぶのだ！",
-    "l1_intro": "へんすうは、なまえの ついた はこ なのだ。すうじを かえると、キャラが つよく なるのだ！",
-    "l2_intro": "いろも コードで きめるのだ。すきな いろを えらんでみるのだ！",
-    "l3_intro": "くりかえしを つかうと、いちどに たくさん つくれるのだ！",
-    "l4_intro": "もし〜なら、で コンピューターは かんがえるのだ。やってみるのだ！",
-    "l5_intro": "じぶんだけの ステージを つくってみるのだ！ きみが ゲームデザイナー なのだ！",
-    "praise1":  "すごいのだ！",
-    "praise2":  "やったのだ！ てんさい なのだ！",
-    "praise3":  "その ちょうし なのだ！",
-    "correct":  "せいかい なのだ！",
-    "clear":    "ぜんぶ クリア なのだ！ きみは りっぱな プログラマー なのだ！",
+    "welcome":     "やあ！ ぼくは ずんだもん。いっしょに プログラミングを まなぶのだ！",
+    # logic puzzles
+    "p1_intro":    "ブロックを ならべて、ヒーローを ゴールまで うごかすのだ！",
+    "p2_intro":    "みちが まがってるのだ。むきを かえる ブロックを つかうのだ！",
+    "p3_intro":    "おなじ うごきは、くりかえし ブロックで まとめると かしこいのだ！",
+    "p4_intro":    "まえに てきが きたら、こうげき するのだ！ じゅんばんが だいじなのだ。",
+    "p5_intro":    "てきの ばしょは まいかい かわるのだ。「もし〜なら」を つかえば、いつでも クリアできるのだ！",
+    # creators
+    "hero_intro":  "じぶんだけの ヒーローを つくって、ゲームに ついか するのだ！",
+    "stage_intro": "じぶんだけの ステージを つくって、ほんとうの ゲームで あそぶのだ！",
+    # feedback
+    "praise1":     "すごいのだ！",
+    "praise2":     "やったのだ！ てんさい なのだ！",
+    "praise3":     "その ちょうし なのだ！",
+    "correct":     "せいかい なのだ！",
+    "clear":       "ぜんぶ クリア なのだ！ きみは りっぱな プログラマー なのだ！",
+    "fail1":       "おしい！ もういちど かんがえてみるのだ！",
+    "fail2":       "ちがう みたいなのだ。なおして やってみるのだ！",
+    "run":         "じっこう するのだ！",
+    "saved":       "できたのだ！ ゲームで あそんでみるのだ！",
 }
 
 def ja(t):
@@ -51,7 +59,7 @@ def render(key, raw):
 
 made=skip=fail=0
 for k,t in LINES.items():
-    r=render(k,t); print("%-10s %s"%(k,r))
+    r=render(k,t); print("%-12s %s"%(k,r))
     made+=(r=="made"); skip+=(r=="skip"); fail+=(r not in ("made","skip"))
 print("\nmade=%d skip=%d fail=%d -> %s"%(made,skip,fail,OUT))
 sys.exit(1 if fail else 0)

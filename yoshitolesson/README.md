@@ -1,36 +1,44 @@
-# 🧑‍💻 コードで あそぼう！ 〜ニャーニャコ プログラミング〜
+# 🛠️ ゲームスタジオ 〜じぶんで ゲームを つくろう〜
 
-A tiny, hands-on programming lab for an 8-year-old, **fully in Japanese**
-(hiragana, with ずんだもん voice). It teaches real coding and game-design ideas
-through the characters from the ニャーニャコ大戦争 game next door (`../yoshito2/`).
+A game-design studio for an 8-year-old, **fully in Japanese**, with a ずんだもん
+(VOICEVOX) guide. Build a whole game from scratch and play it: design any number
+of characters, design the levels, choose who starts and who is gacha, then press
+play. Save/load to slots, and move a game to another device by **file, link, or QR**.
 
-No typing. Everything is sliders, color swatches and taps. Every change updates a
-live **code panel** and an instant **mini preview**, so the link between "the code"
-and "what happens" is always on screen. ずんだもん introduces each lesson and cheers
-with a real (VOICEVOX) voice.
+## What he can do
 
-## The five lessons
+### キャラを つくる (Character Maker)
+- Any number of characters, from **11 base looks** (crewmate, shark, croc, log,
+  coffee, frog, monkey, forest, ballerina, cactus, cosmic cow).
+- **Recolor** any of them with a hue/saturation slider, **resize**, and set
+  **strength** (たいりょく / こうげき / はやさ).
+- Toggle **abilities** (はやい, はんい, ふっとばし, クリティカル, バリアこわし,
+  ゾンビキラー, タンク).
+- Choose availability: **さいしょから (start)**, **ガチャ** (with a rarity), or **あとで (locked)**.
+- A live data panel shows the variables changing as he drags.
 
-1. **へんすう (variables)** — drag たいりょく / こうげき / おおきさ on a crewmate,
-   then たたかう！ to beat an enemy. Bigger numbers, stronger hero.
-2. **いろ (values)** — pick a body and visor color, see `color = "#..."` update, and
-   **add your hero to the game**.
-3. **くりかえし (loops)** — a `for` loop spawns exactly the number of crewmates you set.
-4. **もし〜なら (if / else)** — beat a metal enemy by choosing the branch that matches
-   the `if`.
-5. **つくってみよう (design)** — tap enemies into a `wave = [...]` array and press play to
-   watch the level you authored.
+### ステージを つくる (Stage Maker)
+- Any number of stages. For each: enemy tower HP, your tower HP, coin rate,
+  **enemy strength (mag)**, and a **wave** — tap enemies (red / float / zombie /
+  black / alien / demon / metal / boss) to add them, with adjustable timing.
 
-## The payoff
+### あそぶ (Play)
+- Plays the game he built in `play/` — title → stage select → battles → gacha →
+  boss/power-up cutscenes — all generated from his design.
 
-The hero you design in lessons 1 and 2 is saved to shared browser storage and shows
-up in `../yoshito2/` as a real, deployable character (the **MY** badge in the shop).
-Change a few numbers and colors here, then go fight with the character you made.
+### セーブ・ロード + わたす (Save / Load / Share)
+- Three save slots (autosaved).
+- **ゲームを わたす**: produces a **QR code**, a **shareable link** (the whole game
+  is base64-encoded in the URL hash), and a downloadable **file**. Scan the QR or
+  open the link on another tablet and the game loads there. Big games fall back to
+  link/file when they exceed QR capacity.
 
 ## Files
-- `index.html` — home (lesson map) + lesson screen + clear overlay
-- `lesson.js` — lesson engine, the five lessons, the ずんだもん guide, custom-character save
-- `art.js` — shared character art (a copy of the game's, plus the ずんだもん sprite)
+- `index.html` — the studio (home, character maker, stage maker, slots, share)
+- `studio.js` — studio logic, game definition (GDEF) model, save/load/share
+- `play/index.html`, `play/engine.js` — the data-driven game engine that runs his game
+- `art.js` — shared character art + `recolor()` (hue tint) + the ずんだもん guide
 - `snd.js` — iPad-safe audio bus (SFX + voice)
-- `voice/` — ずんだもん guide clips (VOICEVOX)
-- `tools/render-voice.py` — regenerates `voice/` (needs a VOICEVOX engine on :50021)
+- `qrcode.js` — vendored QR code generator (qrcode-generator, MIT)
+- `voice/` — ずんだもん guide clips + the game's cutscene voices (VOICEVOX)
+- `tools/render-voice.py` — regenerates the guide voice (needs a VOICEVOX engine on :50021)
