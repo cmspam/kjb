@@ -17,8 +17,41 @@ function defChar(){ return { base:"crewmate", name:"", hue:0, sat:1, size:0.62, 
 function defStage(){ return { name:"", ehp:700, php:1600, coin:13, mag:1, coinStart:150, spacing:3, wave:[] }; }
 function newGame(){ return { title:"ぼくの ゲーム", chars:[ defChar() ], levels:[ defStage() ] }; }
 
+/* ---- defensive sanitizers: a bad/old record must never crash the editor ---- */
+const VALID_BASE = ["crewmate","shark","croc","tung","coffee","frog","monkey","forest","ballerina","cactus","cow"];
+const VALID_ABIL = ["fast","area","knockback","crit","barrierBreaker","zombieKiller","tank"];
+function num(v,lo,hi,def){ v=+v; if(!isFinite(v)) v=def; return Math.max(lo,Math.min(hi,v)); }
+function sanitizeChar(c){
+  if(!c||typeof c!=="object") c={};
+  if(VALID_BASE.indexOf(c.base)<0) c.base="crewmate";
+  c.name = (typeof c.name==="string") ? c.name.slice(0,12) : "";
+  c.hue=num(c.hue,0,360,0); c.sat=num(c.sat,0,2,1); c.size=num(c.size,0.4,1.2,0.62);
+  c.hp=Math.round(num(c.hp,20,3000,150)); c.dmg=Math.round(num(c.dmg,1,500,25));
+  c.speed=Math.round(num(c.speed,10,200,60)); c.atkCd=num(c.atkCd,0.2,3,0.7);
+  c.abil = Array.isArray(c.abil) ? c.abil.filter(a=>VALID_ABIL.indexOf(a)>=0) : [];
+  if(["start","gacha","locked"].indexOf(c.avail)<0) c.avail="start";
+  if(["N","R","SR","UR"].indexOf(c.rarity)<0) c.rarity="N";
+  return c;
+}
+function sanitizeStage(s){
+  if(!s||typeof s!=="object") s={};
+  s.name=(typeof s.name==="string")?s.name.slice(0,16):"";
+  s.ehp=Math.round(num(s.ehp,100,5000,700)); s.php=Math.round(num(s.php,200,5000,1600));
+  s.coin=Math.round(num(s.coin,4,40,13)); s.mag=num(s.mag,0.3,4,1);
+  s.coinStart=Math.round(num(s.coinStart,0,1000,150)); s.spacing=Math.round(num(s.spacing,1,8,3));
+  s.wave=Array.isArray(s.wave)?s.wave.filter(w=>w&&typeof w.e==="string").map(w=>({e:w.e,t:Math.round(+w.t||0)})):[];
+  return s;
+}
+function sanitizeGame(g){
+  if(!g||typeof g!=="object") return newGame();
+  g.title=(typeof g.title==="string")?g.title.slice(0,20):"ぼくの ゲーム";
+  g.chars=(Array.isArray(g.chars)&&g.chars.length)?g.chars.slice(0,40).map(sanitizeChar):[defChar()];
+  g.levels=(Array.isArray(g.levels)&&g.levels.length)?g.levels.slice(0,40).map(sanitizeStage):[defStage()];
+  return g;
+}
+
 let SLOT = getActive();
-let G = loadGame(SLOT) || newGame();
+let G = sanitizeGame(loadGame(SLOT) || newGame());
 function save(){ try{ localStorage.setItem(gameKey(SLOT), JSON.stringify(G)); }catch(e){} }
 save();
 
@@ -37,7 +70,8 @@ const ENEMIES = [["red","あか"],["float","ふゆう"],["zombie","ゾンビ"],[
   ["alien","エイリアン"],["demon","あくま"],["metal","メタル"],["boss","ボス"]];
 const enemyArt = k => k==="boss" ? ART.bossImpostor() : ART.imp(k);
 const baseName = c => BASE_NAMES[c.base] || "キャラ";
-const charPic = c => recolor(BASES[c.base?c.base:"crewmate"](1), c.hue||0, (c.sat==null?1:c.sat));
+const baseArt = c => (BASES[c.base]||BASES.crewmate);
+const charPic = c => { try{ return recolor(baseArt(c)(1), c.hue||0, (c.sat==null?1:c.sat)); }catch(e){ return ART.crewmate(); } };
 function availTag(c){
   if(c.avail==="gacha") return `<span class="minitag gacha">ガチャ ${"★".repeat({N:1,R:2,SR:3,UR:4}[c.rarity]||1)}</span>`;
   if(c.avail==="locked") return `<span class="minitag lock">あとで</span>`;
@@ -69,7 +103,22 @@ function renderCharList(){
 }
 
 let editIdx=0, editC=null;
-function openCharEdit(i){ editIdx=i; editC=G.chars[i]; show("charEdit"); renderCharEdit(); }
+function openCharEdit(i){
+  editIdx=i; editC=sanitizeChar(G.chars[i]||defChar()); G.chars[i]=editC; save();
+  show("charEdit");
+  try{ renderCharEdit(); }
+  catch(e){ editError("#charPv","#charEditBody",()=>{ renderCharList(); show("chars"); }, ()=>{ G.chars.splice(i,1); if(!G.chars.length)G.chars.push(defChar()); save(); renderCharList(); show("chars"); }); }
+}
+// friendly fallback so the editor can never go fully black
+function editError(pvSel, bodySel, back, del){
+  const pv = pvSel ? $(pvSel) : null; if(pv) pv.innerHTML="";
+  $(bodySel).innerHTML=`<div class="ctl"><h3>あれ？ ちょっと へんだよ</h3>
+    <div style="font-size:14px;line-height:1.6;color:#cfe">この データが こわれてるみたい。<br>「けす」か「もどる」を おしてね。</div>
+    <div class="rowbtns" style="margin-top:10px">
+      <button class="bigbtn gray" id="errBack">← もどる</button>
+      <button class="delbtn" id="errDel">🗑️ これを けす</button></div></div>`;
+  $("#errBack").onclick=back; $("#errDel").onclick=del;
+}
 function renderCharEdit(){
   const c=editC;
   $("#charEditTitle").textContent = c.name||baseName(c);
@@ -137,7 +186,7 @@ function renderCharEdit(){
 
   function updatePrev(){
     const px=Math.min(165, Math.round(150*c.size*1.35));
-    const svg=recolor(BASES[c.base](1), c.hue||0, (c.sat==null?1:c.sat));
+    const svg=recolor(baseArt(c)(1), c.hue||0, (c.sat==null?1:c.sat));
     $("#cPrev").innerHTML=svg;
     const s=$("#cPrev svg"); if(s){ s.setAttribute("width",px); s.setAttribute("height",px); }
   }
@@ -167,7 +216,12 @@ function renderStageList(){
 function enemyShort(k){ return ({red:"🔴",float:"🔵",zombie:"🟢",black:"⚫",alien:"🟩",demon:"🟣",metal:"⚪",boss:"💀"})[k]||"❓"; }
 
 let editSIdx=0, editS=null;
-function openStageEdit(i){ editSIdx=i; editS=G.levels[i]; show("stageEdit"); renderStageEdit(); }
+function openStageEdit(i){
+  editSIdx=i; editS=sanitizeStage(G.levels[i]||defStage()); G.levels[i]=editS; save();
+  show("stageEdit");
+  try{ renderStageEdit(); }
+  catch(e){ editError(null,"#stageEditBody",()=>{ renderStageList(); show("stages"); }, ()=>{ G.levels.splice(i,1); if(!G.levels.length)G.levels.push(defStage()); save(); renderStageList(); show("stages"); }); }
+}
 function reassignT(s){ s.wave.forEach((w,i)=> w.t = 2 + i*(s.spacing||3)); }
 function renderStageEdit(){
   const s=editS;
@@ -245,7 +299,7 @@ function exportFile(){
 function importFromText(text){
   let g; try{ g=JSON.parse(text); }catch(e){ toast("ファイルが よめなかった…"); return; }
   if(!validGame(g)){ toast("ゲームの ファイルじゃ ないみたい…"); return; }
-  G=g; save(); SND.sfx("levelup"); renderSlots(); renderHome(); toast("ファイルから よみこんだ！🎮");
+  G=sanitizeGame(g); save(); SND.sfx("levelup"); renderSlots(); renderHome(); toast("ファイルから よみこんだ！🎮");
 }
 
 /* ---- link (base64 in URL) + QR sharing, to move a game between devices ---- */
@@ -291,10 +345,16 @@ function renderSlots(){
         <button class="bigbtn gray" style="padding:8px 12px;font-size:14px;box-shadow:0 4px 0 #0007" data-act="load">えらぶ</button>
         <button class="bigbtn gold" style="padding:8px 12px;font-size:14px;box-shadow:0 4px 0 #0007" data-act="new">あたらしく</button>
       </div></div>`);
-    card.querySelector('[data-act="load"]').onclick=()=>{ SLOT=s; setActive(s); G=loadGame(s)||newGame(); save(); SND.sfx("levelup"); renderSlots(); renderHome(); toast("スロット "+(i+1)+" を ひらいた！"); };
+    card.querySelector('[data-act="load"]').onclick=()=>{ SLOT=s; setActive(s); G=sanitizeGame(loadGame(s)||newGame()); save(); SND.sfx("levelup"); renderSlots(); renderHome(); toast("スロット "+(i+1)+" を ひらいた！"); };
     card.querySelector('[data-act="new"]').onclick=()=>{ SLOT=s; setActive(s); G=newGame(); save(); SND.sfx("levelup"); renderSlots(); renderHome(); toast("あたらしい ゲーム！"); };
     L.appendChild(card);
   });
+  // nuke-all reset (two-tap confirm)
+  const nuke=el(`<button class="delbtn" id="nukeAll" style="display:block;margin:14px auto 0">🧨 ぜんぶ けして さいしょから</button>`);
+  let armed=false;
+  nuke.onclick=()=>{ if(!armed){ armed=true; nuke.textContent="ほんとうに？ もう1かい タップ"; setTimeout(()=>{armed=false;nuke.textContent="🧨 ぜんぶ けして さいしょから";},3000); return; }
+    nukeAll(); SND.sfx("lose"); renderSlots(); renderHome(); toast("ぜんぶ けした！さいしょから！"); };
+  L.appendChild(nuke);
 }
 
 /* ============================================================
@@ -312,12 +372,46 @@ try{ muted = localStorage.getItem("ylstudio_muted")==="1"; }catch(e){}
 function refreshMute(){ $("#muteBtn").textContent = muted?"🔇":"🔊"; }
 function toggleMute(){ muted=!muted; SND.setMuted(muted); try{localStorage.setItem("ylstudio_muted",muted?"1":"0");}catch(e){} refreshMute(); if(!muted){ SND.unlock(); SND.sfx("click"); } }
 
+/* ---- reset / recovery (in case anything ever gets stuck) ---- */
+function nukeAll(){
+  try{ Object.keys(localStorage).filter(k=>/^yl(studio|game)_/.test(k)).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  SLOT="0"; setActive("0"); G=newGame(); save();
+}
+function installRecovery(){
+  if($("#rescueBtn")) return;
+  const b=el(`<button id="rescueBtn" title="なおす">🔧</button>`);
+  b.setAttribute("style","position:fixed;bottom:10px;left:10px;z-index:9999;background:#3a1620;border:2px solid #ff5b6e;color:#ff9eaa;border-radius:50%;width:40px;height:40px;font-size:17px;cursor:pointer");
+  b.onclick=showRecovery; document.body.appendChild(b);
+}
+function showRecovery(){
+  let o=$("#rescueOvl");
+  if(!o){
+    o=el(`<div id="rescueOvl"><div style="background:#1e3a2b;border:3px solid #8be04f;border-radius:18px;padding:20px;text-align:center;max-width:340px;width:100%;display:flex;flex-direction:column;gap:13px;align-items:center">
+      <div style="font-size:54px">🔧</div>
+      <div style="font-size:20px;font-weight:bold;color:#8be04f">なおす メニュー</div>
+      <div style="font-size:14px;color:#cfe;line-height:1.6">がめんが くろく なったり、へんに なったら ここで なおせるよ。</div>
+      <button class="bigbtn" id="rescReload">↻ よみなおす</button>
+      <button class="bigbtn pink" id="rescNuke">🧨 ぜんぶ けして さいしょから</button>
+      <button class="bigbtn gray" id="rescClose">とじる</button></div></div>`);
+    o.setAttribute("style","position:fixed;inset:0;z-index:10000;background:rgba(4,12,7,.96);display:flex;align-items:center;justify-content:center;padding:22px");
+    document.body.appendChild(o);
+    $("#rescReload").onclick=()=>location.reload();
+    $("#rescClose").onclick=()=>{ o.style.display="none"; };
+    let armed=false;
+    $("#rescNuke").onclick=()=>{ if(!armed){ armed=true; $("#rescNuke").textContent="ほんとうに？ もう1かい"; return; } nukeAll(); location.href=location.pathname; };
+  }
+  o.style.display="flex";
+}
+window.addEventListener("error", function(){ try{ showRecovery(); }catch(e){} });
+
 /* ============================================================
    WIRING
    ============================================================ */
 window.addEventListener("DOMContentLoaded",()=>{
   SND.setMuted(muted); refreshMute();
   SND.preload(["welcome","hero_intro","stage_intro","saved","praise1"]);
+  installRecovery();
+  G = sanitizeGame(G);
   const imported = checkURLImport();
   renderHome();
   if(imported) toast("リンクから ゲームを よみこんだ！🎮");

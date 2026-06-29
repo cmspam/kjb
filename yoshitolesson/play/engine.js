@@ -56,7 +56,7 @@ const GDEF = loadGDEF();
 
 function deriveCost(g){ return Math.round(40 + (g.dmg||25)*1.2 + (g.hp||150)*0.08 + (g.size||0.6)*30); }
 function buildChars(gd){
-  return gd.chars.map((g,i)=>{
+  return (gd.chars||[]).filter(g=>g&&typeof g==="object").map((g,i)=>{
     const base = (g.base in BASES) ? g.base : "crewmate";
     return { id:"c"+i, name:g.name||BASE_NAMES[base], color:"#888",
       ex: g.avail==="locked", gacha: g.avail==="gacha", rarity:g.rarity||"N", unlockXp:g.unlockXp||1000,
@@ -139,7 +139,7 @@ function buildLevels(gd){
     enemyTowerHP: L.ehp||1000, playerTowerHP: L.php||1600,
     coinRate: L.coin||12, coinStart: L.coinStart||140, mag: L.mag||1,
     reward: L.reward||(200+i*150),
-    spawns: (L.wave||[]).slice().sort((a,b)=>a.t-b.t).map(s=>({t:s.t, e:ENEMY_KEY[s.e]||s.e})) }));
+    spawns: (L.wave||[]).filter(s=>s&&typeof s.e==="string").map(s=>({t:+s.t||0, e:s.e})).sort((a,b)=>a.t-b.t).map(s=>({t:s.t, e:ENEMY_KEY[s.e]||s.e})) }));
 }
 const LEVELS = buildLevels(GDEF);
 let LEVEL = LEVELS[0];           // active stage; set when a battle starts
