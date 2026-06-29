@@ -1,13 +1,29 @@
-# ⭐ ニャーニャコ大戦争 〜インポスター × ブレインロッド〜
+# ⭐ ニャーニャコ大戦争 〜インポスター × ブレインロッド〜 (enhanced edition)
 
 A **Battle Cats (にゃんこ大戦争)**-style lane-battle game, **fully in Japanese**, made
 in Yoshito's image. Among Us impostors are **fused with Italian brainrot** characters,
 and you build an army to smash the enemy tower.
 
+This is the enhanced edition. New since the first cut:
+
+- **8 stages with a stage-select map** (はじめての たたかい → さいしゅう けっせん).
+  Each stage introduces one mechanic, gets harder, and scales enemy strength so
+  the late stages stay tough. Clear a stage to unlock the next; first clears pay
+  double XP and a guaranteed gacha point.
+- **Cutscenes with real voices** (VOICEVOX). The boss taunts you with a big render
+  when it arrives, and the **へんしん！⚡** button plays a power-up cutscene that
+  buffs your whole army for a few seconds.
+- **Sound everywhere**: an iPad-safe audio bus (one AudioContext, pre-decoded
+  buffers) with synthesized SFX and pre-rendered voice clips. 🔊 toggles it.
+- **2x speed** toggle in battle, plus screen shake on big hits.
+- **Make-your-own character**: a hero you design in the companion lab
+  (`../yoshitolesson/`) shows up here as a real, deployable character (the **MY**
+  badge in the shop).
+
 ## How to play (あそびかた)
 
-**Open `index.html` in any browser** — no install. Tap **▶ たたかう** to fight,
-or **⬆ きょうか** to upgrade your characters with XP.
+**Open `index.html` in any browser** — no install. Tap **▶ たたかう** to pick a
+stage, or **⬆ きょうか** to upgrade your characters with XP.
 
 - Tap a character card at the bottom to send it marching right. Each costs **おかね 🪙**.
 - Money refills over time. Tap **お財布Lv↑** to make it refill faster and hold more
@@ -75,8 +91,12 @@ Progress (XP, levels, unlocks) is **saved automatically** in your browser.
 **1–9** deploy your owned characters · **W** upgrade wallet · **R** Report
 
 ## Files
-- `index.html` — title / shop / battle screens, all UI, Japanese text
+- `index.html` — title / stage-select / shop / battle / gacha / cutscene screens, all UI
 - `art.js` — every character & base, hand-drawn as SVG (incl. the fused impostors and boss)
-- `game.js` — the engine: economy, XP/upgrades, types, barriers, zombies, boss, particles
+- `game.js` — the engine: stages, economy, XP/upgrades, types, barriers, zombies, boss,
+  hero power-up, cutscenes, particles, the lab's custom character
+- `snd.js` — iPad-safe audio bus: synthesized SFX + pre-rendered voice playback
+- `voice/` — VOICEVOX voice clips (boss taunts, power-up shouts, win/lose)
+- `tools/render-voice.py` — regenerates `voice/` (needs a VOICEVOX engine on :50021)
 
 たのしんでね！🎮🦈👟🐊

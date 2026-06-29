@@ -104,6 +104,23 @@ const CHARS = [
 ];
 const charById = id => CHARS.find(c=>c.id===id);
 
+// A hero designed in the lesson lab (yoshitolesson) is injected here as a real
+// playable character — it shows up in the shop and the deploy bar, owned at Lv1.
+function loadCustomChar(){
+  let c; try{ c=JSON.parse(localStorage.getItem("yoshito_custom_char_v1")); }catch(e){}
+  if(!c || !c.color) return;
+  const color=c.color, visor=c.visor;
+  // place it right after the four starters so it is easy to find
+  const starters = CHARS.filter(x=>!x.ex&&!x.gacha).length;
+  CHARS.splice(starters, 0, { id:"custom", name:c.name||"ぼくの ヒーロー", custom:true, color,
+    art:(lv)=>ART.crewmate(color, visor, lv),
+    base:{ cost:Math.max(40, c.cost||60), hp:Math.max(80, c.hp||160), dmg:Math.max(5, c.dmg||30),
+      range:48, atkCd:0.65, speed:64, scale:(c.scale||0.62) },
+    grow:{hp:0.16, dmg:0.16, cost:0.06}, maxLv:10,
+    innate:[], unlocks:[ {lv:3,a:"strong:red"}, {lv:7,a:"knockback"} ] });
+}
+loadCustomChar();
+
 // per-character attack flavor (animation + impact effect). default "bonk".
 const ATK_STYLE = {
   crew:"bonk", trala:"bite", tung:"swing", bomb:"bomb", capp:"slash", bone:"slam",
@@ -336,7 +353,7 @@ function renderShop(){
     const pows = allPowerRows(c, owned?lv:0);
     const R = c.gacha ? RARITY[c.rarity] : null;
     const badge = c.gacha ? `<div class="ex" style="background:${R.color};color:#1a1a22">${R.stars}</div>`
-                          : (c.ex?`<div class="ex">EX</div>`:"");
+                          : (c.ex?`<div class="ex">EX</div>` : (c.custom?`<div class="ex" style="background:#8be04f;color:#0a2a00">MY</div>`:""));
     const card = el(`<div class="card ${owned?"":"locked"}" ${R?`style="border-color:${R.color}"`:""}>
       <div class="port">${badge}${c.art(dispLv)}</div>
       <div class="info">
